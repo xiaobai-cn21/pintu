@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from extensions import db, Users
+from extensions import db, users
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token
@@ -22,12 +22,12 @@ def signin():
             if password != confirmPassword:
                 return jsonify({"code": "400", "message": "两次输入的密码不一致", "data": None})
 
-            if Users.query.filter((Users.username == username) | (Users.email == email)).first():
+            if users.query.filter((users.username == username) | (users.email == email)).first():
                 return jsonify({"code": "400", "message": "用户名或邮箱已存在", "data": None})  
             
             hash_password = generate_password_hash(password)
-            users = Users(username=username, email=email, hash_password=hash_password, created_at=datetime.now())
-            db.session.add(users)
+            user_obj = users(username=username, email=email, hash_password=hash_password, created_at=datetime.now())
+            db.session.add(user_obj)
             db.session.commit()
             return jsonify({"code": "200", "message": "注册成功", "data": None})
     except Exception as e:
@@ -41,8 +41,8 @@ def  login():
             loginKey = data.get('loginKey')
             password = data.get('password')
 
-            user = Users.query.filter(
-                (Users.username == loginKey) | (Users.email == loginKey)
+            user = users.query.filter(
+                (users.username == loginKey) | (users.email == loginKey)
             ).first()
 
             if user and check_password_hash(user.hash_password, password):

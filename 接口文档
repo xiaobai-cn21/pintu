@@ -1,0 +1,177 @@
+# 拼图项目接口文档
+
+---
+
+## 关卡相关（/api/puzzles）
+
+### 1. 创建自定义关卡  
+**POST** `/pic/puzzles`  
+**请求类型**：`multipart/form-data`  
+**参数**：
+- creator_id (int, 必填)：创建者用户ID
+- title (string, 必填)：关卡标题
+- image (file, 必填)：关卡图片
+- difficulty (string, 可选)：难度（easy/medium/hard）
+- piece_count (int, 必填)：拼块数量
+- piece_shape (string, 必填)：拼块形状（rect/irregular）
+- is_rotatable (int, 可选)：是否可旋转（0/1）
+- is_system_level (int, 可选)：是否为系统关卡（0/1）
+
+**返回**：
+```json
+{
+  "code": "200",
+  "message": "关卡创建成功",
+  "data": {"puzzle_id": 1}
+}
+```
+
+---
+
+### 2. 更新关卡  
+**PUT** `/pic/puzzles/<puzzle_id>`  
+**请求类型**：`multipart/form-data`  
+**参数**（均为可选，未传则不变）：
+- title, image, difficulty, piece_count, piece_shape, is_rotatable, is_system_level
+
+**返回**：
+```json
+{
+  "code": "200",
+  "message": "关卡更新成功",
+  "data": null
+}
+```
+
+---
+
+### 3. 删除关卡  
+**DELETE** `/pic/puzzles/<puzzle_id>`  
+**返回**：
+```json
+{
+  "code": "200",
+  "message": "关卡删除成功",
+  "data": null
+}
+```
+
+---
+
+### 4. 获取关卡详情  
+**GET** `/pic/puzzles/<puzzle_id>`  
+**返回**：
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": {
+    "puzzle_id": 1,
+    "title": "xxx",
+    "image_url": "/static/uploads/xxx.jpg",
+    "difficulty": "easy",
+    "piece_count": 100,
+    "piece_shape": "rect",
+    "is_rotatable": false,
+    "is_system_level": false,
+    "created_at": "2024-01-01T12:00:00",
+    "creator": {
+      "user_id": 1,
+      "username": "xxx",
+      "email": "xxx@xxx.com"
+    }
+  }
+}
+```
+
+---
+
+### 5. 获取关卡列表  
+**GET** `/pic/puzzles`  
+**返回**：
+```json
+{
+  "code": 200,
+  "message": "获取成功",
+  "data": [
+    {
+      "puzzle_id": 1,
+      "title": "xxx",
+      "image_url": "/static/uploads/xxx.jpg",
+      "difficulty": "easy",
+      "piece_count": 100,
+      "piece_shape": "rect",
+      "is_rotatable": false,
+      "is_system_level": false,
+      "created_at": "2024-01-01T12:00:00"
+    }
+    // ...
+  ]
+}
+```
+
+---
+
+## 用户认证相关（/auth）
+
+### 6. 用户注册  
+**POST** `/auth/signin`  
+**请求类型**：`application/json`  
+**参数**：
+- username (string, 必填)
+- email (string, 必填)
+- password (string, 必填)
+- confirmPassword (string, 必填)
+
+**返回**：
+```json
+{
+  "code": "200",
+  "message": "注册成功",
+  "data": null
+}
+```
+
+---
+
+### 7. 用户登录  
+**POST** `/auth/login`  
+**请求类型**：`application/json`  
+**参数**：
+- loginKey (string, 必填)：用户名或邮箱
+- password (string, 必填)
+
+**返回**：
+```json
+{
+  "code": 200,
+  "message": "登录成功",
+  "data": {
+    "token": "xxx",
+    "expireAt": 1200,
+    "userId": 1
+  }
+}
+```
+
+---
+
+## 成绩相关（/api/record）
+
+### 8. 更新或插入成绩  
+**POST** `/api/record`  
+**请求类型**：`application/json`  
+**参数**：
+- user_id (int, 必填)
+- step_count (int, 必填)
+- time_used (int, 必填)
+
+**返回**：
+```json
+{
+  "code": 200,
+  "msg": "记录已更新"
+}
+```
+
+---
