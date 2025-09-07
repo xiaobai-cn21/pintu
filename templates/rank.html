@@ -377,7 +377,7 @@
                         const myRank = my ? { rank: my.rank, playerName: my.playerName, totalTime: my.totalTime, totalSteps: my.totalSteps } : null;
                         return { success: true, data: { myRank, rankList: mock } };
                     }
-                    const res = await fetch('/ranking/', { credentials: 'include' });
+                    const res = await fetch('http://localhost:5000/ranking', { credentials: 'include' });
                     if (!res.ok) return { success: false };
                     const json = await res.json();
                     if (json.code !== 200 || !Array.isArray(json.data)) return { success: false };

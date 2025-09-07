@@ -1,6 +1,6 @@
 import eventlet
 eventlet.monkey_patch()
-from flask import Flask,render_template
+from flask import Flask,render_template, send_file
 from config import Config
 from extensions import db
 from flask_jwt_extended import JWTManager
@@ -28,9 +28,9 @@ def create_app():
     app.register_blueprint(pvp, url_prefix='/pvp')
     app.register_blueprint(ranking, url_prefix='/ranking')
 
-    @app.route('/')
+    @app.route('/rank')
     def main():
-        return render_template('versus.html')
+        return render_template('rank.html')
     return app
 
 if __name__ == '__main__':
