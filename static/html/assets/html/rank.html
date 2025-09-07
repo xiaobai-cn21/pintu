@@ -44,7 +44,7 @@
         }
 
         .rank-title {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: bold;
             color: #2c3e50;
             margin: 0;
@@ -64,14 +64,7 @@
             transform: rotate(180deg);
         }
 
-        .refresh-btn.loading {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-        }
+        /* 取消刷新按钮的“刷新中”旋转动画状态 */
 
         .my-rank-card {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -126,19 +119,20 @@
         }
 
         .rank-table th {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, #FFE082 0%, #FFC107 100%);
+            color: #4a3b00;
             padding: 15px;
             text-align: center;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 18px;
         }
 
         .rank-table td {
-            padding: 15px;
+            padding: 16px;
             text-align: center;
             border-bottom: 1px solid #e0e0e0;
             transition: background-color 0.3s;
+            font-size: 16px;
         }
 
         .rank-table tr:hover {
@@ -151,12 +145,12 @@
 
         .rank-number {
             font-weight: bold;
-            font-size: 18px;
+            font-size: 20px;
         }
 
         .rank-number.top3 {
             font-weight: bold;
-            font-size: 20px;
+            font-size: 22px;
         }
 
         .rank-number.rank-1 {
@@ -239,32 +233,20 @@
             }
 
             .rank-title {
-                font-size: 24px;
+                font-size: 28px;
             }
 
             .my-rank-info {
                 grid-template-columns: repeat(2, 1fr);
             }
 
-            .rank-table {
-                font-size: 14px;
-            }
-
-            .rank-table th,
-            .rank-table td {
-                padding: 10px 5px;
-            }
+            .rank-table th { font-size: 16px; }
+            .rank-table td { font-size: 15px; padding: 12px 6px; }
         }
 
         @media (max-width: 480px) {
-            .rank-table {
-                font-size: 12px;
-            }
-
-            .rank-table th,
-            .rank-table td {
-                padding: 8px 3px;
-            }
+            .rank-table th { font-size: 14px; }
+            .rank-table td { font-size: 14px; padding: 10px 4px; }
 
             .my-rank-info {
                 grid-template-columns: 1fr;
@@ -345,6 +327,8 @@
                 this.errorMessage = document.getElementById('errorMessage');
                 this.emptyMessage = document.getElementById('emptyMessage');
                 this.rankTableContainer = document.getElementById('rankTableContainer');
+                // 是否启用前端模拟数据（带上 ?mock=1 开启）
+                this.useMock = new URLSearchParams(location.search).get('mock') === '1';
                 
                 this.bindEvents();
                 this.loadRankData();
@@ -358,7 +342,7 @@
                 this.showLoading();
                 
                 try {
-                    // 模拟API调用 - 实际项目中替换为真实的API端点
+                    // API调用 
                     const response = await this.fetchRankData();
                     
                     if (response.success) {
@@ -372,9 +356,27 @@
                 }
             }
 
-            // 真实的API
+            // 数据获取：当 URL 带 ?mock=1 时使用内置模拟数据，否则请求后端 API
             async fetchRankData() {
                 try {
+                    if (this.useMock) {
+                        // 内置部分模拟数据（可根据需要增删改）
+                        const mock = [
+                            { playerName: 'test1', totalTime: 5400, totalSteps: 200 },
+                            { playerName: 'test2', totalTime: 7200, totalSteps: 188 },
+                            { playerName: 'test3', totalTime: 7200, totalSteps: 190 },
+                            { playerName: 'test4', totalTime: 3600, totalSteps: 120 },
+                            { playerName: 'admin', totalTime: 6100, totalSteps: 175 },
+                            { playerName: 'test5', totalTime: 6100, totalSteps: 180 },
+                            { playerName: 'test6', totalTime: 1200, totalSteps: 90 }
+                        ];
+                        // 按规则排序：总时长降序；相同则步数升序
+                        mock.sort((a, b) => (b.totalTime - a.totalTime) || (a.totalSteps - b.totalSteps));
+                        mock.forEach((p, i) => p.rank = i + 1);
+                        const my = mock.find(p => p.playerName === (localStorage.getItem('username') || '当前用户')) || null;
+                        const myRank = my ? { rank: my.rank, playerName: my.playerName, totalTime: my.totalTime, totalSteps: my.totalSteps } : null;
+                        return { success: true, data: { myRank, rankList: mock } };
+                    }
                     const res = await fetch('/ranking/', { credentials: 'include' });
                     if (!res.ok) return { success: false };
                     const json = await res.json();
@@ -386,7 +388,7 @@
                         playerName: r.username,
                         totalTime: Number(r.time_used) || 0,
                         totalSteps: Number(r.step_count) || 0,
-                        completedLevels: 0
+                        // completedLevels: 已移除列
                     }));
 
                     // 计算“我”的占位，具体值在 displayRankData 中按排序列表求
@@ -490,24 +492,19 @@
             showLoading() {
                 this.hideAllMessages();
                 this.loadingMessage.style.display = 'block';
-                this.refreshBtn.classList.add('loading');
-                this.refreshBtn.textContent = '刷新中...';
+                // 刷新按钮不再改变文案或做动画，仅短暂禁用避免重复点击
                 this.refreshBtn.disabled = true;
             }
 
             showError() {
                 this.hideAllMessages();
                 this.errorMessage.style.display = 'block';
-                this.refreshBtn.classList.remove('loading');
-                this.refreshBtn.textContent = '🔄';
                 this.refreshBtn.disabled = false;
             }
 
             showEmpty() {
                 this.hideAllMessages();
                 this.emptyMessage.style.display = 'block';
-                this.refreshBtn.classList.remove('loading');
-                this.refreshBtn.textContent = '🔄';
                 this.refreshBtn.disabled = false;
             }
 
