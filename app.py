@@ -64,6 +64,10 @@ def create_app():
     @app.route('/loading')
     def loading_page():
         return render_template('loading.html')
+
+    @app.route('/ai-page')
+    def ai_page():
+        return render_template('ai.html')
     return app
 
 if __name__ == '__main__':

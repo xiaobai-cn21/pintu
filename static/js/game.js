@@ -574,6 +574,17 @@ class PuzzleGame {
             const remainingSeconds = this.seconds % 60;
             const timeString = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
             this.completeInfo.textContent = `你用了 ${timeString} 和 ${this.moves} 次移动完成了拼图！`;
+            // 提交成绩到后端
+            try {
+                const userId = localStorage.getItem('userId');
+                if (userId) {
+                    fetch('/ranking/record', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ user_id: Number(userId), step_count: this.moves, time_used: this.seconds })
+                    }).catch(()=>{});
+                }
+            } catch (e) { /* ignore network errors */ }
             setTimeout(() => {
                 this.gameComplete.style.display = 'flex';
             }, 500);

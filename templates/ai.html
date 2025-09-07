@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 生成图片</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% include '_navbar.html' %}
+<div class="background-blur"></div>
+<div class="container" style="max-width: 900px; margin: 20px auto;">
+  <div class="card">
+    <h2 style="margin-bottom:12px;">AI 生成图片</h2>
+    <p style="margin-bottom:12px;color:#F9E078;opacity:.85">请输入描述，AI 将生成像素风格图片。该功能需登录。</p>
+    <div class="input-item">
+      <label>描述</label>
+      <textarea id="aiPrompt" rows="4" style="width:100%;padding:10px 12px;border:1px solid #E5E7EB;border-radius:6px;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+      <button id="genBtn" class="btn btn-primary">生成</button>
+      <span id="aiTip" style="font-size:12px;color:#F9E078;opacity:.8;"></span>
+    </div>
+  </div>
+  <div id="aiResult" class="card" style="display:none;">
+    <h3 style="margin-bottom:12px;">生成结果</h3>
+    <img id="aiImg" src="" alt="AI图片" style="max-width:100%;border-radius:8px;display:block;">
+  </div>
+</div>
+<script>
+const genBtn=document.getElementById('genBtn');
+const aiPrompt=document.getElementById('aiPrompt');
+const aiTip=document.getElementById('aiTip');
+const aiResult=document.getElementById('aiResult');
+const aiImg=document.getElementById('aiImg');
+genBtn.addEventListener('click', async ()=>{
+  const token=localStorage.getItem('puzzleToken');
+  if(!token){
+    aiTip.textContent='请先登录后再使用 AI 生成功能。';
+    return;
+  }
+  const prompt=(aiPrompt.value||'').trim();
+  if(!prompt){ aiTip.textContent='请输入描述'; return; }
+  aiTip.textContent='生成中...';
+  try{
+    const form=new FormData();
+    form.append('prompt', prompt);
+    const res=await fetch('/ai/generate',{ method:'POST', body:form });
+    const json=await res.json();
+    if(json.code===200 && json.data && json.data.url){
+      aiImg.src=json.data.url;
+      aiResult.style.display='block';
+      aiTip.textContent='';
+    }else{
+      aiTip.textContent=json.message||'生成失败';
+    }
+  }catch(e){ aiTip.textContent='网络错误'; }
+});
+</script>
+</body>
+</html>
+
+

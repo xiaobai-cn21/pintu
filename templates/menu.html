@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
 </head>
 <body>
+{% include '_navbar.html' %}
 <div class="container" style="max-width: 800px; margin: 0 auto; text-align: center;">
     <div class="background-blur"></div>
     <div class="content">
@@ -22,6 +23,7 @@
             <a id="rankBtn" class="btn btn-default" style="display: none;" href="{{ url_for('rank_page') }}">排行榜</a>
             <a id="myPuzzleBtn" class="btn btn-default" style="display: none;" href="{{ url_for('my_puzzle_page') }}">我的拼图</a>
             <a id="shareBtn" class="btn btn-default" style="display: none;" href="{{ url_for('share_page') }}">分享中心</a>
+            <a id="aiBtn" class="btn btn-default" style="display: none;" href="{{ url_for('ai_page') }}">AI 生成</a>
         </div>
         <div class="copyright" style="position: fixed; bottom: 20px; left: 0; width: 100%; text-align: center; font-size: 12px; color: #999999;">
             © 2025 拼图大师 版权所有
@@ -146,8 +148,44 @@ function switchTab(type){
 document.getElementById('loginBtn').addEventListener('click',()=>{document.getElementById('loginModal').style.display='flex'});
 document.getElementById('helpBtn').addEventListener('click',()=>{document.getElementById('helpModal').style.display='flex'});
 window.onload=function(){const token=localStorage.getItem('puzzleToken');if(token){document.getElementById('loginBtn').style.display='none';document.getElementById('createPuzzleBtn').style.display='block';document.getElementById('rankBtn').style.display='block';document.getElementById('myPuzzleBtn').style.display='block';document.getElementById('shareBtn').style.display='block';}}
-document.getElementById('submitLogin').addEventListener('click',()=>{localStorage.setItem('puzzleToken','test_token_123');window.location.reload()});
-document.getElementById('submitRegister').addEventListener('click',()=>{localStorage.setItem('puzzleToken','test_token_456');window.location.reload()});
+// 登录后显示 AI 入口
+window.onload=function(){
+  const token=localStorage.getItem('puzzleToken');
+  if(token){
+    document.getElementById('loginBtn').style.display='none';
+    document.getElementById('createPuzzleBtn').style.display='block';
+    document.getElementById('rankBtn').style.display='block';
+    document.getElementById('myPuzzleBtn').style.display='block';
+    document.getElementById('shareBtn').style.display='block';
+    const aiBtn=document.getElementById('aiBtn'); if(aiBtn) aiBtn.style.display='block';
+  }
+}
+// 真实登录
+async function realLogin(){
+  const loginKey=document.getElementById('loginAccount').value.trim();
+  const password=document.getElementById('loginPwd').value.trim();
+  const res=await fetch('/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({loginKey,password})});
+  const json=await res.json();
+  if(json.code===200&&json.data){
+    localStorage.setItem('puzzleToken', json.data.token);
+    localStorage.setItem('userId', json.data.userId);
+    window.location.reload();
+  }else{ alert(json.message||'登录失败'); }
+}
+document.getElementById('submitLogin').onclick=realLogin;
+
+// 真实注册
+async function realRegister(){
+  const username=document.getElementById('regUsername').value.trim();
+  const email=document.getElementById('regEmail').value.trim();
+  const password=document.getElementById('regPwd').value.trim();
+  const confirmPassword=document.getElementById('regPwdConfirm').value.trim();
+  const res=await fetch('/auth/signin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,email,password,confirmPassword})});
+  const json=await res.json();
+  if(json.code==200){ alert('注册成功，请登录'); switchTab('login'); }
+  else{ alert(json.message||'注册失败'); }
+}
+document.getElementById('submitRegister').onclick=realRegister;
 </script>
 </body>
 </html>

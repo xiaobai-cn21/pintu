@@ -1,0 +1,76 @@
+<nav class="pm-navbar">
+    <div class="pm-nav-left">
+        <a class="pm-brand" href="{{ url_for('main') }}">PuzzleMaster</a>
+        <a class="pm-link" href="{{ url_for('main') }}">首页</a>
+        <a class="pm-link" href="{{ url_for('option_page') }}">开始游戏</a>
+        <a class="pm-link" href="{{ url_for('ai_page') }}" id="pm-ai-link">AI生成</a>
+        <a class="pm-link" id="pm-help-link" href="#">帮助</a>
+    </div>
+    <div class="pm-nav-right">
+        <div class="pm-avatar-wrap" id="pm-avatar-wrap">
+            <img class="pm-avatar" src="{{ url_for('static', filename='images/用户头像.jpg') }}" alt="avatar">
+            <div class="pm-avatar-menu" id="pm-avatar-menu">
+                <button id="pm-login-btn" class="pm-menu-item">登录 / 注册</button>
+                <button id="pm-logout-btn" class="pm-menu-item" style="display:none;">退出登录</button>
+            </div>
+        </div>
+    </div>
+</nav>
+<script>
+(function(){
+  const token = localStorage.getItem('puzzleToken');
+  const loginBtn = document.getElementById('pm-login-btn');
+  const logoutBtn = document.getElementById('pm-logout-btn');
+  if(token){
+    loginBtn.style.display='none';
+    logoutBtn.style.display='block';
+  } else {
+    loginBtn.style.display='block';
+    logoutBtn.style.display='none';
+  }
+  loginBtn && (loginBtn.onclick = function(){
+    const modal = document.getElementById('loginModal');
+    if(modal){ modal.style.display='flex'; } else { window.location.href='{{ url_for('main') }}'; }
+  });
+  logoutBtn && (logoutBtn.onclick = function(){
+    localStorage.removeItem('puzzleToken');
+    localStorage.removeItem('userId');
+    window.location.reload();
+  });
+  const helpLink = document.getElementById('pm-help-link');
+  if(helpLink){
+    helpLink.onclick = function(e){
+      e.preventDefault();
+      const help = document.getElementById('helpModal');
+      if(help){ help.style.display='flex'; }
+    }
+  }
+
+  // AI 生成需要登录
+  const aiLink=document.getElementById('pm-ai-link');
+  if(aiLink){
+    aiLink.addEventListener('click', function(e){
+      const t=localStorage.getItem('puzzleToken');
+      if(!t){
+        e.preventDefault();
+        const modal = document.getElementById('loginModal');
+        if(modal){ modal.style.display='flex'; }
+      }
+    });
+  }
+
+  // 控制头像菜单打开/关闭，不依赖 hover，避免闪退
+  const wrap = document.getElementById('pm-avatar-wrap');
+  const menu = document.getElementById('pm-avatar-menu');
+  const avatar = document.querySelector('.pm-avatar');
+  function openMenu(){ wrap.classList.add('open'); }
+  function closeMenu(){ wrap.classList.remove('open'); }
+  avatar && avatar.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(wrap.classList.contains('open')) closeMenu(); else openMenu();
+  });
+  menu && menu.addEventListener('click',(e)=>{ e.stopPropagation(); });
+  document.addEventListener('click', ()=> closeMenu());
+})();
+</script>
+

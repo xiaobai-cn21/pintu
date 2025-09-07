@@ -7,10 +7,14 @@
 }
 
 body {
-    background-color: #F9FAFB;
-    color: #333333;
+    background-color: #20223A;
+    color: #F9E078;
     min-height: 100vh;
     padding: 20px;
+    background-image: url('../images/background2.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
 }
 
 /* 按钮通用样式 */
@@ -162,7 +166,7 @@ body {
          left: 0;
          right: 0;
          bottom: 0;
-         background-image: url('../images/background.jpg');
+         background-image: url('../images/background2.png');
          background-size: cover;
          background-position: center;
          z-index: -2; /* 置于最底层 */
@@ -185,7 +189,20 @@ body {
        .content {
          position: relative;
          z-index: 1; /* 确保内容在背景上方 */
-         color: white;
+         color: #F9E078;
          text-align: center;
          padding: 50px;
        }
+/* PuzzleMaster 顶部导航 */
+.pm-navbar{position:sticky;top:0;z-index:1000;display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:#20223A;border-bottom:1px solid rgba(255,255,255,0.08)}
+.pm-brand{font-weight:700;color:#F9E078;text-decoration:none;margin-right:16px}
+.pm-link{color:#F9E078;text-decoration:none;margin-right:12px;opacity:.9}
+.pm-link:hover{opacity:1}
+.pm-nav-left{display:flex;align-items:center;gap:8px}
+.pm-nav-right{display:flex;align-items:center}
+.pm-avatar-wrap{position:relative}
+.pm-avatar{width:36px;height:36px;border-radius:50%;cursor:pointer;border:2px solid #F9E078}
+.pm-avatar-wrap.open #pm-avatar-menu{display:block}
+.pm-avatar-menu{display:none;position:absolute;right:0;top:44px;background:#20223A;border:1px solid rgba(255,255,255,0.12);border-radius:8px;min-width:140px;box-shadow:0 6px 24px rgba(0,0,0,0.35)}
+.pm-menu-item{display:block;width:100%;text-align:left;background:transparent;border:none;color:#F9E078;padding:10px 12px;cursor:pointer}
+.pm-menu-item:hover{background:rgba(249,224,120,0.08)}
