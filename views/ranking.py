@@ -3,6 +3,7 @@ from extensions import db
 from extensions import users
 from sqlalchemy import exc
 from sqlalchemy import text
+from extensions import users, records
 
 ranking = Blueprint('ranking', __name__)
 
@@ -24,7 +25,7 @@ def update_record():
 		db.session.rollback()
 		return jsonify({'code': 500, 'msg': '数据库错误', 'error': str(e)}), 500
 
-@ranking.route('/ranking', methods=['GET'])
+@ranking.route('/', methods=['GET'])
 def get_ranking():
     sql = text('''
         SELECT r.user_id, u.username, r.step_count, r.time_used

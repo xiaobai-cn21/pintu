@@ -9,6 +9,7 @@ from views.pic import pic
 from views.ai import ai
 from views.pvp import pvp, register_socketio_events
 from flask_socketio import SocketIO
+from views.ranking import ranking
 
 def create_app():
     app = Flask(__name__)
@@ -25,6 +26,7 @@ def create_app():
     app.register_blueprint(pic, url_prefix='/pic')
     app.register_blueprint(ai, url_prefix='/ai')
     app.register_blueprint(pvp, url_prefix='/pvp')
+    app.register_blueprint(ranking, url_prefix='/ranking')
 
     @app.route('/')
     def main():
