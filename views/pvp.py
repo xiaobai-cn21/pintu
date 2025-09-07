@@ -1,10 +1,11 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, jsonify
 from flask_socketio import emit, join_room, leave_room
 import random
 
 pvp = Blueprint('pvp', __name__)
 
 room_pool = {}
+user_sid_map = {}
 
 def generate_room_id():
     while True:
@@ -23,7 +24,9 @@ def register_socketio_events(socketio):
         room_pool.setdefault(room_id, [])
         join_room(room_id)
         room_pool[room_id].append(username)
-        emit('room_created', {'code': 200, 'msg': '房间创建成功', 'data': {'room_id': room_id, 'username': username}}, room=room_id)
+        user_sid_map[request.sid] = {'username': username, 'room_id': room_id}
+        # 第一个用户只能收到waiting
+        emit('waiting', {'code': 200, 'msg': '等待另一个玩家加入', 'data': {'room_id': room_id, 'username': username}}, to=request.sid)
 
     @socketio.on('join_room')
     def join_existing_room(data):
@@ -37,8 +40,25 @@ def register_socketio_events(socketio):
             return
         join_room(room_id)
         room_pool[room_id].append(username)
-        # 只发给自己，确保能收到
+        user_sid_map[request.sid] = {'username': username, 'room_id': room_id}
+        # 通知房间所有人可以开始
+        emit('start', {'code': 200, 'msg': '房间已满，可以开始', 'data': {'room_id': room_id}}, room=room_id)
+        # 只通知自己加入成功
         emit('joined', {'code': 200, 'msg': '加入房间成功', 'data': {'room_id': room_id, 'username': username}}, to=request.sid)
+
+    @socketio.on('disconnect')
+    def handle_disconnect():
+        info = user_sid_map.get(request.sid)
+        if info:
+            room_id = info['room_id']
+            username = info['username']
+            leave_room(room_id)
+            if room_id in room_pool and username in room_pool[room_id]:
+                room_pool[room_id].remove(username)
+                if not room_pool[room_id]:
+                    del room_pool[room_id]
+            emit('left', {'code': 200, 'msg': '用户已断开并离开房间', 'data': {'room_id': room_id, 'username': username}}, room=room_id)
+            user_sid_map.pop(request.sid, None)
 
     @socketio.on('leave_room')
     def leave_existing_room(data):
@@ -53,8 +73,21 @@ def register_socketio_events(socketio):
             if not room_pool[room_id]:
                 del room_pool[room_id]
         emit('left', {'code': 200, 'msg': '离开房间成功', 'data': {'room_id': room_id, 'username': username}}, room=room_id)
+        for sid, info in list(user_sid_map.items()):
+            if info['username'] == username and info['room_id'] == room_id:
+                user_sid_map.pop(sid, None)
 
     @socketio.on('challenge')
     def challenge(data):
         room_id = data.get('room_id')
         emit('lose', {}, room=room_id, include_self=False)
+        emit('win', {}, to=request.sid)
+    
+
+@pvp.route('/rooms', methods=['GET'])
+def get_rooms():
+    return jsonify({
+        "code": 200,
+        "message": "获取成功",
+        "data": [{"room_id": rid, "user_count": len(users)} for rid, users in room_pool.items()]
+    })

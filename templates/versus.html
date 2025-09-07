@@ -2,62 +2,109 @@
 <html lang="zh-cn">
 <head>
     <meta charset="UTF-8">
-    <title>简单房间Demo</title>
+    <title>房间对战Demo</title>
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
 <body>
     <div id="main">
-        <button id="createBtn">创建房间</button>
-        <input id="roomInput" placeholder="输入房间号">
+        <input id="username" placeholder="输入你的昵称">
+        <button id="createBtn">创建自己的房间</button>
+        <hr>
+        <h3>当前可加入的房间：</h3>
+        <ul id="roomList"></ul>
+        <hr>
+        <input id="roomInput" placeholder="输入要加入的房间号">
         <button id="joinBtn">加入房间</button>
     </div>
     <div id="room" style="display:none;">
         <p id="roomInfo"></p>
-        <button id="challengeBtn">挑战</button>
+        <button id="challengeBtn" style="display:none;">挑战</button>
         <p id="result"></p>
     </div>
     <script>
         const socket = io("http://localhost:5000");
         let myRoomId = null;
 
+        function fetchRooms() {
+            fetch('/pvp/rooms')
+                .then(res => res.json())
+                .then(data => {
+                    const list = document.getElementById('roomList');
+                    list.innerHTML = '';
+                    if(data.data.length === 0) {
+                        list.innerHTML = '<li>暂无房间</li>';
+                    } else {
+                        data.data.forEach(room => {
+                            const li = document.createElement('li');
+                            li.innerHTML = `房间号: <b>${room.room_id}</b> (${room.user_count}人) <button>加入</button>`;
+                            li.querySelector('button').onclick = function() {
+                                const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
+                                socket.emit('join_room', {room_id: room.room_id, username});
+                            };
+                            list.appendChild(li);
+                        });
+                    }
+                });
+        }
+        fetchRooms();
+        setInterval(fetchRooms, 3000);
+
         document.getElementById('createBtn').onclick = function() {
-            socket.emit('create_room', {username: '用户' + Math.floor(Math.random()*1000)});
+            const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
+            socket.emit('create_room', {username});
         };
 
         document.getElementById('joinBtn').onclick = function() {
             const roomId = document.getElementById('roomInput').value;
+            const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
             if(roomId) {
-                socket.emit('join_room', {room_id: roomId, username: '用户' + Math.floor(Math.random()*1000)});
+                socket.emit('join_room', {room_id: roomId, username});
             }
         };
 
-        socket.on('room_created', function(data) {
+        // 新增waiting事件监听
+        socket.on('waiting', function(data) {
             myRoomId = data.data.room_id;
             document.getElementById('main').style.display = 'none';
             document.getElementById('room').style.display = '';
-            document.getElementById('roomInfo').innerText = '房间号: ' + myRoomId;
+            document.getElementById('roomInfo').innerText = '房间号: ' + myRoomId + '，请等待其他玩家加入...';
+            document.getElementById('challengeBtn').style.display = 'none';
+            document.getElementById('result').innerText = '';
+        });
+
+        // start事件：可以开始挑战
+        socket.on('start', function(data) {
+            myRoomId = data.data.room_id;
+            document.getElementById('main').style.display = 'none';
+            document.getElementById('room').style.display = '';
+            document.getElementById('roomInfo').innerText = '你已加入房间: ' + myRoomId + '，可以开始挑战！';
+            document.getElementById('challengeBtn').style.display = '';
+            document.getElementById('result').innerText = '';
         });
 
         socket.on('joined', function(data) {
             myRoomId = data.data.room_id;
             document.getElementById('main').style.display = 'none';
             document.getElementById('room').style.display = '';
-            document.getElementById('roomInfo').innerText = '房间号: ' + myRoomId;
+            document.getElementById('roomInfo').innerText = '你已加入房间: ' + myRoomId;
         });
 
         document.getElementById('challengeBtn').onclick = function() {
             if(myRoomId) {
                 socket.emit('challenge', {room_id: myRoomId});
+                socket.emit('won', {room_})
             }
         };
 
         socket.on('lose', function() {
             document.getElementById('result').innerText = '你输了';
         });
-
-        // 错误提示
         socket.on('error', function(data) {
             alert(data.msg || JSON.stringify(data));
+        });
+
+        socket.on('win', function() {
+        document.getElementById('result').innerText = '你赢了';
         });
     </script>
 </body>
