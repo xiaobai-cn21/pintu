@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
 import os
-from extensions import users, puzzles, db
+from ..extensions import users, puzzles, db
 from datetime import datetime
 
 pic = Blueprint('pic', __name__)
