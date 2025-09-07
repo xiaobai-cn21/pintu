@@ -174,4 +174,20 @@
 }
 ```
 
+### 9. AI生成像素图片  
+**POST** `/ai/generate`  
+**请求类型**：`application/x-www-form-urlencoded` 或 `multipart/form-data`  
+**参数**：  
+- prompt (string, 必填)：描述词（如“猫咪”）
+
+**返回**：  
+```json
+{
+  "code": 200,
+  "message": "生成成功",
+  "data": {
+    "url": "https://image.pollinations.ai/prompt/xxx"
+  }
+}
+```
 ---
