@@ -107,7 +107,7 @@ h1 {
     margin: 2px;
     position: static;
     z-index: 2;
-    flex-shrink: 0;
+    flex-shrink: 0; 
 }
 
 .puzzle-piece:hover {
@@ -227,3 +227,4 @@ h1 {
         text-align: center;
         padding: 50px;
       }
+
