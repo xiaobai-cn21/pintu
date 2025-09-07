@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>拼图大师 - 主界面</title>
+    <link rel="stylesheet" href="../CSS/style.css">
+    <!-- 引入图标库（可选，用于返回、帮助图标） -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+
+
+<div class="container" style="max-width: 800px; margin: 0 auto; text-align: center;">
+    <div class="background-blur"></div>
+    <div class="content">
+    <!-- Logo -->
+    <div class="logo" style="margin: 60px 0 80px;">
+        <h1 style="font-size: 70px; color: #F9E078; letter-spacing: 2px;">拼图大师</h1>
+        <p style="font-size: 16px; color: #F9E078; margin-top: 10px;">拼出你的专属世界</p>
+    </div>
+
+    <!-- 菜单按钮区 -->
+    <div class="menu-btns" style="display: flex; flex-direction: column; gap: 16px; max-width: 300px; margin: 0 auto;">
+        <!-- 游客模式显示（默认） -->
+        <button id="loginBtn" class="btn btn-primary">登录 / 注册</button>
+        <button id="startGameBtn" class="btn btn-default" onclick="window.location.href='option.html'">开始游戏</button>
+        <button id="helpBtn" class="btn btn-default">帮助中心</button>
+
+        <!-- 登录模式显示（默认隐藏，JS控制） -->
+        <button id="createPuzzleBtn" class="btn btn-default" style="display: none;" onclick="window.location.href='simpleEditor.html'">创建拼图</button>
+        <button id="rankBtn" class="btn btn-default" style="display: none;" onclick="window.location.href='rank.html'">排行榜</button>
+        <button id="myPuzzleBtn" class="btn btn-default" style="display: none;" onclick="window.location.href='myPuzzle.html'">我的拼图</button>
+        <button id="shareBtn" class="btn btn-default" style="display: none;" onclick="window.location.href='share.html'">分享中心</button>
+    </div>
+
+    <!-- 版权信息 -->
+    <div class="copyright" style="position: fixed; bottom: 20px; left: 0; width: 100%; text-align: center; font-size: 12px; color: #999999;">
+        © 2025 拼图大师 版权所有
+    </div>
+</div>
+
+<!-- 登录/注册模态框 -->
+<div class="modal-mask" id="loginModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <span id="modalTitle">登录</span>
+            <span class="modal-close" onclick="document.getElementById('loginModal').style.display='none'">×</span>
+        </div>
+        <div class="modal-body">
+            <div class="tab-switch" style="display: flex; margin-bottom: 16px;">
+                <span class="tab-item active" style="flex: 1; text-align: center; padding: 8px; cursor: pointer;" onclick="switchTab('login')">登录</span>
+                <span class="tab-item" style="flex: 1; text-align: center; padding: 8px; cursor: pointer; color: #666;" onclick="switchTab('register')">注册</span>
+            </div>
+            <!-- 登录表单 -->
+            <form id="loginForm">
+                <div class="input-item">
+                    <label>用户名 / 邮箱</label>
+                    <input type="text" id="loginAccount" placeholder="请输入用户名或邮箱">
+                    <div class="error-tip" id="loginAccountError">请输入正确的用户名或邮箱</div>
+                </div>
+                <div class="input-item">
+                    <label>密码</label>
+                    <input type="password" id="loginPwd" placeholder="请输入密码">
+                    <div class="error-tip" id="loginPwdError">密码错误</div>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                    <label style="display: flex; align-items: center; gap: 6px; font-size: 14px; color: #666;">
+                        <input type="checkbox" id="rememberMe"> 记住我（30天）
+                    </label>
+                    <span style="font-size: 14px; color: #165DFF; cursor: pointer;">忘记密码？</span>
+                </div>
+            </form>
+            <!-- 注册表单（默认隐藏） -->
+            <form id="registerForm" style="display: none;">
+                <div class="input-item">
+                    <label>用户名（4-16位，含字母/数字/下划线）</label>
+                    <input type="text" id="regUsername" placeholder="请输入用户名">
+                    <div class="error-tip" id="regUsernameError">用户名格式错误或已存在</div>
+                </div>
+                <div class="input-item">
+                    <label>邮箱</label>
+                    <input type="email" id="regEmail" placeholder="请输入邮箱">
+                    <div class="error-tip" id="regEmailError">邮箱格式错误或已存在</div>
+                </div>
+                <div class="input-item">
+                    <label>密码（8-20位，含大小写/数字/特殊符号）</label>
+                    <input type="password" id="regPwd" placeholder="请输入密码">
+                    <div class="error-tip" id="regPwdError">密码格式不符合要求</div>
+                </div>
+                <div class="input-item">
+                    <label>确认密码</label>
+                    <input type="password" id="regPwdConfirm" placeholder="请再次输入密码">
+                    <div class="error-tip" id="regPwdConfirmError">两次密码不一致</div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-default" onclick="document.getElementById('loginModal').style.display='none'">取消</button>
+            <button id="submitLogin" class="btn btn-primary">登录</button>
+            <button id="submitRegister" class="btn btn-primary" style="display: none;">注册</button>
+        </div>
+    </div>
+</div>
+
+<!-- 帮助中心悬浮窗（默认隐藏） -->
+<div class="modal-mask" id="helpModal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span>操作指南</span>
+            <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
+        </div>
+        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #666;">
+            <p><strong style="color: #333;">1. 游戏操作</strong></p>
+            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+            <p>- 单击选中的图块，顺时针旋转90度</p>
+            <p>- 点击“撤销”可还原上一步操作，“重做”恢复撤销操作</p>
+            <p><strong style="color: #333; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+            <p><strong style="color: #333; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+            <p>- 自定义拼图可分享至“分享中心”，供其他玩家游玩</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
+        </div>
+    </div>
+</div>
+</div>
+<script>
+    // 1. 登录/注册标签切换
+    function switchTab(type) {
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const loginBtn = document.getElementById('submitLogin');
+        const registerBtn = document.getElementById('submitRegister');
+        const modalTitle = document.getElementById('modalTitle');
+        const tabItems = document.querySelectorAll('.tab-item');
+
+        if (type === 'login') {
+            loginForm.style.display = 'block';
+            registerForm.style.display = 'none';
+            loginBtn.style.display = 'block';
+            registerBtn.style.display = 'none';
+            modalTitle.textContent = '登录';
+            tabItems[0].classList.add('active');
+            tabItems[0].style.color = '#333';
+            tabItems[1].classList.remove('active');
+            tabItems[1].style.color = '#666';
+        } else {
+            loginForm.style.display = 'none';
+            registerForm.style.display = 'block';
+            loginBtn.style.display = 'none';
+            registerBtn.style.display = 'block';
+            modalTitle.textContent = '注册';
+            tabItems[1].classList.add('active');
+            tabItems[1].style.color = '#333';
+            tabItems[0].classList.remove('active');
+            tabItems[0].style.color = '#666';
+        }
+    }
+
+    // 2. 显示登录模态框
+    document.getElementById('loginBtn').addEventListener('click', () => {
+        document.getElementById('loginModal').style.display = 'flex';
+    });
+
+    // 3. 显示帮助模态框
+    document.getElementById('helpBtn').addEventListener('click', () => {
+        document.getElementById('helpModal').style.display = 'flex';
+    });
+
+    // 4. 登录状态判断（示例：若localStorage有token，显示登录后菜单）
+    window.onload = function() {
+        const token = localStorage.getItem('puzzleToken');
+        if (token) {
+            document.getElementById('loginBtn').style.display = 'none';
+            document.getElementById('createPuzzleBtn').style.display = 'block';
+            document.getElementById('rankBtn').style.display = 'block';
+            document.getElementById('myPuzzleBtn').style.display = 'block';
+            document.getElementById('shareBtn').style.display = 'block';
+        }
+    }
+
+    // 5. 登录/注册提交逻辑（示例，实际需对接后端）
+    document.getElementById('submitLogin').addEventListener('click', () => {
+        // 这里仅做前端模拟，实际需调用接口校验
+        localStorage.setItem('puzzleToken', 'test_token_123'); // 模拟登录成功，存储token
+        window.location.reload(); // 刷新页面显示登录后菜单
+    });
+    document.getElementById('submitRegister').addEventListener('click', () => {
+        // 模拟注册成功，自动登录
+        localStorage.setItem('puzzleToken', 'test_token_456');
+        window.location.reload();
+    });
+</script>
+</body>
+</html>

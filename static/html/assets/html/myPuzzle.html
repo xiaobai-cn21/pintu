@@ -1,0 +1,31 @@
+<!-- 顶部导航 -->
+<div class="page-title">
+    <i class="fa fa-arrow-left back-btn" onclick="window.location.href='menu.html'"></i>
+    <span>我的存档</span>
+    <button class="btn btn-danger" style="margin-left: auto; padding: 6px 12px; font-size: 12px;">清理全部存档</button>
+</div>
+
+<!-- 存档列表（有存档时） -->
+<div class="archive-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+    <div class="archive-card card">
+        <div style="display: flex; gap: 16px;">
+            <img src="../images/lake.png" alt="存档缩略图" style="width: 100px; height: 100px; object-fit: cover; border-radius: 4px;">
+            <div style="flex: 1;">
+                <h3 style="font-size: 16px; margin-bottom: 8px;">自然风光 - 湖泊（简单）</h3>
+                <p style="font-size: 12px; color: #666; margin-bottom: 4px;">保存时间：2025-08-28 14:30</p>
+                <p style="font-size: 12px; color: #666; margin-bottom: 4px;">已用时：01:20</p>
+                <p style="font-size: 12px; color: #666;">已走步数：22步</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: 10px; margin-top: 16px; justify-content: flex-end;">
+            <button class="btn btn-default" onclick="continueGame('archive1')">继续游戏</button>
+            <button class="btn btn-danger" onclick="deleteArchive('archive1')">删除</button>
+        </div>
+    </div>
+</div>
+
+<!-- 空状态（无存档时） -->
+<div class="empty-state" style="text-align: center; padding: 60px 0;">
+    <p style="font-size: 16px; color: #666; margin-bottom: 20px;">暂无游戏存档</p>
+    <button class="btn btn-primary" onclick="window.location.href='option.html'">去开始游戏</button>
+</div>

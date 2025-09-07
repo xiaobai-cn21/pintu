@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>拼图大师 - 选择关卡</title>
+    <link rel="stylesheet" href="../CSS/style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+</head>
+<body>
+<div class="container" style="max-width: 1200px; margin: 0 auto;">
+    <div class="background-blur"></div>
+    <!-- 顶部导航 -->
+    <div class="page-title">
+        <i class="fa fa-arrow-left back-btn" onclick="window.location.href='menu.html'"></i>
+        <span>选择关卡</span>
+    </div>
+
+    <!-- 筛选区 -->
+    <div class="filter-area card" style="margin-bottom: 24px;">
+        <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+            <!-- 风格筛选 -->
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #666;">风格筛选</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <label class="filter-label active" style="padding: 6px 12px; border-radius: 4px; cursor: pointer; background-color: #165DFF; color: #FFF;">全部</label>
+                    <label class="filter-label" style="padding: 6px 12px; border-radius: 4px; cursor: pointer; border: 1px solid #E5E7EB;">自然风光</label>
+                    <label class="filter-label" style="padding: 6px 12px; border-radius: 4px; cursor: pointer; border: 1px solid #E5E7EB;">动物</label>
+                    <label class="filter-label" style="padding: 6px 12px; border-radius: 4px; cursor: pointer; border: 1px solid #E5E7EB;">建筑</label>
+                    <label class="filter-label" style="padding: 6px 12px; border-radius: 4px; cursor: pointer; border: 1px solid #E5E7EB;">卡通</label>
+                </div>
+            </div>
+            <!-- 难度筛选 -->
+            <div style="flex: 1; min-width: 200px;">
+                <label style="display: block; margin-bottom: 8px; font-size: 14px; color: #666;">难度筛选</label>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <label class="filter-label active" style="padding: 6px 12px; border-radius: 4px; cursor: pointer; background-color: #165DFF; color: #FFF;">全部</label>
+                    <label class="filter-label" style="padding: 6px 12px; border-radius: 4px; cursor: pointer; border: 1px solid #E5E7EB;">简单（3*3）</label>
+                    <label class="filter-label" style="padding: 6px 12px; border-radius: 4px; cursor: pointer; border: 1px solid #E5E7EB;">中等（4*4）</label>
+                    <label class="filter-label" style="padding: 6px 12px; border-radius: 4px; cursor: pointer; border: 1px solid #E5E7EB;">困难（5*5）</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 关卡展示区 -->
+    <div class="level-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;">
+        <!-- 关卡卡片1（自然风光-简单） -->
+        <div class="level-card card" style="cursor: pointer; position: relative;" onclick="selectLevel('level1', '../images/lake.png', 3)">
+            <div style="position: relative; margin-bottom: 12px;">
+                <img src="../images/lake.png" alt="自然风光-简单" style="width: 100%; height: 140px; object-fit: cover; border-radius: 4px;">
+                <span style="position: absolute; top: 8px; left: 8px; background-color: #52C41A; color: #FFF; font-size: 12px; padding: 2px 8px; border-radius: 4px;">简单</span>
+            </div>
+            <h3 style="font-size: 16px; margin-bottom: 8px;">自然风光 - 湖泊</h3>
+            <p style="font-size: 12px; color: #666;">你的最佳成绩：02:15 | 38步</p>
+            <button class="btn" style="position: absolute; right: 12px; bottom: 12px;" onclick="event.stopPropagation(); editLevel('../images/lake.png', 3);">编辑</button>
+        </div>
+        <!-- 关卡卡片2（动物-中等） -->
+        <div class="level-card card" style="cursor: pointer; position: relative;" onclick="selectLevel('level2', '../images/snow.png', 4)">
+            <div style="position: relative; margin-bottom: 12px;">
+                <img src="../images/snow.png" alt="雪山-中等" style="width: 100%; height: 140px; object-fit: cover; border-radius: 4px;">
+                <span style="position: absolute; top: 8px; left: 8px; background-color: #FAAD14; color: #FFF; font-size: 12px; padding: 2px 8px; border-radius: 4px;">中等</span>
+            </div>
+            <h3 style="font-size: 16px; margin-bottom: 8px;">雪山 - 中等</h3>
+            <p style="font-size: 12px; color: #666;">未挑战该难度</p>
+            <button class="btn" style="position: absolute; right: 12px; bottom: 12px;" onclick="event.stopPropagation(); editLevel('../images/snow.png', 4);">编辑</button>
+        </div>
+        <!-- 更多关卡卡片... -->
+    </div>
+
+    <!-- 底部进入游戏按钮 -->
+    <div style="text-align: center; margin-top: 30px;">
+        <button id="enterGameBtn" class="btn btn-primary" style="padding: 12px 40px; font-size: 16px;" disabled>进入游戏</button>
+    </div>
+</div>
+
+<script>
+    let selectedLevelId = '';
+    let selectedImage = '';
+    let selectedDifficulty = 3;
+
+    // 筛选标签切换
+    document.querySelectorAll('.filter-label').forEach(label => {
+        label.addEventListener('click', () => {
+            const parent = label.parentElement;
+            parent.querySelectorAll('.filter-label').forEach(item => {
+                item.classList.remove('active');
+                item.style.backgroundColor = '#FFF';
+                item.style.color = '#333';
+                item.style.border = '1px solid #E5E7EB';
+            });
+            label.classList.add('active');
+            label.style.backgroundColor = '#165DFF';
+            label.style.color = '#FFF';
+            label.style.border = 'none';
+        });
+    });
+
+    // 选择关卡
+    function selectLevel(levelId, image, difficulty) {
+        selectedLevelId = levelId;
+        selectedImage = image;
+        selectedDifficulty = difficulty;
+        document.querySelectorAll('.level-card').forEach(card => {
+            card.style.border = '1px solid #E5E7EB';
+        });
+        event.currentTarget.style.border = '2px solid #165DFF';
+        document.getElementById('enterGameBtn').disabled = false;
+    }
+
+    // 编辑关卡
+    function editLevel(image, difficulty) {
+        localStorage.setItem('customImage', image);
+        localStorage.setItem('customSize', difficulty);
+        window.location.href = 'simpleEditor.html';
+    }
+
+    // 进入游戏
+    document.getElementById('enterGameBtn').addEventListener('click', () => {
+        localStorage.setItem('customImage', selectedImage);
+        localStorage.setItem('customSize', selectedDifficulty);
+        window.location.href = 'index.html';
+    });
+</script>
+</body>
+</html>
