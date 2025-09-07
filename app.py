@@ -1,14 +1,17 @@
-from flask import Flask
+import eventlet
+eventlet.monkey_patch()
+from flask import Flask,render_template
 from config import Config
 from extensions import db
 from flask_jwt_extended import JWTManager
 from views.auth import auth
 from views.pic import pic
-from config import Config
+from views.ai import ai
+from views.pvp import pvp, register_socketio_events
+from flask_socketio import SocketIO
 
 def create_app():
     app = Flask(__name__)
-
     app.config['SQLALCHEMY_DATABASE_URI'] = (
         f"mysql+pymysql://{Config.MYSQL_USER}:{Config.MYSQL_PASSWORD}@"
         f"{Config.MYSQL_HOST}:{Config.MYSQL_PORT}/{Config.MYSQL_DB}"
@@ -17,17 +20,23 @@ def create_app():
     app.config['JWT_SECRET_KEY'] = Config.SECRET_KEY
     db.init_app(app)
     JWTManager(app)
-    
+
     app.register_blueprint(auth, url_prefix='/auth')
     app.register_blueprint(pic, url_prefix='/pic')
+    app.register_blueprint(ai, url_prefix='/ai')
+    app.register_blueprint(pvp, url_prefix='/pvp')
 
     @app.route('/')
     def main():
-        return '欢迎来到拼图项目主页！'
+        return render_template('versus.html')
     return app
 
 if __name__ == '__main__':
     app = create_app()
     with app.app_context():
         db.create_all()
-    app.run(debug=True)
+    from views.pvp import register_socketio_events
+    socketio = SocketIO(app, async_mode='eventlet',cors_allowed_origins="*")  # 这里创建并绑定 app
+    print("async_mode:", socketio.async_mode)
+    register_socketio_events(socketio)
+    socketio.run(app, debug=True, host='0.0.0.0', port=5000, use_reloader=False)

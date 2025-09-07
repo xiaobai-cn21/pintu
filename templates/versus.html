@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>简单房间Demo</title>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+    <div id="main">
+        <button id="createBtn">创建房间</button>
+        <input id="roomInput" placeholder="输入房间号">
+        <button id="joinBtn">加入房间</button>
+    </div>
+    <div id="room" style="display:none;">
+        <p id="roomInfo"></p>
+        <button id="challengeBtn">挑战</button>
+        <p id="result"></p>
+    </div>
+    <script>
+        const socket = io("http://localhost:5000");
+        let myRoomId = null;
+
+        document.getElementById('createBtn').onclick = function() {
+            socket.emit('create_room', {username: '用户' + Math.floor(Math.random()*1000)});
+        };
+
+        document.getElementById('joinBtn').onclick = function() {
+            const roomId = document.getElementById('roomInput').value;
+            if(roomId) {
+                socket.emit('join_room', {room_id: roomId, username: '用户' + Math.floor(Math.random()*1000)});
+            }
+        };
+
+        socket.on('room_created', function(data) {
+            myRoomId = data.data.room_id;
+            document.getElementById('main').style.display = 'none';
+            document.getElementById('room').style.display = '';
+            document.getElementById('roomInfo').innerText = '房间号: ' + myRoomId;
+        });
+
+        socket.on('joined', function(data) {
+            myRoomId = data.data.room_id;
+            document.getElementById('main').style.display = 'none';
+            document.getElementById('room').style.display = '';
+            document.getElementById('roomInfo').innerText = '房间号: ' + myRoomId;
+        });
+
+        document.getElementById('challengeBtn').onclick = function() {
+            if(myRoomId) {
+                socket.emit('challenge', {room_id: myRoomId});
+            }
+        };
+
+        socket.on('lose', function() {
+            document.getElementById('result').innerText = '你输了';
+        });
+
+        // 错误提示
+        socket.on('error', function(data) {
+            alert(data.msg || JSON.stringify(data));
+        });
+    </script>
+</body>
+</html>
