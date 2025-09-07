@@ -47,7 +47,30 @@ body {
     border-color: #165DFF;
     color: #165DFF;
 }
+/* 三角形拼图块样式 */
+.puzzle-piece.triangle {
+    clip-path: polygon(0 0, 0 100%, 100% 0);
+    transition: transform 0.3s ease;
+}
 
+/* 拼图块操作提示 */
+.puzzle-piece::after {
+    content: "右击旋转/双击翻转";
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.7);
+    background: rgba(0, 0, 0, 0.5);
+    padding: 2px 4px;
+    border-radius: 3px;
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.puzzle-piece:hover::after {
+    opacity: 1;
+}
 /* 卡片通用样式 */
 .card {
     background-color: #FFFFFF;

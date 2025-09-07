@@ -89,6 +89,14 @@
                         <option value="8">8 x 8</option>
                     </select>
                 </div>
+                <!-- 添加形状选择 -->
+                <div class="input-item">
+                    <label>形状</label>
+                    <select id="shapeSelect">
+                        <option value="square" selected>方形</option>
+                        <option value="triangle">三角形</option>
+                    </select>
+                </div>
             </div>
         </div>
         <!-- 右侧：预览区 -->
@@ -120,6 +128,9 @@
         const previewTip = document.getElementById('previewTip');
         const difficultyText = document.getElementById('difficultyText');
         let imgData = null;
+        //形状变量
+        const shapeSelect = document.getElementById('shapeSelect');
+        let currentShape = 'square';
 
         // 上传图片
         uploadBox.onclick = () => imageUpload.click();
@@ -170,6 +181,11 @@
         });
         updateDifficultyText();
 
+        shapeSelect.addEventListener('change', () => {
+            drawGrid();
+            updateDifficultyText(); // 可选：根据形状更新难度提示
+        });
+
         // 绘制网格
         function drawGrid() {
             if (!imgData) return;
@@ -183,6 +199,8 @@
                 ctx.strokeStyle = "#FFFFFF";
                 ctx.lineWidth = 2;
                 const grid = parseInt(difficultySelect.value);
+                //获取当前形状
+                currentShape = shapeSelect.value;
                 // 竖线
                 for (let i = 1; i < grid; i++) {
                     let x = i * gridCanvas.width / grid;
@@ -199,6 +217,32 @@
                     ctx.lineTo(gridCanvas.width, y);
                     ctx.stroke();
                 }
+                // 三角形模式添加对角线
+                if (currentShape === 'triangle') {
+                    for (let i = 0; i < grid; i++) {
+                        for (let j = 0; j < grid; j++) {
+                            const x = j * gridCanvas.width / grid;
+                            const y = i * gridCanvas.height / grid;
+                            const nextX = (j+1) * gridCanvas.width / grid;
+                            const nextY = (i+1) * gridCanvas.height / grid;
+
+                            // 交错切割：奇数行奇数列切主对角线，其他切副对角线
+                            if ((i % 2 === 0 && j % 2 === 0) || (i % 2 === 1 && j % 2 === 1)) {
+                                // 主对角线
+                                ctx.beginPath();
+                                ctx.moveTo(x, y);
+                                ctx.lineTo(nextX, nextY);
+                                ctx.stroke();
+                            } else {
+                                // 副对角线
+                                ctx.beginPath();
+                                ctx.moveTo(nextX, y);
+                                ctx.lineTo(x, nextY);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
             };
             previewImage.src = imgData;
         }
@@ -207,6 +251,7 @@
         playBtn.addEventListener('click', function() {
             localStorage.setItem('customImage', imgData);
             localStorage.setItem('customSize', difficultySelect.value);
+            localStorage.setItem('customShape', shapeSelect.value); // 保存形状
             window.location.href = 'index.html';
         });
 
