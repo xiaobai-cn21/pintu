@@ -30,7 +30,40 @@ def create_app():
 
     @app.route('/')
     def main():
-        return render_template('versus.html')
+        return render_template('index.html')
+
+    # 其它页面路由（模板渲染）
+    @app.route('/menu')
+    def menu_page():
+        return render_template('menu.html')
+
+    @app.route('/option')
+    def option_page():
+        return render_template('option.html')
+
+    @app.route('/game')
+    def game_page():
+        return render_template('game.html')
+
+    @app.route('/editor')
+    def editor_page():
+        return render_template('edditor.html')
+
+    @app.route('/rank')
+    def rank_page():
+        return render_template('rank.html')
+
+    @app.route('/my-puzzle')
+    def my_puzzle_page():
+        return render_template('myPuzzle.html')
+
+    @app.route('/share')
+    def share_page():
+        return render_template('share.html')
+
+    @app.route('/loading')
+    def loading_page():
+        return render_template('loading.html')
     return app
 
 if __name__ == '__main__':

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>排行榜</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="container" style="max-width: 800px; margin: 0 auto;">
+    <div class="background-blur"></div>
+    <div class="page-title">
+        <a class="back-btn" href="{{ url_for('menu_page') }}">返回</a>
+        <span>排行榜</span>
+    </div>
+    <div id="rankList" class="card" style="padding:16px;">
+        加载中...
+    </div>
+</div>
+<script>
+fetch('/ranking/')
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.code===200){
+      const list=d.data||[];
+      const html=list.map((it,i)=>`<div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;">
+        <span>${i+1}. ${it.username||('用户'+it.user_id)}</span>
+        <span>用时: ${it.time_used} | 步数: ${it.step_count}</span>
+      </div>`).join('');
+      document.getElementById('rankList').innerHTML=html||'暂无数据';
+    }else{document.getElementById('rankList').textContent='加载失败'}
+  }).catch(()=>{document.getElementById('rankList').textContent='加载失败'})
+</script>
+</body>
+</html>
+
+
