@@ -283,7 +283,7 @@
             <button id="refreshBtn" class="refresh-btn" title="刷新数据">🔄</button>
         </div>
 
-        <!-- 我的排名卡片 -->
+        <!-- 我的排名卡片：显示当前登录用户的聚合成绩（排名/总时长/总步数） -->
         <div id="myRankCard" class="my-rank-card" style="display: none;">
             <div class="my-rank-title">我的成绩</div>
             <div class="my-rank-info">
@@ -299,14 +299,10 @@
                     <div class="my-rank-label">总步数</div>
                     <div class="my-rank-value" id="myTotalSteps">0</div>
                 </div>
-                <div class="my-rank-item">
-                    <div class="my-rank-label">完成关卡</div>
-                    <div class="my-rank-value" id="myCompletedLevels">0</div>
-                </div>
             </div>
         </div>
 
-        <!-- 排行榜表格 -->
+        <!-- 排行榜表格：总榜（后端已按时长降序/步数升序，前端再次稳妥排序） -->
         <div id="rankTableContainer">
             <table class="rank-table">
                 <thead>
@@ -315,7 +311,6 @@
                         <th>玩家</th>
                         <th>游戏总时长</th>
                         <th>总步数</th>
-                        <th>完成总关卡</th>
                     </tr>
                 </thead>
                 <tbody id="rankTableBody">
@@ -326,7 +321,7 @@
 
         <!-- 加载状态 -->
         <div id="loadingMessage" class="loading-message" style="display: none;">
-            <div>🔄 正在加载排行榜数据...</div>
+            <div>正在加载排行榜数据...</div>
         </div>
 
         <!-- 错误状态 -->
@@ -336,7 +331,7 @@
 
         <!-- 空数据状态 -->
         <div id="emptyMessage" class="empty-message" style="display: none;">
-            <div>📊 暂无排行榜数据</div>
+            <div>暂无排行榜数据</div>
         </div>
     </div>
 
@@ -406,44 +401,49 @@
             displayRankData(data) {
                 this.hideAllMessages();
                 
-                // 排序：总时长降序，其次总步数升序
+                // 前端兜底排序：总时长降序，其次总步数升序
                 const sorted = [...data.rankList].sort((a, b) => {
                     if (b.totalTime !== a.totalTime) return b.totalTime - a.totalTime;
                     return a.totalSteps - b.totalSteps;
                 });
-                // 重新计算排名
+                // 重新计算排名序号
                 sorted.forEach((p, idx) => { p.rank = idx + 1; });
                 
-                // 计算“我”的排名（优先使用后端提供的 playerName）
-                const currentName = (data.myRank && data.myRank.playerName) ? data.myRank.playerName : '当前用户';
+                // 计算“我”的排名（按用户名匹配；若未登录则默认“当前用户”）
+                const currentName = localStorage.getItem('username') || (data.myRank && data.myRank.playerName) || '当前用户';
                 const myEntry = sorted.find(p => p.playerName === currentName);
                 if (myEntry) {
                     this.displayMyRank({
                         rank: myEntry.rank,
                         playerName: myEntry.playerName,
                         totalTime: myEntry.totalTime,
-                        totalSteps: myEntry.totalSteps,
-                        completedLevels: myEntry.completedLevels
+                        totalSteps: myEntry.totalSteps
                     });
                 } else if (data.myRank) {
                     // 回退：如果列表未包含该用户，则显示后端提供的信息
-                    this.displayMyRank(data.myRank);
+                    this.displayMyRank({
+                        rank: data.myRank.rank || '-',
+                        playerName: data.myRank.playerName || currentName,
+                        totalTime: data.myRank.totalTime || 0,
+                        totalSteps: data.myRank.totalSteps || 0
+                    });
                 }
                 
-                // 显示排行榜
+                // 渲染排行榜
                 this.displayRankList(sorted);
                 
                 this.rankTableContainer.style.display = 'block';
             }
 
+            // 渲染“我的成绩”卡片
             displayMyRank(myRank) {
                 document.getElementById('myRank').textContent = myRank.rank;
                 document.getElementById('myTotalTime').textContent = this.formatTime(myRank.totalTime);
                 document.getElementById('myTotalSteps').textContent = myRank.totalSteps;
-                document.getElementById('myCompletedLevels').textContent = myRank.completedLevels;
                 this.myRankCard.style.display = 'block';
             }
 
+            // 渲染排行榜列表
             displayRankList(rankList) {
                 this.rankTableBody.innerHTML = '';
                 
@@ -471,11 +471,6 @@
                         <td>
                             <span class="steps-display ${isTop3 ? 'top3' : ''}">
                                 ${player.totalSteps}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="levels-display ${isTop3 ? 'top3' : ''}">
-                                ${player.completedLevels}
                             </span>
                         </td>
                     `;
