@@ -3,7 +3,6 @@
         <a class="pm-brand" href="{{ url_for('main') }}">PuzzleMaster</a>
         <a class="pm-link" href="{{ url_for('main') }}">首页</a>
         <a class="pm-link" href="{{ url_for('option_page') }}">开始游戏</a>
-        <a class="pm-link" href="{{ url_for('ai_page') }}" id="pm-ai-link">AI生成</a>
         <a class="pm-link" id="pm-help-link" href="#">帮助</a>
     </div>
     <div class="pm-nav-right">
@@ -46,18 +45,6 @@
     }
   }
 
-  // AI 生成需要登录
-  const aiLink=document.getElementById('pm-ai-link');
-  if(aiLink){
-    aiLink.addEventListener('click', function(e){
-      const t=localStorage.getItem('puzzleToken');
-      if(!t){
-        e.preventDefault();
-        const modal = document.getElementById('loginModal');
-        if(modal){ modal.style.display='flex'; }
-      }
-    });
-  }
 
   // 控制头像菜单打开/关闭，不依赖 hover，避免闪退
   const wrap = document.getElementById('pm-avatar-wrap');

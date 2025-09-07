@@ -1,9 +1,10 @@
 /* 重置默认样式 */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: "Microsoft YaHei", Arial, sans-serif;
+    font-family: 'Press Start 2P', "Microsoft YaHei", Arial, monospace;
 }
 
 body {
@@ -17,53 +18,62 @@ body {
     background-attachment: fixed;
 }
 
+/* 滚动条深色样式（全站适用） */
+*::-webkit-scrollbar{width:8px;height:8px}
+*::-webkit-scrollbar-track{background:#20223A}
+*::-webkit-scrollbar-thumb{background:#3a3c5e;border-radius:6px;border:1px solid #20223A}
+*::-webkit-scrollbar-thumb:hover{background:#4a4d72}
+html{scrollbar-color:#3a3c5e #20223A;scrollbar-width:thin}
+
 /* 按钮通用样式 */
 .btn {
     padding: 10px 20px;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
+    border: 3px solid #F9E078;
+    border-radius: 0;
+    font-size: 10px;
+    font-family: 'Press Start 2P', monospace;
+    letter-spacing: 1px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform 0.05s ease;
+    background: #20223A;
+    color: #F9E078;
+    box-shadow: 4px 4px 0 #000000;
+}
+.btn:hover { 
+    transform: translate(-1px, -1px); 
+    box-shadow: 6px 6px 0 #000000; 
+}
+.btn:active { 
+    transform: translate(0,0); 
+    box-shadow: 3px 3px 0 #000000; 
 }
 .btn-primary {
-    background-color: #165DFF;
-    color: #FFFFFF;
-}
-.btn-primary:hover {
-    background-color: #0E42D2;
-    box-shadow: 0 2px 8px rgba(22, 93, 255, 0.3);
+    background: #20223A;
+    color: #F9E078;
+    border-color: #F9E078;
 }
 .btn-danger {
-    background-color: #FF4D4F;
-    color: #FFFFFF;
-}
-.btn-danger:hover {
-    background-color: #E03A3A;
+    background: #20223A;
+    color: #F9E078;
+    border-color: #FF4D4F;
 }
 .btn-default {
-    background-color: #FFFFFF;
-    color: #333333;
-    border: 1px solid #E5E7EB;
-}
-.btn-default:hover {
-    border-color: #165DFF;
-    color: #165DFF;
+    background: #20223A;
+    color: #F9E078;
+    border-color: #F9E078;
 }
 
 /* 卡片通用样式 */
 .card {
-    background-color: #FFFFFF;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    background-color: #20223A;
+    border-radius: 0;
+    border: 3px solid #F9E078;
+    box-shadow: 6px 6px 0 #000000;
     padding: 16px;
     margin-bottom: 16px;
-    transition: box-shadow 0.3s ease;
+    transition: box-shadow 0.1s ease, transform 0.05s ease;
 }
-.card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-}
+.card:hover { box-shadow: 8px 8px 0 #000000; }
 
 /* 标题通用样式 */
 .page-title {
@@ -98,8 +108,10 @@ body {
     display: none; /* 默认隐藏 */
 }
 .modal-content {
-    background-color: #FFFFFF;
-    border-radius: 8px;
+    background-color: #20223A;
+    border-radius: 0;
+    border: 3px solid #F9E078;
+    box-shadow: 8px 8px 0 #000000;
     width: 90%;
     max-width: 400px;
     padding: 24px;
@@ -135,17 +147,20 @@ body {
     margin-bottom: 6px;
     color: #666666;
 }
-.input-item input, .input-item select {
+.input-item input, .input-item select, textarea, input, select {
     width: 100%;
     padding: 10px 12px;
-    border: 1px solid #E5E7EB;
-    border-radius: 6px;
-    font-size: 14px;
+    border: 3px solid #F9E078;
+    border-radius: 0;
+    font-size: 12px;
+    background:#20223A;
+    color:#F9E078;
+    box-shadow: 4px 4px 0 #000000;
 }
 .input-item input:focus, .input-item select:focus {
     outline: none;
-    border-color: #165DFF;
-    box-shadow: 0 0 0 2px rgba(22, 93, 255, 0.1);
+    border-color: #F9E078;
+    box-shadow: 0 0 0 2px rgba(249, 224, 120, 0.1);
 }
 .error-tip {
     font-size: 12px;
@@ -195,8 +210,8 @@ body {
        }
 /* PuzzleMaster 顶部导航 */
 .pm-navbar{position:sticky;top:0;z-index:1000;display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:#20223A;border-bottom:1px solid rgba(255,255,255,0.08)}
-.pm-brand{font-weight:700;color:#F9E078;text-decoration:none;margin-right:16px}
-.pm-link{color:#F9E078;text-decoration:none;margin-right:12px;opacity:.9}
+.pm-brand{font-weight:700;color:#F9E078;text-decoration:none;margin-right:16px;font-family:'Press Start 2P', monospace;letter-spacing:1px;font-size:12px}
+.pm-link{color:#F9E078;text-decoration:none;margin-right:12px;opacity:.9;font-family:'Press Start 2P', monospace;letter-spacing:1px;font-size:10px}
 .pm-link:hover{opacity:1}
 .pm-nav-left{display:flex;align-items:center;gap:8px}
 .pm-nav-right{display:flex;align-items:center}

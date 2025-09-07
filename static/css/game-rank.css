@@ -1,11 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
+    font-family: 'Press Start 2P', "Microsoft YaHei", Arial, monospace;
 }
 
 body {
-    font-family: 'Arial', sans-serif;
+    font-family: 'Press Start 2P', "Microsoft YaHei", Arial, monospace;
     background-color: #20223A;
     color: #F9E078;
     line-height: 1.6;
@@ -36,35 +38,51 @@ h1 {
 }
 
 .btn {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 8px 16px;
+    background-color: #20223A;
+    color: #F9E078;
+    border: 3px solid #F9E078;
+    padding: 10px 20px;
     cursor: pointer;
-    border-radius: 4px;
-    font-size: 16px;
-    transition: background-color 0.3s;
+    border-radius: 0;
+    font-size: 10px;
+    font-family: 'Press Start 2P', monospace;
+    letter-spacing: 1px;
+    transition: transform 0.05s ease;
+    box-shadow: 4px 4px 0 #000000;
 }
 
 .btn:hover {
-    background-color: #2980b9;
+    transform: translate(-1px, -1px);
+    box-shadow: 6px 6px 0 #000000;
+}
+
+.btn:active {
+    transform: translate(0,0);
+    box-shadow: 3px 3px 0 #000000;
 }
 
 .btn:disabled {
-    background-color: #bdc3c7;
+    background-color: #20223A;
+    color: #666;
+    border-color: #666;
     cursor: not-allowed;
     opacity: 0.6;
 }
 
 .btn:disabled:hover {
-    background-color: #bdc3c7;
+    transform: none;
+    box-shadow: 4px 4px 0 #000000;
 }
 
 #difficultySelect {
     padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 16px;
+    border: 3px solid #F9E078;
+    border-radius: 0;
+    font-size: 10px;
+    background: #20223A;
+    color: #F9E078;
+    box-shadow: 4px 4px 0 #000000;
+    font-family: 'Press Start 2P', monospace;
 }
 
 .game-info {
@@ -86,7 +104,7 @@ h1 {
 .puzzle-board {
     width: 400px;
     height: 400px;
-    background: #fff;
+    background: #20223A;
     border: 2px solid #aedcec;
     position: relative;
     margin-bottom: 20px;
@@ -146,7 +164,7 @@ h1 {
 .pieces-zone {
     width: 100%;
     min-height: 110px;
-    background: #f0f8ff;
+    background: #20223A;
     border: 2px dashed #aedcec;
     display: flex;
     flex-direction: row;
@@ -171,7 +189,7 @@ h1 {
 }
 
 .message {
-    background-color: white;
+    background-color: #20223A;
     padding: 30px;
     border-radius: 8px;
     text-align: center;
@@ -247,8 +265,8 @@ h1 {
 
 /* 顶部导航在游戏/排行榜样式表中也生效 */
 .pm-navbar{position:sticky;top:0;z-index:1000;display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:#20223A;border-bottom:1px solid rgba(255,255,255,0.08)}
-.pm-brand{font-weight:700;color:#F9E078;text-decoration:none;margin-right:16px}
-.pm-link{color:#F9E078;text-decoration:none;margin-right:12px;opacity:.9}
+.pm-brand{font-weight:700;color:#F9E078;text-decoration:none;margin-right:16px;font-family:'Press Start 2P', monospace;letter-spacing:1px;font-size:14px}
+.pm-link{color:#F9E078;text-decoration:none;margin-right:12px;opacity:.9;font-family:'Press Start 2P', monospace;letter-spacing:1px;font-size:12px}
 .pm-link:hover{opacity:1}
 .pm-nav-left{display:flex;align-items:center;gap:8px}
 .pm-nav-right{display:flex;align-items:center}
