@@ -20,7 +20,7 @@ let timerInterval;
 let seconds = 0;
 let moves = 0;
 let gameStarted = false;
-let originalImageUrl = './puzzle-image.jpg'; // Imagen por defecto
+let originalImageUrl = '../puzzle-image.jpg'; // Imagen por defecto
 let draggedPiece = null;
 let bgVisible = true;
 let shape = 'square'; // 默认为方形
@@ -102,9 +102,6 @@ function toggleBg() {
 
 // 开始游戏
 function startGame() {
-    if (gameStarted) {
-        resetGame();
-    }
     gameStarted = true;
     moves = 0;
     seconds = 0;
@@ -113,33 +110,35 @@ function startGame() {
     clearInterval(timerInterval);
     timerInterval = setInterval(updateTimer, 1000);
 
-    // 调用重构后的 setPuzzleBg，并把创建拼图的逻辑作为回调传入
-    setPuzzleBg(() => {
-        puzzleBg.style.opacity = bgVisible ? '0.25' : '0';
-        toggleBgBtn.textContent = bgVisible ? '隐藏背景' : '显示背景';
-        createPuzzlePieces();
-    });
+    function checkAndLaunch() {
+        if (puzzleBoard.offsetWidth === 0) {
+            requestAnimationFrame(checkAndLaunch);
+        } else {
+            setPuzzleBg(() => {
+                puzzleBg.style.opacity = bgVisible ? '0.25' : '0';
+                toggleBgBtn.textContent = bgVisible ? '隐藏背景' : '显示背景';
+                createPuzzlePieces();
+            });
+        }
+    }
+    checkAndLaunch();
 }
 
 // 重置游戏
 function resetGame() {
     gameStarted = false;
     clearInterval(timerInterval);
-    seconds = 0;
-    moves = 0;
-    timerElement.textContent = `时间: 00:00`;
-    movesElement.textContent = `移动次数: ${moves}`;
-    //puzzleBoard.querySelectorAll('.puzzle-piece').forEach(piece => piece.remove());
-    // 直接清空容器内容更高效
+
+    // 同样，这里的清理现在是安全的
     puzzleBoard.innerHTML = '';
     piecesZone.innerHTML = '';
-    if (svgDefs) { //清空 SVG 定义
+    if (svgDefs) {
         svgDefs.innerHTML = '';
     }
     pieces = [];
-    setPuzzleBg();
-    puzzleBg.style.opacity = bgVisible ? '0.25' : '0';
-    toggleBgBtn.textContent = bgVisible ? '隐藏背景' : '显示背景';
+
+    // 直接调用 startGame 来处理所有重置和启动逻辑
+    startGame();
 }
 
 // 更新计时器
@@ -152,17 +151,10 @@ function updateTimer() {
 
 // 创建拼图块
 function createPuzzlePieces() {
-    //puzzleBoard.querySelectorAll('.puzzle-piece').forEach(piece => piece.remove());
     puzzleBoard.innerHTML = '';
     piecesZone.innerHTML = '';
     if (svgDefs) svgDefs.innerHTML = '';
     pieces = [];
-
-    // 确保棋盘尺寸已就绪
-    if (puzzleBoard.offsetWidth === 0) {
-        setTimeout(createPuzzlePieces, 100); // 如果棋盘还未渲染，稍后重试
-        return;
-    }
 
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
@@ -176,21 +168,16 @@ function createPuzzlePieces() {
     } else if (shape === 'triangle') {
         for (let y = 0; y < difficulty; y++) {
             for (let x = 0; x < difficulty; x++) {
-                // (行 + 列) 为偶数的格子，进行主对角线切割
                 if ((x + y) % 2 === 0) {
-                    // 根据我们对 clip-path 的正确分析，主对角线切割的块被命名为 'top-right' 和 'bottom-left'
                     createTrianglePiece(x, y, pieceWidth, pieceHeight, 'top-right');
                     createTrianglePiece(x, y, pieceWidth, pieceHeight, 'bottom-left');
-                }
-                // (行 + 列) 为奇数的格子，进行副对角线切割
-                else {
-                    // 副对角线切割的块被命名为 'top-left' 和 'bottom-right'
+                } else {
                     createTrianglePiece(x, y, pieceWidth, pieceHeight, 'top-left');
                     createTrianglePiece(x, y, pieceWidth, pieceHeight, 'bottom-right');
                 }
             }
         }
-    }else if (shape === 'jigsaw') { // --- 新增：jigsaw 形状逻辑 ---
+    } else if (shape === 'jigsaw') {
         const layout = generateJigsawLayout();
         for (let y = 0; y < difficulty; y++) {
             for (let x = 0; x < difficulty; x++) {
@@ -201,14 +188,13 @@ function createPuzzlePieces() {
 
     shufflePieces();
     pieces.forEach(piece => {
-        if (shape === 'jigsaw') { // 为 jigsaw 块在备选区增加间距，防止重叠
-             piece.style.margin = `${(pieceHeight * JIGSAW_TAB_RATIO) / 2}px`;
+        if (shape === 'jigsaw') {
+            piece.style.margin = `${(pieceHeight * JIGSAW_TAB_RATIO) / 2}px`;
         }
-        //piece.style.position = 'static';
         piecesZone.appendChild(piece);
-        //setupPieceEvents(piece);
     });
 
+    // --- 关键修复：确保每次创建时都重新绑定事件监听器 ---
     puzzleBoard.addEventListener('dragover', dragOver);
     puzzleBoard.addEventListener('drop', dropOnBoard);
     piecesZone.addEventListener('dragover', dragOver);
@@ -290,6 +276,7 @@ function dragOver(e) {
 }
 
 // 拖拽到棋盘
+// --- 用这个修复后的版本替换你原来的 dropOnBoard 函数 ---
 function dropOnBoard(e) {
     e.preventDefault();
     if (!draggedPiece) return;
@@ -310,44 +297,41 @@ function dropOnBoard(e) {
     gridX = Math.max(0, Math.min(gridX, difficulty - 1));
     gridY = Math.max(0, Math.min(gridY, difficulty - 1));
 
-    // 如果目标位置已有拼图块，则不允许放置
-    if (findPieceOnBoard(gridX, gridY)) {
-        return;
-    }
+    let finalLeft, finalTop;
 
-    if (shape === 'jigsaw') {
-        const tabSize = pieceWidth * JIGSAW_TAB_RATIO;
-        // 需要根据这块拼图的原始位置（correctX/Y）来判断它左边和上边是否有“耳朵”
-        const correctX = parseInt(draggedPiece.dataset.correctX);
-        const correctY = parseInt(draggedPiece.dataset.correctY);
-        const hasLeftTab = draggedPiece.dataset.edgeLeft === 'tab';
-        const hasTopTab = draggedPiece.dataset.edgeTop === 'tab';
+    if (shape === 'jigsaw' || shape === 'square') {
+        // --- 检查逻辑移到这里 ---
+        // 对于方形和jigsaw，一个格子只允许一个块
+        if (findPieceOnBoard(gridX, gridY)) {
+            returnToZone(draggedPiece); // 如果位置被占，送回备选区
+            return;
+        }
 
-        // 计算放置时需要的偏移量
-        const offsetXForDiv = hasLeftTab ? tabSize : 0;
-        const offsetYForDiv = hasTopTab ? tabSize : 0;
+        if (shape === 'jigsaw') {
+            const tabSize = pieceWidth * JIGSAW_TAB_RATIO;
+            const hasLeftTab = draggedPiece.dataset.edgeLeft === 'tab';
+            const hasTopTab = draggedPiece.dataset.edgeTop === 'tab';
+            const offsetXForDiv = hasLeftTab ? tabSize : 0;
+            const offsetYForDiv = hasTopTab ? tabSize : 0;
+            finalLeft = `${gridX * pieceWidth - offsetXForDiv}px`;
+            finalTop = `${gridY * pieceHeight - offsetYForDiv}px`;
+        } else { // 如果是 'square'
+            finalLeft = `${gridX * pieceWidth}px`;
+            finalTop = `${gridY * pieceHeight}px`;
+        }
 
-        finalLeft = `${gridX * pieceWidth - offsetXForDiv}px`;
-        finalTop = `${gridY * pieceHeight - offsetYForDiv}px`;
-    } else if (shape === 'square') {
-        finalLeft = `${gridX * pieceWidth}px`;
-        finalTop = `${gridY * pieceHeight}px`;
     } else if (shape === 'triangle') {
-
+        // --- 关键修复：恢复三角形专用的检查逻辑 ---
         const relX = (x % pieceWidth) / pieceWidth;
         const relY = (y % pieceHeight) / pieceHeight;
-
         let position;
-
-        // (行+列) 为偶数的格子，是主对角线切割
         if ((gridX + gridY) % 2 === 0) {
             position = (relY < relX) ? 'top-right' : 'bottom-left';
-        }
-        // (行+列) 为奇数的格子，是副对角线切割
-        else {
+        } else {
             position = (relX + relY < 1) ? 'top-left' : 'bottom-right';
         }
 
+        // 使用精确的 findTrianglePieceOnBoard 函数进行检查
         if (findTrianglePieceOnBoard(gridX, gridY, position)) {
             returnToZone(draggedPiece);
             return;
@@ -358,6 +342,7 @@ function dropOnBoard(e) {
         finalTop = `${gridY * pieceHeight}px`;
     }
 
+    // 统一设置最终位置和数据
     draggedPiece.style.position = "absolute";
     draggedPiece.style.left = finalLeft;
     draggedPiece.style.top = finalTop;
@@ -368,8 +353,6 @@ function dropOnBoard(e) {
 
     moves++;
     movesElement.textContent = `移动次数: ${moves}`;
-
-    checkPuzzleCompletion();
 }
 
 // 拖拽回piecesZone
@@ -503,9 +486,6 @@ function touchEnd(e) {
     draggedPiece = null;
 }
 
-// 初始化背景
-setPuzzleBg();
-
 
 window.addEventListener('DOMContentLoaded', function() {
     const customImage = localStorage.getItem('customImage');
@@ -523,7 +503,12 @@ window.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem('customSize');
         localStorage.removeItem('customShape'); // 清除
     } else {
-        setPuzzleBg();
+        console.log("没有找到拼图数据，请从预览页面开始游戏。");
+        puzzleBoard.innerHTML = '<p style="text-align:center; color:#666; margin-top: 40px;">请先选择一张图片来创建拼图</p>';
+
+        // 禁用不需要的按钮
+        if(resetBtn) resetBtn.disabled = true;
+        if(toggleBgBtn) toggleBgBtn.disabled = true;
     }
 });
 
@@ -667,51 +652,42 @@ function generateJigsawLayout() {
 function generateJigsawPath(w, h, tabSize, edges) {
     const { top, right, bottom, left } = edges;
 
-    // 连接头的根部宽度
-    const base = w * (1 - JIGSAW_TAB_RATIO);
-    const neck = w * (1 - JIGSAW_TAB_RATIO) / 2;
-    const pt = tabSize;
+    // 曲线参数，用于定义圆润的形状
+    const neckRatio = 0.2;
+    const headWidthRatio = 0.6;
+    const headHeightRatio = 1.0;
+    const shoulderRatio = 0.25;
 
-    const pathTab = `h ${neck} c ${pt*0.2} 0, ${pt*0.3} ${-pt}, ${pt*0.5} ${-pt} s ${pt*0.3} ${pt}, ${pt*0.5} ${pt} h ${neck}`;
-    const pathBlank = `h ${neck} c ${pt*0.2} 0, ${pt*0.3} ${pt}, ${pt*0.5} ${pt} s ${pt*0.3} ${-pt}, ${pt*0.5} ${-pt} h ${neck}`;
-    const pTop = (top === 'flat') ? `h ${w}` : (top === 'tab' ? pathTab : pathBlank);
-    const pRight = (right === 'flat') ? `v ${h}` : (right === 'tab' ? `v ${neck} c 0 ${pt*0.2}, ${pt} ${pt*0.3}, ${pt} ${pt*0.5} s ${-pt} ${pt*0.3}, ${-pt} ${pt*0.5} v ${neck}` : `v ${neck} c 0 ${pt*0.2}, ${-pt} ${pt*0.3}, ${-pt} ${pt*0.5} s ${pt} ${pt*0.3}, ${pt} ${pt*0.5} v ${neck}`);
-    const pBottom = (bottom === 'flat') ? `h ${-w}` : (bottom === 'tab' ? `h ${-neck} c ${-pt*0.2} 0, ${-pt*0.3} ${pt}, ${-pt*0.5} ${pt} s ${-pt*0.3} ${-pt}, ${-pt*0.5} ${-pt} h ${-neck}` : `h ${-neck} c ${-pt*0.2} 0, ${-pt*0.3} ${-pt}, ${-pt*0.5} ${-pt} s ${-pt*0.3} ${pt}, ${-pt*0.5} ${pt} h ${-neck}`);
-    const pLeft = (left === 'flat') ? `v ${-h}` : (left === 'tab' ? `v ${-neck} c 0 ${-pt*0.2}, ${-pt} ${-pt*0.3}, ${-pt} ${-pt*0.5} s ${pt} ${-pt*0.3}, ${pt} ${-pt*0.5} v ${-neck}` : `v ${-neck} c 0 ${-pt*0.2}, ${pt} ${-pt*0.3}, ${pt} ${-pt*0.5} s ${-pt} ${-pt*0.3}, ${-pt} ${-pt*0.5} v ${-neck}`);
+    const neckW = w * neckRatio;
+    const neckH = h * neckRatio; // 新增：垂直方向的脖子高度
+    const headW = w * headWidthRatio;
+    const headH = h * headWidthRatio; // 新增：垂直方向的头部宽度
+    const pt = tabSize * headHeightRatio;
 
+    // 1. --- 顶部边缘的路径 (从左到右) ---
+    const pathTabTop = `h ${neckW} c ${shoulderRatio * headW} 0, ${shoulderRatio * headW} ${-pt}, ${0.5 * headW} ${-pt} c ${(0.5-shoulderRatio) * headW} 0, ${(0.5-shoulderRatio) * headW} ${pt}, ${0.5 * headW} ${pt} h ${neckW}`;
+    const pathBlankTop = `h ${neckW} c ${shoulderRatio * headW} 0, ${shoulderRatio * headW} ${pt}, ${0.5 * headW} ${pt} c ${(0.5-shoulderRatio) * headW} 0, ${(0.5-shoulderRatio) * headW} ${-pt}, ${0.5 * headW} ${-pt} h ${neckW}`;
+    const pTop = (top === 'flat') ? `h ${w}` : (top === 'tab' ? pathTabTop : pathBlankTop);
 
+    // 2. --- 右侧边缘的路径 (从上到下) ---
+    const pathTabRight = `v ${neckH} c 0 ${shoulderRatio * headH}, ${pt} ${shoulderRatio * headH}, ${pt} ${0.5 * headH} c 0 ${(0.5-shoulderRatio) * headH}, ${-pt} ${(0.5-shoulderRatio) * headH}, ${-pt} ${0.5 * headH} v ${neckH}`;
+    const pathBlankRight = `v ${neckH} c 0 ${shoulderRatio * headH}, ${-pt} ${shoulderRatio * headH}, ${-pt} ${0.5 * headH} c 0 ${(0.5-shoulderRatio) * headH}, ${pt} ${(0.5-shoulderRatio) * headH}, ${pt} ${0.5 * headH} v ${neckH}`;
+    const pRight = (right === 'flat') ? `v ${h}` : (right === 'tab' ? pathTabRight : pathBlankRight);
 
+    // 3. --- 底部边缘的路径 (从右到左) ---
+    const pathTabBottom = `h ${-neckW} c ${-shoulderRatio * headW} 0, ${-shoulderRatio * headW} ${pt}, ${-0.5 * headW} ${pt} c ${-(0.5-shoulderRatio) * headW} 0, ${-(0.5-shoulderRatio) * headW} ${-pt}, ${-0.5 * headW} ${-pt} h ${-neckW}`;
+    const pathBlankBottom = `h ${-neckW} c ${-shoulderRatio * headW} 0, ${-shoulderRatio * headW} ${-pt}, ${-0.5 * headW} ${-pt} c ${-(0.5-shoulderRatio) * headW} 0, ${-(0.5-shoulderRatio) * headW} ${pt}, ${-0.5 * headW} ${pt} h ${-neckW}`;
+    const pBottom = (bottom === 'flat') ? `h ${-w}` : (bottom === 'tab' ? pathTabBottom : pathBlankBottom);
 
+    // 4. --- 关键修复：左侧边缘的路径 (从下到上) ---
+    const pathTabLeft = `v ${-neckH} c 0 ${-shoulderRatio * headH}, ${-pt} ${-shoulderRatio * headH}, ${-pt} ${-0.5 * headH} c 0 ${-(0.5-shoulderRatio) * headH}, ${pt} ${-(0.5-shoulderRatio) * headH}, ${pt} ${-0.5 * headH} v ${-neckH}`;
+    const pathBlankLeft = `v ${-neckH} c 0 ${-shoulderRatio * headH}, ${pt} ${-shoulderRatio * headH}, ${pt} ${-0.5 * headH} c 0 ${-(0.5-shoulderRatio) * headH}, ${-pt} ${-(0.5-shoulderRatio) * headH}, ${-pt} ${-0.5 * headH} v ${-neckH}`;
+    const pLeft = (left === 'flat') ? `v ${-h}` : (left === 'tab' ? pathTabLeft : pathBlankLeft);
 
-    const getEdgePath = (type, multiplier) => {
-        switch (type) {
-            case 'flat': return `h ${w * multiplier.x}`;
-            case 'tab':
-                 return `h ${neck * multiplier.x} c ${pt*0.1*multiplier.x} ${pt*0.5*multiplier.y}, ${pt*0.8*multiplier.x} ${pt*multiplier.y}, ${pt*0.5*multiplier.x} ${pt*multiplier.y} s ${pt*-0.4*multiplier.x} 0, ${pt*0.5*multiplier.x} ${-pt*multiplier.y} c ${pt*0.7*multiplier.x} ${-pt*multiplier.y}, ${pt*0.9*multiplier.x} ${-pt*0.5*multiplier.y}, ${neck*multiplier.x} 0`;
-            case 'blank':
-                 return `h ${neck * multiplier.x} c ${pt*0.1*multiplier.x} ${-pt*0.5*multiplier.y}, ${pt*0.8*multiplier.x} ${-pt*multiplier.y}, ${pt*0.5*multiplier.x} ${-pt*multiplier.y} s ${pt*-0.4*multiplier.x} 0, ${pt*0.5*multiplier.x} ${pt*multiplier.y} c ${pt*0.7*multiplier.x} ${pt*multiplier.y}, ${pt*0.9*multiplier.x} ${pt*0.5*multiplier.y}, ${neck*multiplier.x} 0`;
-        }
-    };
-
+    // 5. --- 拼接最终路径 ---
+    // 计算 div 内部的起始点 (只在边缘是 'tab' 时才需要偏移)
     const startX = left === 'tab' ? tabSize : 0;
     const startY = top === 'tab' ? tabSize : 0;
-
-    let path = `M ${startX},${startY}`;
-    // Top
-    path += getEdgePath(top, {x:1, y:-1});
-    // Right
-    path = path.replace(/h /g, 'v ').replace(/([0-9.-]+),([0-9.-]+)/g, (m, p1, p2) => `${p2},${p1}`);
-    path += getEdgePath(right, {x:1, y:1}).replace(/h/g, 'v').replace(/(\s[0-9.-]+)(\s[0-9.-]+)/g, (m,p1,p2) => `${p2}${p1}`);
-    // Bottom
-    path += getEdgePath(bottom, {x:-1, y:1});
-    // Left
-    path += getEdgePath(left, {x:-1, y:-1}).replace(/h/g, 'v').replace(/(\s[0-9.-]+)(\s[0-9.-]+)/g, (m,p1,p2) => `${p2}${p1}`);
-
-    // 使用更健壮的相对路径命令
-    //const pTop = (top === 'flat') ? `h ${w}` : `h ${neck} c ${pt*0.2} 0, ${pt*0.3} ${-pt}, ${pt*0.5} ${-pt} s ${pt*0.3} ${pt}, ${pt*0.5} ${pt} h ${neck}`;
-    //const pRight = (right === 'flat') ? `v ${h}` : `v ${neck} c 0 ${pt*0.2}, ${pt} ${pt*0.3}, ${pt} ${pt*0.5} s ${-pt} ${pt*0.3}, ${-pt} ${pt*0.5} v ${neck}`;
-    //const pBottom = (bottom === 'flat') ? `h ${-w}` : `h ${-neck} c ${-pt*0.2} 0, ${-pt*0.3} ${pt}, ${-pt*0.5} ${pt} s ${-pt*0.3} ${-pt}, ${-pt*0.5} ${-pt} h ${-neck}`;
-    //const pLeft = (left === 'flat') ? `v ${-h}` : `v ${-neck} c 0 ${-pt*0.2}, ${-pt} ${-pt*0.3}, ${-pt} ${-pt*0.5} s ${pt} ${-pt*0.3}, ${pt} ${-pt*0.5} v ${-neck}`;
 
     const finalPath = `M ${startX} ${startY} ${pTop} ${pRight} ${pBottom} ${pLeft} Z`;
     return finalPath;
