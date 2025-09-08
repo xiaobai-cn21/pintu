@@ -7,11 +7,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/game-rank.css') }}">
     <style>
         .rank-container { max-width: 1000px; margin: 80px auto 20px; padding: 20px; background: #20223A; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
-        .rank-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #e0e0e0; }
-        .back-btn { background-color: #3498db; color: #fff; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-size: 16px; text-decoration: none; display: inline-block; }
-        .back-btn:hover { background-color: #2980b9; }
-        .rank-title { font-size: 32px; font-weight: bold; color: #2c3e50; margin: 0; }
-        .refresh-btn { background: none; border: none; cursor: pointer; font-size: 20px; color: #3498db; padding: 10px; }
+        .rank-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #F9E078; }
+        .back-btn { background-color: #F9E078; color: #20223A; border: none; padding: 8px 16px; border-radius: 0; cursor: pointer; text-decoration: none; display: inline-block; font-family: 'Press Start 2P', 'Zpix', monospace; font-size: 12px; }
+        .back-btn:hover { background-color: #E6D166; }
+        .rank-title { font-weight: bold; color: #F9E078; margin: 0; font-family: 'Press Start 2P', 'Zpix', monospace; font-size: 18px; }
+        .refresh-btn { background: #F9E078; color: #20223A; border: none; cursor: pointer; font-size: 12px; padding: 8px 16px; border-radius: 0; font-family: 'Press Start 2P', 'Zpix', monospace; }
         .my-rank-card { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#fff; padding:20px; border-radius:10px; margin-bottom:20px; box-shadow:0 4px 15px rgba(102,126,234,.3); }
         .my-rank-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
         .my-rank-title::before { content: "👤"; margin-right: 8px; }
@@ -55,9 +55,13 @@
     <div class="background-blur"></div>
     <div class="rank-container">
         <div class="rank-header">
-            <a href="{{ url_for('menu_page') }}" class="back-btn">← 返回主界面</a>
-            <h1 class="rank-title">拼图排行榜</h1>
-            <button id="refreshBtn" class="refresh-btn" title="刷新数据">🔄</button>
+            <button class="btn btn-secondary back-btn" onclick="window.location.href='{{ url_for('main') }}'" style="padding: 8px 16px; font-size: 12px;">
+                <span class="chinese-text">返回主界面</span>
+            </button>
+            <h1 class="rank-title chinese-text">拼图排行榜</h1>
+            <button id="refreshBtn" class="btn refresh-btn" title="刷新数据" style="padding: 8px 16px; font-size: 12px;">
+                <span class="chinese-text">刷新</span>
+            </button>
         </div>
         <div id="myRankCard" class="my-rank-card" style="display:none;">
             <div class="my-rank-title">我的成绩</div>
@@ -163,6 +167,31 @@
         }
         document.addEventListener('DOMContentLoaded',()=>{ new RankPage(); });
     </script>
+
+<!-- 帮助页面模态框 -->
+<div class="modal-mask" id="helpModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span>操作指南</span>
+            <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
+        </div>
+        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
+            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+            <p>- 单击选中的图块，顺时针旋转90度</p>
+            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
 

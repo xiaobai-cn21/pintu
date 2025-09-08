@@ -35,7 +35,90 @@
     </div>
 </div>
 
+<!-- 帮助页面模态框 -->
+<div class="modal-mask" id="helpModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span>操作指南</span>
+            <span class="modal-close" onclick="closeHelpModal()">×</span>
+        </div>
+        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
+            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+            <p>- 单击选中的图块，顺时针旋转90度</p>
+            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="closeHelpModal()">我知道了</button>
+        </div>
+    </div>
+</div>
+
 <script src="{{ url_for('static', filename='js/game.js') }}"></script>
+<script>
+// 游戏暂停/继续功能
+let gamePaused = false;
+let gameInstance = null;
+
+// 等待游戏实例初始化
+document.addEventListener('DOMContentLoaded', function() {
+    // 延迟获取游戏实例，确保game.js已经加载
+    setTimeout(() => {
+        if (window.puzzleGame) {
+            gameInstance = window.puzzleGame;
+        }
+    }, 100);
+});
+
+// 打开帮助模态框时暂停游戏
+function openHelpModal() {
+    const helpModal = document.getElementById('helpModal');
+    if (helpModal) {
+        helpModal.style.display = 'flex';
+        
+        // 暂停游戏
+        if (gameInstance && gameInstance.gameStarted && !gamePaused) {
+            gameInstance.pauseGame();
+            gamePaused = true;
+        }
+    }
+}
+
+// 关闭帮助模态框时继续游戏
+function closeHelpModal() {
+    const helpModal = document.getElementById('helpModal');
+    if (helpModal) {
+        helpModal.style.display = 'none';
+        
+        // 继续游戏
+        if (gameInstance && gamePaused) {
+            gameInstance.resumeGame();
+            gamePaused = false;
+        }
+    }
+}
+
+// 重写导航栏的帮助按钮点击事件（仅限game页面）
+document.addEventListener('DOMContentLoaded', function() {
+    const helpLink = document.getElementById('pm-help-link');
+    if (helpLink) {
+        // 移除原有的事件监听器
+        helpLink.onclick = null;
+        // 添加新的事件监听器
+        helpLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openHelpModal();
+        });
+    }
+});
+</script>
 </body>
 </html>
 

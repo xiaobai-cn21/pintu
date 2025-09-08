@@ -1,10 +1,130 @@
 /* 重置默认样式 */
-@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@font-face {
+    font-family: 'Press Start 2P';
+    src: url('../fonts/PressStart2P-Regular.woff2') format('woff2');
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Zpix';
+    src: url('../fonts/Zpix-Regular.ttf') format('truetype');
+    font-display: swap;
+}
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Press Start 2P', "Microsoft YaHei", Arial, monospace;
+    font-family: 'Press Start 2P', 'Zpix', monospace;
+}
+
+/* 中文字体大小调整 */
+.chinese-text {
+    font-size: 1.2em;
+    line-height: 1.3;
+}
+
+/* 主页面标题样式 */
+.main-title {
+    font-size: 50px;
+    color: #F9E078;
+    letter-spacing: 2px;
+    font-family: 'Press Start 2P', monospace;
+}
+
+/* 主页面副标题样式 */
+.main-subtitle {
+    color: #F9E078;
+    margin-top: 20px;
+    font-family: 'Zpix', 'Press Start 2P', monospace;
+}
+
+/* 通用字体大小类 */
+.filter-section-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #666;
+}
+
+.filter-label {
+    padding: 6px 12px;
+    border-radius: 0;
+    cursor: pointer;
+    background-color: #20223A;
+    color: #F9E078;
+    border: 3px solid #F9E078;
+    box-shadow: 4px 4px 0 #000000;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+}
+
+.level-title {
+    font-size: 16px;
+    margin-bottom: 8px;
+}
+
+.level-description {
+    font-size: 12px;
+    color: #666;
+}
+
+.level-badge {
+    font-size: 12px;
+}
+
+.level-edit-btn {
+    font-size: 8px;
+}
+
+.enter-game-btn {
+    font-size: 10px;
+}
+
+/* 按钮字体大小调整 */
+.btn {
+    font-size: 15px;
+}
+
+/* 通用英文数字符号微调 */
+.english-text, .number-text, .symbol-text {
+    position: relative;
+    top: 2px;  /* 微调位置，让英文数字符号稍微下移一点 */
+}
+
+/* 按钮中的英文文字 */
+.btn .english-text {
+    font-size: 15px;
+    font-family: 'Press Start 2P', monospace;
+    vertical-align: middle;  /* 垂直居中对齐 */
+    line-height: 1.2;  /* 调整行高 */
+}
+
+/* 按钮中的中文文字 */
+.btn .chinese-text {
+    font-size: 18px;  /* 中文字体稍大一些 */
+    font-family: 'Zpix', 'Press Start 2P', monospace;
+    vertical-align: middle;  /* 垂直居中对齐 */
+    line-height: 1.2;  /* 调整行高 */
+}
+
+/* 导航栏字体大小调整 */
+.pm-brand {
+    font-size: 16px; /* 主页按钮字体大小 */
+    font-family: 'Press Start 2P', monospace;
+    vertical-align: middle;  /* 垂直居中对齐 */
+    line-height: 1.2;  /* 调整行高 */
+    position: static;  /* 重置位置，不受通用微调影响 */
+    top: auto;  /* 重置top值 */
+}
+
+.pm-link {
+    font-size: 14px; /* 导航栏链接字体大小 */
+}
+
+.pm-link.chinese-text {
+    font-size: 16px;  /* 导航栏中文稍大一些 */
+    font-family: 'Zpix', 'Press Start 2P', monospace;
+    vertical-align: middle;  /* 垂直居中对齐 */
+    line-height: 1.2;  /* 调整行高 */
 }
 
 body {
@@ -30,14 +150,16 @@ html{scrollbar-color:#3a3c5e #20223A;scrollbar-width:thin}
     padding: 10px 20px;
     border: 3px solid #F9E078;
     border-radius: 0;
-    font-size: 10px;
-    font-family: 'Press Start 2P', monospace;
+    font-size: 15px;
+    font-family: 'Press Start 2P', 'Zpix', monospace;
     letter-spacing: 1px;
     cursor: pointer;
     transition: transform 0.05s ease;
     background: #20223A;
     color: #F9E078;
     box-shadow: 4px 4px 0 #000000;
+    text-decoration: none;  /* 去除下划线 */
+    display: inline-block;  /* 确保a标签和button标签样式一致 */
 }
 .btn:hover { 
     transform: translate(-1px, -1px); 
@@ -80,7 +202,7 @@ html{scrollbar-color:#3a3c5e #20223A;scrollbar-width:thin}
     font-size: 20px;
     font-weight: 600;
     color: #2C466D;
-    margin-bottom: 20px;
+    margin: 80px 0 20px 0;  /* 调整顶部间距，因为body已有padding */
     display: flex;
     align-items: center;
     gap: 8px;
@@ -153,6 +275,7 @@ html{scrollbar-color:#3a3c5e #20223A;scrollbar-width:thin}
     border: 3px solid #F9E078;
     border-radius: 0;
     font-size: 12px;
+    font-family: 'Press Start 2P', 'Zpix', monospace;
     background:#20223A;
     color:#F9E078;
     box-shadow: 4px 4px 0 #000000;
@@ -185,21 +308,7 @@ html{scrollbar-color:#3a3c5e #20223A;scrollbar-width:thin}
          background-size: cover;
          background-position: center;
          z-index: -2; /* 置于最底层 */
-       }
-       .background-blur::before {
-         content: '';
-         position: absolute;
-         top: 0;
-         left: 0;
-         width: 100%;
-         height: 100%;
-         backdrop-filter: blur(3px);
-         -webkit-backdrop-filter: blur(3px);
-         background: radial-gradient(
-           circle at center,
-           rgba(255, 255, 255, 0) 0%,
-           rgba(0, 0, 0, 0.5) 150%
-         );
+         opacity: 0.8; /* 降低背景透明度，减少视觉干扰 */
        }
        .content {
          position: relative;
@@ -208,16 +317,138 @@ html{scrollbar-color:#3a3c5e #20223A;scrollbar-width:thin}
          text-align: center;
          padding: 50px;
        }
-/* PuzzleMaster 顶部导航 */
-.pm-navbar{position:sticky;top:0;z-index:1000;display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:#20223A;border-bottom:1px solid rgba(255,255,255,0.08)}
-.pm-brand{font-weight:700;color:#F9E078;text-decoration:none;margin-right:16px;font-family:'Press Start 2P', monospace;letter-spacing:1px;font-size:12px}
-.pm-link{color:#F9E078;text-decoration:none;margin-right:12px;opacity:.9;font-family:'Press Start 2P', monospace;letter-spacing:1px;font-size:10px}
-.pm-link:hover{opacity:1}
-.pm-nav-left{display:flex;align-items:center;gap:8px}
-.pm-nav-right{display:flex;align-items:center}
+/* ========== PuzzleMaster 顶部导航栏样式 ========== */
+
+/* 导航栏容器 - 整体布局和尺寸 */
+.pm-navbar{
+    position:sticky;           /* 粘性定位，滚动时固定在顶部 */
+    top:0;                     /* 距离顶部0像素 */
+    z-index:1000;              /* 层级，确保在其他元素之上 */
+    display:flex;              /* 弹性布局 */
+    justify-content:space-between; /* 子元素两端对齐 */
+    align-items:center;        /* 垂直居中对齐 */
+    padding:16px 60px;         /* 上下12px，左右60px内边距（增加宽度） */
+    background:#20223A;        /* 背景颜色 */
+    border-bottom:1px solid rgba(255,255,255,0.08); /* 底部边框 */
+    width:100%;                /* 宽度占满父容器 */
+    min-width:1400px;          /* 最小宽度1400px（增加宽度） */
+}
+
+/* 左侧品牌标题 "PuzzleMaster" */
+.pm-brand{
+    font-weight:700;           /* 字体粗细 */
+    color:#F9E078;             /* 字体颜色（黄色） */
+    text-decoration:none;      /* 去除下划线 */
+    margin-right:0;            /* 右边距 */
+    font-family:'Press Start 2P', monospace; /* 字体族 */
+    letter-spacing:1px;        /* 字母间距 */
+    font-size:14px;            /* 字体大小 */
+    position:absolute;         /* 绝对定位 */
+    left:60px;                 /* 距离左边60px（与padding保持一致） */
+}
+
+/* 中间导航链接（首页、开始游戏、帮助） */
+.pm-link{
+    color:#F9E078;             /* 字体颜色（黄色） */
+    text-decoration:none;      /* 去除下划线 */
+    margin:0 20px;             /* 左右边距20px */
+    opacity:.9;                /* 透明度90% */
+    font-family:'Press Start 2P', 'Zpix', monospace; /* 字体族 */
+    letter-spacing:1px;        /* 字母间距 */
+    font-size:14px;            /* 字体大小 */
+}
+.pm-link:hover{opacity:1}      /* 鼠标悬停时完全不透明 */
+
+/* 中间导航链接容器 */
+.pm-nav-left{
+    display:flex;              /* 弹性布局 */
+    align-items:center;        /* 垂直居中 */
+    gap:8px;                   /* 子元素间距 */
+    justify-content:center;    /* 水平居中 */
+    flex:1;                    /* 占据剩余空间 */
+}
+
+/* 右侧用户头像容器 */
+.pm-nav-right{
+    display:flex;              /* 弹性布局 */
+    align-items:center;        /* 垂直居中 */
+    position:absolute;         /* 绝对定位 */
+    right:60px;                /* 距离右边60px（与padding保持一致） */
+}
 .pm-avatar-wrap{position:relative}
 .pm-avatar{width:36px;height:36px;border-radius:50%;cursor:pointer;border:2px solid #F9E078}
 .pm-avatar-wrap.open #pm-avatar-menu{display:block}
-.pm-avatar-menu{display:none;position:absolute;right:0;top:44px;background:#20223A;border:1px solid rgba(255,255,255,0.12);border-radius:8px;min-width:140px;box-shadow:0 6px 24px rgba(0,0,0,0.35)}
-.pm-menu-item{display:block;width:100%;text-align:left;background:transparent;border:none;color:#F9E078;padding:10px 12px;cursor:pointer}
-.pm-menu-item:hover{background:rgba(249,224,120,0.08)}
+.pm-avatar-menu{
+    display:none;
+    position:absolute;
+    right:0;
+    top:44px;
+    background:#20223A;
+    border:2px solid #F9E078;
+    border-radius:0;
+    min-width:160px;
+    box-shadow:4px 4px 0 #000000;
+    z-index:1001;
+}
+.pm-menu-item{
+    display:block;
+    width:100%;
+    text-align:left;
+    background:transparent;
+    border:none;
+    color:#F9E078;
+    padding:12px 16px;
+    cursor:pointer;
+    font-family:'Press Start 2P', 'Zpix', monospace;
+    font-size:12px;
+    text-decoration:none;
+    transition:all 0.1s ease;
+    border-bottom:1px solid rgba(249,224,120,0.1);
+}
+.pm-menu-item:last-child{
+    border-bottom:none;
+}
+.pm-menu-item:hover{
+    background:rgba(249,224,120,0.15);
+    transform:translateX(2px);
+}
+
+/* 登录注册页面样式优化 */
+.modal-content input[type="checkbox"] {
+    width: 16px !important;
+    height: 16px !important;
+    margin: 0 !important;
+    accent-color: #F9E078;
+    cursor: pointer;
+}
+
+.modal-content input[type="checkbox"]:checked {
+    background-color: #F9E078;
+    border-color: #F9E078;
+}
+
+/* 标签文字颜色优化 */
+.modal-content label {
+    color: #B8BCC8 !important;
+    font-size: 14px;
+}
+
+/* 输入框样式优化 */
+.modal-content input[type="text"], 
+.modal-content input[type="email"], 
+.modal-content input[type="password"] {
+    color: #F9E078;
+    background-color: #20223A;
+    border: 2px solid #F9E078;
+    border-radius: 0;
+    padding: 8px 12px;
+    font-family: 'Press Start 2P', 'Zpix', monospace;
+    font-size: 12px;
+}
+
+.modal-content input[type="text"]:focus, 
+.modal-content input[type="email"]:focus, 
+.modal-content input[type="password"]:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(249, 224, 120, 0.3);
+}

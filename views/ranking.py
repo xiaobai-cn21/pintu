@@ -16,7 +16,16 @@ def update_record():
 	if not (user_id and step_count and time_used):
 		return jsonify({'code': 400, 'msg': '参数缺失'}), 400
 	from sqlalchemy import text
-	sql = text('INSERT INTO records (user_id, step_count, time_used) VALUES (:user_id, :step_count, :time_used) ON DUPLICATE KEY UPDATE step_count=:step_count, time_used=:time_used')
+	# 检查是否已有记录
+	check_sql = text('SELECT step_count, time_used FROM records WHERE user_id = :user_id')
+	existing = db.session.execute(check_sql, {'user_id': user_id}).fetchone()
+	
+	if existing:
+		# 更新记录
+		sql = text('UPDATE records SET step_count = :step_count, time_used = :time_used WHERE user_id = :user_id')
+	else:
+		# 插入新记录
+		sql = text('INSERT INTO records (user_id, step_count, time_used) VALUES (:user_id, :step_count, :time_used)')
 	try:
 		db.session.execute(sql, {'user_id': user_id, 'step_count': step_count, 'time_used': time_used})
 		db.session.commit()

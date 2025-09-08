@@ -1,5 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import Column, Integer, String, DateTime, MetaData, Enum, ForeignKey,Boolean
+from sqlalchemy import Column, Integer, String, DateTime, MetaData, Enum, ForeignKey, Boolean, Text
 from config import Config
 from datetime import datetime
 from sqlalchemy.orm import relationship
@@ -15,6 +15,8 @@ class users(db.Model):
     created_at = Column(DateTime)
     puzzles = relationship('puzzles', backref='creator', lazy=True)
     records = relationship('records', backref='user', lazy=True)
+    level_records = relationship('level_records', backref='user', lazy=True)
+    game_saves = relationship('game_saves', backref='user', lazy=True)
 
 class puzzles(db.Model):
     __tablename__ = 'puzzles'
@@ -35,3 +37,29 @@ class records(db.Model):
     step_count = Column(Integer, nullable=False)
     time_used = Column(Integer, nullable=False)
 
+class level_records(db.Model):
+    __tablename__ = 'level_records'
+    record_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    level_id = Column(String(50), nullable=False)
+    level_name = Column(String(100), nullable=False)
+    image_url = Column(String(255), nullable=False)
+    difficulty = Column(Integer, nullable=False)
+    best_time = Column(Integer, default=None)
+    best_steps = Column(Integer, default=None)
+    completed = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class game_saves(db.Model):
+    __tablename__ = 'game_saves'
+    save_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    level_id = Column(String(50), nullable=False)
+    level_name = Column(String(100), nullable=False)
+    image_url = Column(String(255), nullable=False)
+    difficulty = Column(Integer, nullable=False)
+    current_time = Column(Integer, default=0)
+    current_steps = Column(Integer, default=0)
+    puzzle_state = Column(Text)
+    save_time = Column(DateTime, default=datetime.utcnow)

@@ -1,16 +1,17 @@
 <nav class="pm-navbar">
     <div class="pm-nav-left">
         <a class="pm-brand" href="{{ url_for('main') }}">PuzzleMaster</a>
-        <a class="pm-link" href="{{ url_for('main') }}">首页</a>
-        <a class="pm-link" href="{{ url_for('option_page') }}">开始游戏</a>
-        <a class="pm-link" id="pm-help-link" href="#">帮助</a>
+        <a class="pm-link chinese-text" href="{{ url_for('main') }}">首页</a>
+        <a class="pm-link chinese-text" href="{{ url_for('option_page') }}">开始游戏</a>
+        <a class="pm-link chinese-text" id="pm-help-link" href="#">帮助</a>
     </div>
     <div class="pm-nav-right">
         <div class="pm-avatar-wrap" id="pm-avatar-wrap">
             <img class="pm-avatar" src="{{ url_for('static', filename='images/用户头像.jpg') }}" alt="avatar">
             <div class="pm-avatar-menu" id="pm-avatar-menu">
-                <button id="pm-login-btn" class="pm-menu-item">登录 / 注册</button>
-                <button id="pm-logout-btn" class="pm-menu-item" style="display:none;">退出登录</button>
+                <button id="pm-login-btn" class="pm-menu-item chinese-text"><span class="chinese-text">登录</span><span class="symbol-text"> / </span><span class="chinese-text">注册</span></button>
+                <a id="pm-my-puzzle-btn" class="pm-menu-item chinese-text" href="{{ url_for('my_puzzle_page') }}" style="display:none;"><span class="chinese-text">我的拼图</span></a>
+                <button id="pm-logout-btn" class="pm-menu-item chinese-text" style="display:none;"><span class="chinese-text">退出登录</span></button>
             </div>
         </div>
     </div>
@@ -20,12 +21,15 @@
   const token = localStorage.getItem('puzzleToken');
   const loginBtn = document.getElementById('pm-login-btn');
   const logoutBtn = document.getElementById('pm-logout-btn');
+  const myPuzzleBtn = document.getElementById('pm-my-puzzle-btn');
   if(token){
     loginBtn.style.display='none';
     logoutBtn.style.display='block';
+    myPuzzleBtn.style.display='block';
   } else {
     loginBtn.style.display='block';
     logoutBtn.style.display='none';
+    myPuzzleBtn.style.display='none';
   }
   loginBtn && (loginBtn.onclick = function(){
     const modal = document.getElementById('loginModal');
@@ -38,11 +42,14 @@
   });
   const helpLink = document.getElementById('pm-help-link');
   if(helpLink){
-    helpLink.onclick = function(e){
+    helpLink.addEventListener('click', function(e){
       e.preventDefault();
+      e.stopPropagation();
       const help = document.getElementById('helpModal');
-      if(help){ help.style.display='flex'; }
-    }
+      if(help){ 
+        help.style.display='flex'; 
+      }
+    });
   }
 
 

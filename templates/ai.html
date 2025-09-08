@@ -21,9 +21,12 @@
     .ai-chat-input{display:flex;gap:10px;padding:12px;border-top:1px solid rgba(255,255,255,0.1)}
     .ai-tag-title{font-size:14px;margin:6px 0 8px;color:#F9E078;opacity:.9}
     .ai-tags{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-    .tag-btn{height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.15);background:transparent;color:#F9E078;border-radius:6px;cursor:pointer}
+    .tag-btn{height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.15);background:transparent;color:#F9E078;border-radius:6px;cursor:pointer;pointer-events:auto;position:relative;z-index:1}
     .tag-btn:hover{background:rgba(249,224,120,0.08)}
-    .tag-btn.active{outline:2px solid #F9E078}
+    .tag-btn.active{outline:2px solid #F9E078;background:rgba(249,224,120,0.15);box-shadow:0 0 8px rgba(249,224,120,0.3)}
+    .size-tag{font-size:10px;font-family:'Press Start 2P', monospace}
+    .number-text{font-family:'Press Start 2P', monospace}
+    .symbol-text{font-family:'Press Start 2P', monospace}
   </style>
   <div class="ai-layout">
     <!-- 左侧：预置 Prompt 标签 -->
@@ -32,10 +35,10 @@
       <div id="promptTags">
         <div class="ai-tag-title">尺寸</div>
         <div class="ai-tags" id="sizeTags">
-          <button class="tag-btn" data-size="1024x1024">1024×1024</button>
-          <button class="tag-btn" data-size="1280x720">1280×720</button>
-          <button class="tag-btn" data-size="1024x768">1024×768</button>
-          <button class="tag-btn" data-size="720x1280">720×1280</button>
+          <button class="tag-btn size-tag active" data-size="1024x1024"><span class="number-text">1024</span><span class="symbol-text">×</span><span class="number-text">1024</span></button>
+          <button class="tag-btn size-tag" data-size="1280x720"><span class="number-text">1280</span><span class="symbol-text">×</span><span class="number-text">720</span></button>
+          <button class="tag-btn size-tag" data-size="1024x768"><span class="number-text">1024</span><span class="symbol-text">×</span><span class="number-text">768</span></button>
+          <button class="tag-btn size-tag" data-size="720x1280"><span class="number-text">720</span><span class="symbol-text">×</span><span class="number-text">1280</span></button>
         </div>
         <div class="ai-tag-title">画风</div>
         <div class="ai-tags">
@@ -48,7 +51,7 @@
           <button class="tag-btn" data-val="漫画">漫画</button>
           <button class="tag-btn" data-val="日系">日系</button>
           <button class="tag-btn" data-val="写实">写实</button>
-          <button class="tag-btn" data-val="3D渲染">3D渲染</button>
+          <button class="tag-btn" data-val="3D渲染"><span class="number-text">3</span><span class="symbol-text">D</span></span>渲染</button>
         </div>
         <div class="ai-tag-title">图片类型</div>
         <div class="ai-tags">
@@ -103,7 +106,7 @@ const aiPlaceholder=document.getElementById('aiPlaceholder');
 const chatBox=document.getElementById('chatBox');
 const promptTags=document.getElementById('promptTags');
 const sizeTags=document.getElementById('sizeTags');
-let selectedSize=null; // e.g. "1024x1024"
+let selectedSize="1024x1024"; // 默认选中第一个尺寸
 
 function appendMsg(who,text){
   const row=document.createElement('div');
@@ -140,6 +143,7 @@ sizeTags.addEventListener('click',(e)=>{
     [...sizeTags.querySelectorAll('button')].forEach(b=>b.classList.remove('active'));
     e.target.classList.add('active');
     selectedSize=e.target.getAttribute('data-size');
+    console.log('尺寸选择:', selectedSize); // 调试信息
   }
 });
 
@@ -151,6 +155,7 @@ genBtn.addEventListener('click', async ()=>{
   }
   const prompt=(aiPrompt.value||'').trim();
   if(!prompt){ aiTip.textContent='请输入描述'; return; }
+  console.log('当前选择的尺寸:', selectedSize); // 调试信息
   aiTip.textContent='生成中...';
   appendMsg('我', prompt);
   try{
@@ -177,6 +182,31 @@ genBtn.addEventListener('click', async ()=>{
   }catch(e){ aiTip.textContent='网络错误'; }
 });
 </script>
+
+<!-- 帮助页面模态框 -->
+<div class="modal-mask" id="helpModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span>操作指南</span>
+            <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
+        </div>
+        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
+            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+            <p>- 单击选中的图块，顺时针旋转90度</p>
+            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
 

@@ -110,6 +110,21 @@ class PuzzleGame {
         }
     }
 
+    // 暂停游戏
+    pauseGame() {
+        if (this.gameStarted && this.timerInterval) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
+    }
+
+    // 继续游戏
+    resumeGame() {
+        if (this.gameStarted && !this.timerInterval) {
+            this.timerInterval = setInterval(() => this.updateTimer(), 1000);
+        }
+    }
+
     // 更新计时器
     updateTimer() {
         this.seconds++;
@@ -574,23 +589,36 @@ class PuzzleGame {
             const remainingSeconds = this.seconds % 60;
             const timeString = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
             this.completeInfo.textContent = `你用了 ${timeString} 和 ${this.moves} 次移动完成了拼图！`;
-            // 提交成绩到后端
-            try {
-                const userId = localStorage.getItem('userId');
-                if (userId) {
-                    fetch('/ranking/record', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ user_id: Number(userId), step_count: this.moves, time_used: this.seconds })
-                    }).catch(()=>{});
-                }
-            } catch (e) { /* ignore network errors */ }
+            // 提交成绩到排行榜
+            this.submitToRanking();
             setTimeout(() => {
                 this.gameComplete.style.display = 'flex';
             }, 500);
         }
         
         return completed;
+    }
+
+    // 提交成绩到排行榜
+    submitToRanking() {
+        try {
+            const userId = localStorage.getItem('userId');
+            if (userId) {
+                fetch('/ranking/record', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        user_id: Number(userId), 
+                        step_count: this.moves, 
+                        time_used: this.seconds 
+                    })
+                }).catch(error => {
+                    console.error('提交排行榜成绩失败:', error);
+                });
+            }
+        } catch (e) {
+            console.error('提交成绩失败:', e);
+        }
     }
 
     // 获取游戏统计信息
@@ -627,4 +655,4 @@ window.addEventListener('DOMContentLoaded', function() {
 });
 
 // 导出游戏实例供外部使用
-window.PuzzleGame = game;
+window.puzzleGame = game;

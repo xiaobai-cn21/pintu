@@ -1,111 +1,240 @@
 <!DOCTYPE html>
-<html lang="zh-cn">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>房间对战Demo</title>
+    <title>房间对战</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
 <body>
-    <div id="main">
-        <input id="username" placeholder="输入你的昵称">
-        <button id="createBtn">创建自己的房间</button>
-        <hr>
-        <h3>当前可加入的房间：</h3>
-        <ul id="roomList"></ul>
-        <hr>
-        <input id="roomInput" placeholder="输入要加入的房间号">
-        <button id="joinBtn">加入房间</button>
+{% include '_navbar.html' %}
+<div class="background-blur"></div>
+<div class="container" style="max-width: 1200px; margin: 0 auto;">
+    <div class="page-title" style="margin-top: 20px;">
+        <button class="btn btn-secondary back-btn" onclick="window.location.href='{{ url_for('main') }}'" style="padding: 8px 16px; font-size: 12px; margin-right: 16px;">
+            <span class="chinese-text">返回</span>
+        </button>
+        <span class="chinese-text" style="color: #F9E078; font-size: 18px;">房间对战</span>
     </div>
-    <div id="room" style="display:none;">
-        <p id="roomInfo"></p>
-        <button id="challengeBtn" style="display:none;">挑战</button>
-        <p id="result"></p>
-    </div>
-    <script>
-        const socket = io("http://localhost:5000");
-        let myRoomId = null;
 
-        function fetchRooms() {
-            fetch('/pvp/rooms')
-                .then(res => res.json())
-                .then(data => {
-                    const list = document.getElementById('roomList');
-                    list.innerHTML = '';
-                    if(data.data.length === 0) {
-                        list.innerHTML = '<li>暂无房间</li>';
-                    } else {
-                        data.data.forEach(room => {
-                            const li = document.createElement('li');
-                            li.innerHTML = `房间号: <b>${room.room_id}</b> (${room.user_count}人) <button>加入</button>`;
-                            li.querySelector('button').onclick = function() {
-                                const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
-                                socket.emit('join_room', {room_id: room.room_id, username});
-                            };
-                            list.appendChild(li);
-                        });
-                    }
-                });
+    <!-- 主界面 -->
+    <div id="main" class="card" style="background-color: #20223A; padding: 24px; margin-bottom: 20px;">
+        <div style="margin-bottom: 20px;">
+            <label class="chinese-text" style="color: #F9E078; font-size: 14px; display: block; margin-bottom: 8px;">输入你的昵称</label>
+            <input id="username" type="text" placeholder="输入你的昵称" style="width: 100%; max-width: 300px; padding: 8px 12px; background-color: #2A2D4A; border: 2px solid #F9E078; color: #E0E0E0; font-family: 'Press Start 2P', 'Zpix', monospace; font-size: 12px;">
+        </div>
+        
+        <button id="createBtn" class="btn btn-primary" style="margin-bottom: 20px; padding: 12px 24px; font-size: 14px;">
+            <span class="chinese-text">创建自己的房间</span>
+        </button>
+        
+        <hr style="border-color: #F9E078; margin: 20px 0;">
+        
+        <h3 class="chinese-text" style="color: #F9E078; font-size: 16px; margin-bottom: 16px;">当前可加入的房间：</h3>
+        <div id="roomList" class="card" style="background-color: #2A2D4A; padding: 16px; margin-bottom: 20px; min-height: 100px;">
+            <p class="chinese-text" style="color: #B8BCC8; text-align: center;">加载中...</p>
+        </div>
+        
+        <hr style="border-color: #F9E078; margin: 20px 0;">
+        
+        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+            <input id="roomInput" type="text" placeholder="输入要加入的房间号" style="flex: 1; min-width: 200px; padding: 8px 12px; background-color: #2A2D4A; border: 2px solid #F9E078; color: #E0E0E0; font-family: 'Press Start 2P', 'Zpix', monospace; font-size: 12px;">
+            <button id="joinBtn" class="btn btn-primary" style="padding: 8px 16px; font-size: 12px;">
+                <span class="chinese-text">加入房间</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 房间界面 -->
+    <div id="room" class="card" style="background-color: #20223A; padding: 24px; display: none;">
+        <div id="roomInfo" class="chinese-text" style="color: #F9E078; font-size: 16px; margin-bottom: 20px; text-align: center;"></div>
+        <div style="text-align: center;">
+            <button id="challengeBtn" class="btn btn-primary" style="padding: 12px 24px; font-size: 14px; display: none;">
+                <span class="chinese-text">开始挑战</span>
+            </button>
+        </div>
+        <div id="result" class="chinese-text" style="color: #F9E078; font-size: 18px; text-align: center; margin-top: 20px; font-weight: bold;"></div>
+        <div style="text-align: center; margin-top: 20px;">
+            <button id="leaveBtn" class="btn btn-secondary" style="padding: 8px 16px; font-size: 12px;">
+                <span class="chinese-text">离开房间</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 帮助页面模态框 -->
+<div class="modal-mask" id="helpModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span>操作指南</span>
+            <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
+        </div>
+        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
+            <p><strong style="color: #F9E078;">1. 创建房间</strong></p>
+            <p>- 输入你的昵称，点击"创建自己的房间"</p>
+            <p>- 系统会生成一个4位数字的房间号</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 加入房间</strong></p>
+            <p>- 在房间列表中选择房间，或输入房间号加入</p>
+            <p>- 每个房间最多容纳2名玩家</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 开始对战</strong></p>
+            <p>- 房间满员后，点击"开始挑战"开始对战</p>
+            <p>- 对战采用快速挑战模式，先完成者获胜</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const socket = io("http://localhost:5000");
+    let myRoomId = null;
+    let myUsername = null;
+
+    // 获取用户信息
+    function getUserInfo() {
+        const token = localStorage.getItem('puzzleToken');
+        const userId = localStorage.getItem('userId');
+        if (token) {
+            return { token, userId };
         }
+        return null;
+    }
+
+    // 刷新房间列表
+    function fetchRooms() {
+        fetch('/pvp/rooms')
+            .then(res => res.json())
+            .then(data => {
+                const list = document.getElementById('roomList');
+                list.innerHTML = '';
+                if(data.data.length === 0) {
+                    list.innerHTML = '<p class="chinese-text" style="color: #B8BCC8; text-align: center;">暂无房间</p>';
+                } else {
+                    data.data.forEach(room => {
+                        const roomDiv = document.createElement('div');
+                        roomDiv.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px; margin-bottom: 8px; background-color: #20223A; border: 1px solid #F9E078; border-radius: 4px;';
+                        roomDiv.innerHTML = `
+                            <div>
+                                <span class="chinese-text" style="color: #F9E078; font-size: 14px;">房间号: <strong>${room.room_id}</strong></span>
+                                <span class="chinese-text" style="color: #B8BCC8; font-size: 12px; margin-left: 12px;">(${room.user_count}/2人)</span>
+                            </div>
+                            <button class="btn btn-primary" style="padding: 6px 12px; font-size: 12px;">
+                                <span class="chinese-text">加入</span>
+                            </button>
+                        `;
+                        roomDiv.querySelector('button').onclick = function() {
+                            const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
+                            myUsername = username;
+                            socket.emit('join_room', {room_id: room.room_id, username});
+                        };
+                        list.appendChild(roomDiv);
+                    });
+                }
+            })
+            .catch(err => {
+                console.error('获取房间列表失败:', err);
+                document.getElementById('roomList').innerHTML = '<p class="chinese-text" style="color: #FF6B6B; text-align: center;">获取房间列表失败</p>';
+            });
+    }
+
+    // 初始化
+    document.addEventListener('DOMContentLoaded', function() {
         fetchRooms();
         setInterval(fetchRooms, 3000);
+        
+        // 检查登录状态
+        const userInfo = getUserInfo();
+        if (!userInfo) {
+            alert('请先登录后再使用对战功能');
+            window.location.href = '/';
+            return;
+        }
+    });
 
-        document.getElementById('createBtn').onclick = function() {
-            const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
-            socket.emit('create_room', {username});
-        };
+    // 创建房间
+    document.getElementById('createBtn').onclick = function() {
+        const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
+        myUsername = username;
+        socket.emit('create_room', {username});
+    };
 
-        document.getElementById('joinBtn').onclick = function() {
-            const roomId = document.getElementById('roomInput').value;
-            const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
-            if(roomId) {
-                socket.emit('join_room', {room_id: roomId, username});
-            }
-        };
+    // 加入房间
+    document.getElementById('joinBtn').onclick = function() {
+        const roomId = document.getElementById('roomInput').value;
+        const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
+        myUsername = username;
+        if(roomId) {
+            socket.emit('join_room', {room_id: roomId, username});
+        } else {
+            alert('请输入房间号');
+        }
+    };
 
-        // 新增waiting事件监听
-        socket.on('waiting', function(data) {
-            myRoomId = data.data.room_id;
-            document.getElementById('main').style.display = 'none';
-            document.getElementById('room').style.display = '';
-            document.getElementById('roomInfo').innerText = '房间号: ' + myRoomId + '，请等待其他玩家加入...';
+    // 离开房间
+    document.getElementById('leaveBtn').onclick = function() {
+        if(myRoomId && myUsername) {
+            socket.emit('leave_room', {room_id: myRoomId, username: myUsername});
+            document.getElementById('main').style.display = 'block';
+            document.getElementById('room').style.display = 'none';
+            myRoomId = null;
+            myUsername = null;
+        }
+    };
+
+    // Socket事件监听
+    socket.on('waiting', function(data) {
+        myRoomId = data.data.room_id;
+        document.getElementById('main').style.display = 'none';
+        document.getElementById('room').style.display = 'block';
+        document.getElementById('roomInfo').innerText = '房间号: ' + myRoomId + '，请等待其他玩家加入...';
+        document.getElementById('challengeBtn').style.display = 'none';
+        document.getElementById('result').innerText = '';
+    });
+
+    socket.on('start', function(data) {
+        myRoomId = data.data.room_id;
+        document.getElementById('main').style.display = 'none';
+        document.getElementById('room').style.display = 'block';
+        document.getElementById('roomInfo').innerText = '你已加入房间: ' + myRoomId + '，可以开始挑战！';
+        document.getElementById('challengeBtn').style.display = 'inline-block';
+        document.getElementById('result').innerText = '';
+    });
+
+    socket.on('joined', function(data) {
+        myRoomId = data.data.room_id;
+        document.getElementById('main').style.display = 'none';
+        document.getElementById('room').style.display = 'block';
+        document.getElementById('roomInfo').innerText = '你已加入房间: ' + myRoomId;
+    });
+
+    socket.on('left', function(data) {
+        if (data.data.room_id === myRoomId) {
+            document.getElementById('roomInfo').innerText = '其他玩家已离开房间';
             document.getElementById('challengeBtn').style.display = 'none';
             document.getElementById('result').innerText = '';
-        });
+        }
+    });
 
-        // start事件：可以开始挑战
-        socket.on('start', function(data) {
-            myRoomId = data.data.room_id;
-            document.getElementById('main').style.display = 'none';
-            document.getElementById('room').style.display = '';
-            document.getElementById('roomInfo').innerText = '你已加入房间: ' + myRoomId + '，可以开始挑战！';
-            document.getElementById('challengeBtn').style.display = '';
-            document.getElementById('result').innerText = '';
-        });
+    document.getElementById('challengeBtn').onclick = function() {
+        if(myRoomId) {
+            socket.emit('challenge', {room_id: myRoomId});
+        }
+    };
 
-        socket.on('joined', function(data) {
-            myRoomId = data.data.room_id;
-            document.getElementById('main').style.display = 'none';
-            document.getElementById('room').style.display = '';
-            document.getElementById('roomInfo').innerText = '你已加入房间: ' + myRoomId;
-        });
+    socket.on('lose', function() {
+        document.getElementById('result').innerText = '你输了';
+        document.getElementById('challengeBtn').style.display = 'none';
+    });
 
-        document.getElementById('challengeBtn').onclick = function() {
-            if(myRoomId) {
-                socket.emit('challenge', {room_id: myRoomId});
-                socket.emit('won', {room_})
-            }
-        };
+    socket.on('win', function() {
+        document.getElementById('result').innerText = '你赢了！';
+        document.getElementById('challengeBtn').style.display = 'none';
+    });
 
-        socket.on('lose', function() {
-            document.getElementById('result').innerText = '你输了';
-        });
-        socket.on('error', function(data) {
-            alert(data.msg || JSON.stringify(data));
-        });
-
-        socket.on('win', function() {
-        document.getElementById('result').innerText = '你赢了';
-        });
-    </script>
+    socket.on('error', function(data) {
+        alert(data.msg || JSON.stringify(data));
+    });
+</script>
 </body>
 </html>

@@ -10,6 +10,7 @@ from views.ai import ai
 from views.pvp import pvp, register_socketio_events
 from flask_socketio import SocketIO
 from views.ranking import ranking
+from views.levels import levels
 
 def create_app():
     app = Flask(__name__)
@@ -27,6 +28,7 @@ def create_app():
     app.register_blueprint(ai, url_prefix='/ai')
     app.register_blueprint(pvp, url_prefix='/pvp')
     app.register_blueprint(ranking, url_prefix='/ranking')
+    app.register_blueprint(levels, url_prefix='/levels')
 
     @app.route('/')
     def main():
@@ -35,7 +37,7 @@ def create_app():
     # 其它页面路由（模板渲染）
     @app.route('/menu')
     def menu_page():
-        return render_template('menu.html')
+        return render_template('index.html')
 
     @app.route('/option')
     def option_page():
@@ -68,6 +70,10 @@ def create_app():
     @app.route('/ai-page')
     def ai_page():
         return render_template('ai.html')
+
+    @app.route('/versus')
+    def versus_page():
+        return render_template('versus.html')
     return app
 
 if __name__ == '__main__':
