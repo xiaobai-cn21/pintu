@@ -24,8 +24,9 @@
         </div>
 
         <div class="puzzle-container">
-            <div id="puzzleBoard" class="puzzle-board">
+            <div class="puzzle-board-wrapper"> <!-- 新增一个 wrapper -->
                 <div id="puzzleBg" class="puzzle-bg"></div>
+                <div id="puzzleBoard" class="puzzle-board"></div>
             </div>
             <div id="piecesZone" class="pieces-zone"></div>
         </div>
@@ -38,7 +39,10 @@
             </div>
         </div>
     </div>
-    
+    //svg形状
+    <svg width="0" height="0" style="position: absolute; z-index: -1;">
+      <defs id="puzzle-defs"></defs>
+    </svg>
     <script src="../js/script.js"></script>
 </body>
 </html>
