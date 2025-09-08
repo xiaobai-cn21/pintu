@@ -20,6 +20,10 @@
         <p id="roomInfo"></p>
         <button id="challengeBtn" style="display:none;">挑战</button>
         <p id="result"></p>
+        <!-- 聊天区 -->
+        <div id="chatBox" style="border:1px solid #ccc; height:150px; overflow-y:auto; margin:10px 0; padding:5px;"></div>
+        <input id="chatInput" placeholder="输入消息" style="width:70%;">
+        <button id="sendMsgBtn">发送</button>
     </div>
     <script>
         const socket = io("http://localhost:5000");
@@ -70,6 +74,7 @@
             document.getElementById('roomInfo').innerText = '房间号: ' + myRoomId + '，请等待其他玩家加入...';
             document.getElementById('challengeBtn').style.display = 'none';
             document.getElementById('result').innerText = '';
+            document.getElementById('chatBox').innerHTML = '';
         });
 
         // start事件：可以开始挑战
@@ -80,6 +85,7 @@
             document.getElementById('roomInfo').innerText = '你已加入房间: ' + myRoomId + '，可以开始挑战！';
             document.getElementById('challengeBtn').style.display = '';
             document.getElementById('result').innerText = '';
+            document.getElementById('chatBox').innerHTML = '';
         });
 
         socket.on('joined', function(data) {
@@ -92,7 +98,6 @@
         document.getElementById('challengeBtn').onclick = function() {
             if(myRoomId) {
                 socket.emit('challenge', {room_id: myRoomId});
-                socket.emit('won', {room_})
             }
         };
 
@@ -104,7 +109,35 @@
         });
 
         socket.on('win', function() {
-        document.getElementById('result').innerText = '你赢了';
+            document.getElementById('result').innerText = '你赢了';
+        });
+
+        // 聊天消息显示
+        function appendMessage(username, message) {
+            const chatBox = document.getElementById('chatBox');
+            const msgDiv = document.createElement('div');
+            msgDiv.innerText = username + ': ' + message;
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        // 发送消息
+        document.getElementById('sendMsgBtn').onclick = function() {
+            const message = document.getElementById('chatInput').value.trim();
+            const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
+            if(myRoomId && message) {
+                socket.emit('send_message', {
+                    room_id: myRoomId,
+                    username: username,
+                    message: message
+                });
+                document.getElementById('chatInput').value = '';
+            }
+        };
+
+        // 接收消息
+        socket.on('receive_message', function(data) {
+            appendMessage(data.username, data.message);
         });
     </script>
 </body>

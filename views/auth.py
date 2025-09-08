@@ -43,7 +43,7 @@ def  login():
             ).first()
 
             if user and check_password_hash(user.hash_password, password):
-                acces_token = create_access_token(identity=user.user_id)
+                acces_token = create_access_token(identity=str(user.user_id))
                 return jsonify({
                     "code": 200, 
                     "message": "登录成功", 

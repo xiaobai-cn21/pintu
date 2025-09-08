@@ -30,7 +30,7 @@ def create_app():
 
     @app.route('/rank')
     def main():
-        return render_template('rank.html')
+        return render_template('versus.html')
     return app
 
 if __name__ == '__main__':
