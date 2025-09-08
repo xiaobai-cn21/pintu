@@ -276,7 +276,6 @@ function dragOver(e) {
 }
 
 // 拖拽到棋盘
-// --- 用这个修复后的版本替换你原来的 dropOnBoard 函数 ---
 function dropOnBoard(e) {
     e.preventDefault();
     if (!draggedPiece) return;
@@ -300,46 +299,92 @@ function dropOnBoard(e) {
     let finalLeft, finalTop;
 
     if (shape === 'jigsaw' || shape === 'square') {
-        // --- 检查逻辑移到这里 ---
-        // 对于方形和jigsaw，一个格子只允许一个块
+        // --- 方形和异形块的逻辑保持不变 ---
         if (findPieceOnBoard(gridX, gridY)) {
-            returnToZone(draggedPiece); // 如果位置被占，送回备选区
+            returnToZone(draggedPiece);
             return;
         }
 
         if (shape === 'jigsaw') {
+            const rotation = parseInt(draggedPiece.dataset.rotation) || 0;
+            const isFlipped = draggedPiece.dataset.flipped === 'true';
             const tabSize = pieceWidth * JIGSAW_TAB_RATIO;
-            const hasLeftTab = draggedPiece.dataset.edgeLeft === 'tab';
-            const hasTopTab = draggedPiece.dataset.edgeTop === 'tab';
-            const offsetXForDiv = hasLeftTab ? tabSize : 0;
-            const offsetYForDiv = hasTopTab ? tabSize : 0;
-            finalLeft = `${gridX * pieceWidth - offsetXForDiv}px`;
-            finalTop = `${gridY * pieceHeight - offsetYForDiv}px`;
-        } else { // 如果是 'square'
+
+            let edges = {
+                top: draggedPiece.dataset.edgeTop, right: draggedPiece.dataset.edgeRight,
+                bottom: draggedPiece.dataset.edgeBottom, left: draggedPiece.dataset.edgeLeft
+            };
+            if (isFlipped) { [edges.left, edges.right] = [edges.right, edges.left]; }
+            const rotationSteps = rotation / 90;
+            for (let i = 0; i < rotationSteps; i++) {
+                const tempTop = edges.top; edges.top = edges.left; edges.left = edges.bottom;
+                edges.bottom = edges.right; edges.right = tempTop;
+            }
+
+            const offsetXForDiv = (edges.left === 'tab' ? tabSize : 0);
+            const offsetYForDiv = (edges.top === 'tab' ? tabSize : 0);
+
+            let calculatedLeft = gridX * pieceWidth - offsetXForDiv;
+            let calculatedTop = gridY * pieceHeight - offsetYForDiv;
+
+            if (rotation === 90 || rotation === 270) {
+                const divWidth = parseFloat(draggedPiece.style.width);
+                const divHeight = parseFloat(draggedPiece.style.height);
+                calculatedLeft += (divWidth - divHeight) / 2;
+                calculatedTop += (divHeight - divWidth) / 2;
+            }
+            finalLeft = `${calculatedLeft}px`;
+            finalTop = `${calculatedTop}px`;
+        } else { // 'square'
             finalLeft = `${gridX * pieceWidth}px`;
             finalTop = `${gridY * pieceHeight}px`;
         }
 
     } else if (shape === 'triangle') {
-        // --- 关键修复：恢复三角形专用的检查逻辑 ---
-        const relX = (x % pieceWidth) / pieceWidth;
-        const relY = (y % pieceHeight) / pieceHeight;
-        let position;
-        if ((gridX + gridY) % 2 === 0) {
-            position = (relY < relX) ? 'top-right' : 'bottom-left';
-        } else {
-            position = (relX + relY < 1) ? 'top-left' : 'bottom-right';
-        }
+        // --- ✨ 全新自由逻辑：移除 (x+y)%2 的限制，允许任何兼容的三角形组合 ✨ ---
 
-        // 使用精确的 findTrianglePieceOnBoard 函数进行检查
-        if (findTrianglePieceOnBoard(gridX, gridY, position)) {
-            returnToZone(draggedPiece);
+        const draggedPieceType = draggedPiece.dataset.type; // 获取正在拖动的块的类型，例如 'top-left'
+
+        // 1. 查找目标格子里所有已经存在的三角块
+        const piecesInCell = Array.from(
+            puzzleBoard.querySelectorAll(`.puzzle-piece.triangle[data-current-x='${gridX}'][data-current-y='${gridY}']`)
+        );
+
+        // 2. 检查格子是否已满 (最多只能有2个)
+        if (piecesInCell.length >= 2) {
+            returnToZone(draggedPiece); // 如果格子满了，直接送回
             return;
         }
 
-        draggedPiece.dataset.position = position;
+        // 3. 检查是否要放置的“类型”已经存在于格子中
+        const typeAlreadyExists = piecesInCell.some(p => p.dataset.type === draggedPieceType);
+        if (typeAlreadyExists) {
+            returnToZone(draggedPiece); // 如果这个类型的槽位被占了，送回
+            return;
+        }
+
+        // 4. 如果格子里已经有1个块，检查即将放入的块是否与它“兼容”（能拼成正方形）
+        if (piecesInCell.length === 1) {
+            const existingPieceType = piecesInCell[0].dataset.type;
+
+            // 定义所有兼容的配对关系
+            const isCompatible =
+                (draggedPieceType === 'top-left' && existingPieceType === 'bottom-right') ||
+                (draggedPieceType === 'bottom-right' && existingPieceType === 'top-left') ||
+                (draggedPieceType === 'top-right' && existingPieceType === 'bottom-left') ||
+                (draggedPieceType === 'bottom-left' && existingPieceType === 'top-right');
+
+            if (!isCompatible) {
+                returnToZone(draggedPiece); // 如果是不兼容的组合（例如 top-left 和 top-right），送回
+                return;
+            }
+        }
+
+        // 5. 所有检查都通过了，说明可以安全放置
+        draggedPiece.dataset.position = draggedPieceType; // 对于三角块，它的“放置位置”就是它自身的“类型”
         finalLeft = `${gridX * pieceWidth}px`;
         finalTop = `${gridY * pieceHeight}px`;
+        // --- 新逻辑结束 ---
     }
 
     // 统一设置最终位置和数据
@@ -705,18 +750,13 @@ function setupPieceEvents(piece) {
     // 添加右键旋转功能
     piece.addEventListener('contextmenu', function(e) {
         e.preventDefault();
-        if (shape !== 'jigsaw') {
-            rotatePiece(this);
-        }
+        rotatePiece(this);
     });
 
     // 添加双击翻转功能
     piece.addEventListener('dblclick', function(e) {
         e.preventDefault();
-        // --- 新增：jigsaw 形状不支持翻转 ---
-        if (shape !== 'jigsaw') {
-            flipPiece(this);
-        }
+        flipPiece(this);
     });
     piece.addEventListener('drag', pieceDrag);
 }
