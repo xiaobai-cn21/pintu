@@ -83,6 +83,12 @@
         <img id="aiImg" src="" alt="AI图片" style="display:none;">
         <div id="aiPlaceholder" style="color:#F9E078; opacity:.7;">生成结果将显示在这里</div>
       </div>
+      <!-- 结果确认区：用此图生成拼图 -->
+      <div style="display:flex;justify-content:center;margin-top:8px;">
+        <button id="toEditorBtn" class="btn btn-primary" style="display:none;">
+          <span class="chinese-text">用此图生成拼图</span>
+        </button>
+      </div>
 
       <!-- 对话+输入区 -->
       <div class="card ai-chat">
@@ -107,6 +113,7 @@ const chatBox=document.getElementById('chatBox');
 const promptTags=document.getElementById('promptTags');
 const sizeTags=document.getElementById('sizeTags');
 let selectedSize="1024x1024"; // 默认选中第一个尺寸
+const toEditorBtn=document.getElementById('toEditorBtn');
 
 function appendMsg(who,text){
   const row=document.createElement('div');
@@ -173,6 +180,8 @@ genBtn.addEventListener('click', async ()=>{
       aiResult.style.display='flex';
       aiImg.style.display='block';
       if(aiPlaceholder) aiPlaceholder.style.display='none';
+      // 显示“用此图生成拼图”
+      toEditorBtn.style.display='inline-block';
       appendMsg('AI', '已生成图片，见上方预览');
       aiTip.textContent='';
     }else{
@@ -180,6 +189,23 @@ genBtn.addEventListener('click', async ()=>{
       appendMsg('AI', '生成失败');
     }
   }catch(e){ aiTip.textContent='网络错误'; }
+});
+
+// 跳转编辑器并带入图片（默认 4x4 方形，用户可在编辑器调整）
+toEditorBtn.addEventListener('click', ()=>{
+  const src = aiImg && aiImg.src ? aiImg.src : '';
+  if(!src){
+    aiTip.textContent='请先生成图片';
+    return;
+  }
+  try{
+    localStorage.setItem('customImage', src);
+    if(!localStorage.getItem('customSize')){
+      localStorage.setItem('customSize', '4');
+    }
+    // 形状默认保持方形，用户在编辑器选择
+  }catch(e){}
+  window.location.href = '{{ url_for('editor_page') }}';
 });
 </script>
 
