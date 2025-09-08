@@ -1,0 +1,230 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f5f5f5;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.controls {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#imageUpload {
+    display: none;
+}
+
+.btn {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+.btn:hover {
+    background-color: #2980b9;
+}
+
+#difficultySelect {
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.puzzle-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.puzzle-board {
+    width: 400px;
+    height: 400px;
+    background: #fff;
+    border: 2px solid #aedcec;
+    position: relative;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.puzzle-bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0.25;
+    z-index: 1;
+    pointer-events: none;
+    background-size: cover;
+    background-position: center;
+    transition: opacity 0.3s;
+}
+
+.puzzle-piece {
+    width: 100px;
+    height: 100px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid transparent;
+    box-sizing: border-box;
+    background-repeat: no-repeat;
+    background-size: 400px 400px;
+    margin: 2px;
+    position: static;
+    z-index: 2;
+    flex-shrink: 0; 
+}
+
+.puzzle-piece:hover {
+    z-index: 10;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    border: 1px solid #3498db;
+}
+
+
+
+.puzzle-piece.dragging {
+    opacity: 0.8;
+    z-index: 100;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+    transform: scale(1.05);
+    clip-path: inherit;
+}
+
+.pieces-zone {
+    width: 100%;
+    min-height: 110px;
+    background: #f0f8ff;
+    border: 2px dashed #aedcec;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    align-items: center;
+    padding: 10px 0;
+    gap: 8px;
+}
+
+.game-complete {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.message {
+    background-color: white;
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.message h2 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.message p {
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+@media (max-width: 850px) {
+    .puzzle-board {
+        width: 320px;
+        height: 320px;
+    }
+    .puzzle-piece {
+        width: 80px;
+        height: 80px;
+        background-size: 320px 320px !important;
+    }
+}
+
+.pieces-zone .puzzle-piece {
+    margin: 0;
+    /* Elimina el gap extra */
+
+}
+  {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+      }
+      .background-blur {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url('../images/background.jpg');
+        background-size: cover;
+        background-position: center;
+        z-index: -2; /* 置于最底层 */
+      }
+      .background-blur::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        background: radial-gradient(
+          circle at center,
+          rgba(255, 255, 255, 0) 0%,
+          rgba(0, 0, 0, 0.5) 150%
+        );
+      }
+      .content {
+        position: relative;
+        z-index: 1; /* 确保内容在背景上方 */
+        color: white;
+        text-align: center;
+        padding: 50px;
+      }
+
