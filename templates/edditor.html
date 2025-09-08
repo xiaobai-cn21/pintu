@@ -55,6 +55,13 @@
                         <option value="8">8 x 8</option>
                     </select>
                 </div>
+                <div class="input-item">
+                    <label>形状</label>
+                    <select id="shapeSelect">
+                        <option value="square" selected>方形</option>
+                        <option value="triangle">三角形</option>
+                    </select>
+                </div>
             </div>
         </div>
         <!-- 右侧：预览区 -->
@@ -84,7 +91,9 @@
         const playBtn = document.getElementById('playBtn');
         const previewTip = document.getElementById('previewTip');
         const difficultyText = document.getElementById('difficultyText');
+        const shapeSelect = document.getElementById('shapeSelect');
         let imgData = null;
+        let currentShape = 'square';
 
         uploadBox.onclick = () => imageUpload.click();
         uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.style.borderColor = "#165DFF"; });
@@ -133,6 +142,11 @@
         });
         updateDifficultyText();
 
+        shapeSelect.addEventListener('change', () => {
+            currentShape = shapeSelect.value;
+            drawGrid();
+        });
+
         function drawGrid() {
             if (!imgData) return;
             previewImage.onload = function() {
@@ -145,6 +159,7 @@
                 ctx.strokeStyle = "#FFFFFF";
                 ctx.lineWidth = 2;
                 const grid = parseInt(difficultySelect.value);
+                currentShape = shapeSelect.value;
                 for (let i = 1; i < grid; i++) {
                     let x = i * gridCanvas.width / grid;
                     ctx.beginPath();
@@ -159,6 +174,27 @@
                     ctx.lineTo(gridCanvas.width, y);
                     ctx.stroke();
                 }
+                if (currentShape === 'triangle') {
+                    for (let i = 0; i < grid; i++) {
+                        for (let j = 0; j < grid; j++) {
+                            const x = j * gridCanvas.width / grid;
+                            const y = i * gridCanvas.height / grid;
+                            const nextX = (j + 1) * gridCanvas.width / grid;
+                            const nextY = (i + 1) * gridCanvas.height / grid;
+                            if ((i % 2 === 0 && j % 2 === 0) || (i % 2 === 1 && j % 2 === 1)) {
+                                ctx.beginPath();
+                                ctx.moveTo(x, y);
+                                ctx.lineTo(nextX, nextY);
+                                ctx.stroke();
+                            } else {
+                                ctx.beginPath();
+                                ctx.moveTo(nextX, y);
+                                ctx.lineTo(x, nextY);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
             };
             previewImage.src = imgData;
         }
@@ -166,7 +202,29 @@
         playBtn.addEventListener('click', function() {
             localStorage.setItem('customImage', imgData);
             localStorage.setItem('customSize', difficultySelect.value);
+            localStorage.setItem('customShape', shapeSelect.value);
             window.location.href = '{{ url_for('game_page') }}';
+        });
+
+        window.addEventListener('DOMContentLoaded', function() {
+            const customImage = localStorage.getItem('customImage');
+            const customSize = localStorage.getItem('customSize');
+            const customShape = localStorage.getItem('customShape');
+            if (customImage && customSize) {
+                imgData = customImage;
+                previewImage.src = imgData;
+                previewImage.style.display = 'block';
+                gridCanvas.style.display = 'block';
+                previewTip.style.display = 'none';
+                difficultySelect.value = customSize;
+                if (customShape) { shapeSelect.value = customShape; currentShape = customShape; }
+                updateDifficultyText();
+                drawGrid();
+                playBtn.disabled = false;
+                localStorage.removeItem('customImage');
+                localStorage.removeItem('customSize');
+                localStorage.removeItem('customShape');
+            }
         });
     </script>
 

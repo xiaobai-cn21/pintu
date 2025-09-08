@@ -30,9 +30,8 @@ def create_app():
     app.register_blueprint(ranking, url_prefix='/ranking')
     app.register_blueprint(levels, url_prefix='/levels')
 
-    @app.route('/rank')
+    @app.route('/')
     def main():
-        return render_template('rank.html')
         return render_template('index.html')
 
     # 其它页面路由（模板渲染）

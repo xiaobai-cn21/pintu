@@ -152,7 +152,11 @@ function createPuzzlePieces() {
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
 
     if (shape === 'square') {
-        // ... 方形逻辑保持不变 ...
+        for (let y = 0; y < difficulty; y++) {
+            for (let x = 0; x < difficulty; x++) {
+                createSquarePiece(x, y, pieceWidth, pieceHeight);
+            }
+        }
     } else if (shape === 'triangle') {
         for (let y = 0; y < difficulty; y++) {
             for (let x = 0; x < difficulty; x++) {
@@ -274,7 +278,10 @@ function dropOnBoard(e) {
     let gridY = Math.floor(y / pieceHeight);
 
     if (shape === 'square') {
-        // ... 方形逻辑保持不变 ...
+        if (findPieceOnBoard(gridX, gridY)) {
+            returnToZone(draggedPiece);
+            return;
+        }
     } else if (shape === 'triangle') {
 
         const relX = (x % pieceWidth) / pieceWidth;
@@ -325,7 +332,7 @@ function dropOnZone(e) {
     piecesZone.appendChild(draggedPiece);
     moves++;
     movesElement.textContent = `移动次数: ${moves}`;
-    //draggedPiece = null;
+    draggedPiece = null;
 }
 
 // 查找棋盘上指定格子的拼图块
@@ -474,7 +481,7 @@ function createSquarePiece(x, y, width, height) {
     piece.style.height = `${height}px`;
     piece.style.backgroundImage = `url(${originalImageUrl})`;
 
-    // 使用新的全局变量来设置背景，确保比例正确
+    // 使用计算后的 cover 尺寸与偏移，确保切片背景对齐
     piece.style.backgroundSize = `${coveredWidth}px ${coveredHeight}px`;
     const bgPosX = -(x * width) + offsetX;
     const bgPosY = -(y * height) + offsetY;
@@ -609,3 +616,19 @@ function pieceDrag(e) {
         customFollower.style.top = `${e.clientY - customFollower.offsetY}px`;
     }
 }
+
+// 兼容 game.html 对 window.puzzleGame 的依赖（用于帮助弹窗暂停/恢复）
+window.puzzleGame = {
+    get gameStarted() { return gameStarted; },
+    pauseGame() {
+        if (gameStarted && timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+    },
+    resumeGame() {
+        if (gameStarted && !timerInterval) {
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+    }
+};
