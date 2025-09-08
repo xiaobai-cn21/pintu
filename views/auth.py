@@ -3,8 +3,10 @@ from extensions import db, users
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_jwt_extended import create_access_token
+import re
 
 auth = Blueprint('auth', __name__)
+
 
 @auth.route('/signin', methods=['GET', 'POST'])
 def signin():
@@ -16,14 +18,9 @@ def signin():
             password = data.get('password')
             confirmPassword = data.get('confirmPassword')
 
-            if not all([username, email, password, confirmPassword]):
-                return jsonify({"code": "400", "message": "请求参数异常", "data": None})
-
-            if password != confirmPassword:
-                return jsonify({"code": "400", "message": "两次输入的密码不一致", "data": None})
-
-            if users.query.filter((users.username == username) | (users.email == email)).first():
-                return jsonify({"code": "400", "message": "用户名或邮箱已存在", "data": None})  
+            error = validate_signup(username, email, password, confirmPassword)
+            if error:
+                return jsonify({"code": "400", "message": error, "data": None})
             
             hash_password = generate_password_hash(password)
             user_obj = users(username=username, email=email, hash_password=hash_password, created_at=datetime.now())
@@ -46,7 +43,7 @@ def  login():
             ).first()
 
             if user and check_password_hash(user.hash_password, password):
-                acces_token = create_access_token(identity=user.user_id)
+                acces_token = create_access_token(identity=str(user.user_id))
                 return jsonify({
                     "code": 200, 
                     "message": "登录成功", 
@@ -60,3 +57,29 @@ def  login():
                 return jsonify({"code": "401", "message": "用户名或密码错误", "data": None})
     except Exception as e:
         return jsonify({"code": "500", "message": f"服务器内部错误: {str(e)}", "data": None})
+    
+
+def is_email(s):
+    return re.match(r'[\w\.-]+@[\w\.-]+\w+$', s)
+
+def is_valid_password(s):
+    return len(s) >= 6 and len(s) <= 20 
+
+
+def is_valid_username(s):
+    return len(s) >= 4 and len(s) <= 16 and not re.search(r'[^\w]', s)
+
+def validate_signup(username, email, password, confirmPassword):
+    if not all([username, email, password, confirmPassword]):
+        return "请求参数异常"
+    if password != confirmPassword:
+        return "两次输入的密码不一致"
+    if users.query.filter((users.username == username) | (users.email == email)).first():
+        return "用户名或邮箱已存在"
+    if not is_valid_password(password):
+        return "密码长度必须在6-20位之间"
+    if not is_valid_username(username):
+        return "用户名只能包含字母、数字和下划线，长度在4-16位之间"
+    if not is_email(email):
+        return "你输入一个有效的电子邮件"
+    return None

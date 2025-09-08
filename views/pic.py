@@ -3,10 +3,17 @@ from werkzeug.utils import secure_filename
 import os
 from extensions import users, puzzles, db
 from datetime import datetime
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 pic = Blueprint('pic', __name__)
 
+def allowed_picture_type(filename):
+    ALLOWED_EXTENSIONS = {'jpg', 'png'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
 @pic.route('/puzzles', methods=['POST'])
+@jwt_required()
 def create_puzzle():
     try:
         data = request.form
@@ -14,6 +21,15 @@ def create_puzzle():
         if not file:
             return jsonify({"code": "400", "message": "图片未上传", "data": None})
 
+        if not allowed_picture_type(file.filename):
+            return jsonify({"code": "400", "message": "图片格式仅支持 JPG/PNG", "data": None})
+        
+        file.seek(0, 2)
+        file_length = file.tell()
+        file.seek(0)
+        if file_length > (5 * 1024 * 1024):
+            return jsonify({"code":"404", "message":"图片的大小大于5mb", "data": None})
+        
         filename = secure_filename(file.filename)
         img_dir = os.path.join(current_app.root_path, 'static', 'uploads')
         os.makedirs(img_dir, exist_ok=True)
@@ -21,14 +37,18 @@ def create_puzzle():
         file.save(file_path)
         image_url = f'/static/uploads/{filename}'
 
-        creator_id = data.get('creator_id')
+        creator_id = int(get_jwt_identity())
         user = users.query.get(creator_id)
         if not user:
             return jsonify({"code": "404", "message": "用户不存在", "data": None})
-
+        
+        puzzle_title = data.get('title')
+        if (len(puzzle_title) < 4 or len(puzzle_title) > 20):
+            return jsonify({"code": "404", "message": "拼图标题长度需在5~20个字符之间", "data": None})
+        
         puzzle = puzzles(
             creator_id=creator_id,
-            title=data.get('title'),
+            title=puzzle_title,
             image_url=image_url,
             difficulty=data.get('difficulty'),
             piece_count=data.get('piece_count'),

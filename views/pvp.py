@@ -41,9 +41,9 @@ def register_socketio_events(socketio):
         join_room(room_id)
         room_pool[room_id].append(username)
         user_sid_map[request.sid] = {'username': username, 'room_id': room_id}
-        # 通知房间所有人可以开始
+
         emit('start', {'code': 200, 'msg': '房间已满，可以开始', 'data': {'room_id': room_id}}, room=room_id)
-        # 只通知自己加入成功
+
         emit('joined', {'code': 200, 'msg': '加入房间成功', 'data': {'room_id': room_id, 'username': username}}, to=request.sid)
 
     @socketio.on('disconnect')
@@ -82,7 +82,20 @@ def register_socketio_events(socketio):
         room_id = data.get('room_id')
         emit('lose', {}, room=room_id, include_self=False)
         emit('win', {}, to=request.sid)
-    
+
+    @socketio.on('send_message')
+    def handle_send_message(data):
+        room_id = data.get('room_id')
+        message = data.get('message')
+        username = data.get('username')
+        if not room_id or not username or not message:
+            emit('error', {'msg': '消息参数不完整', 'data': None})
+            return
+        emit('receive_message', {
+            'room_id': room_id,
+            'username': username,
+            'message': message
+        }, room=room_id)
 
 @pvp.route('/rooms', methods=['GET'])
 def get_rooms():
