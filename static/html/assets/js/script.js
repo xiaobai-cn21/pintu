@@ -11,6 +11,8 @@ const completeInfo = document.getElementById('completeInfo');
 const playAgainBtn = document.getElementById('playAgainBtn');
 const puzzleBg = document.getElementById('puzzleBg');
 const toggleBgBtn = document.getElementById('toggleBgBtn');
+//SVG 定义容器
+const svgDefs = document.getElementById('puzzle-defs');
 
 let pieces = [];
 let difficulty = 4;
@@ -25,7 +27,8 @@ let shape = 'square'; // 默认为方形
 let coveredWidth, coveredHeight, offsetX, offsetY;
 let boardRect;
 let customFollower = null;
-
+//连接头的大小比例
+const JIGSAW_TAB_RATIO = 0.3;
 // 事件监听器
 //imageUpload.addEventListener('change', handleImageUpload);
 //startBtn.addEventListener('click', startGame);
@@ -126,8 +129,13 @@ function resetGame() {
     moves = 0;
     timerElement.textContent = `时间: 00:00`;
     movesElement.textContent = `移动次数: ${moves}`;
-    puzzleBoard.querySelectorAll('.puzzle-piece').forEach(piece => piece.remove());
+    //puzzleBoard.querySelectorAll('.puzzle-piece').forEach(piece => piece.remove());
+    // 直接清空容器内容更高效
+    puzzleBoard.innerHTML = '';
     piecesZone.innerHTML = '';
+    if (svgDefs) { //清空 SVG 定义
+        svgDefs.innerHTML = '';
+    }
     pieces = [];
     setPuzzleBg();
     puzzleBg.style.opacity = bgVisible ? '0.25' : '0';
@@ -144,9 +152,17 @@ function updateTimer() {
 
 // 创建拼图块
 function createPuzzlePieces() {
-    puzzleBoard.querySelectorAll('.puzzle-piece').forEach(piece => piece.remove());
+    //puzzleBoard.querySelectorAll('.puzzle-piece').forEach(piece => piece.remove());
+    puzzleBoard.innerHTML = '';
     piecesZone.innerHTML = '';
+    if (svgDefs) svgDefs.innerHTML = '';
     pieces = [];
+
+    // 确保棋盘尺寸已就绪
+    if (puzzleBoard.offsetWidth === 0) {
+        setTimeout(createPuzzlePieces, 100); // 如果棋盘还未渲染，稍后重试
+        return;
+    }
 
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
@@ -174,13 +190,23 @@ function createPuzzlePieces() {
                 }
             }
         }
+    }else if (shape === 'jigsaw') { // --- 新增：jigsaw 形状逻辑 ---
+        const layout = generateJigsawLayout();
+        for (let y = 0; y < difficulty; y++) {
+            for (let x = 0; x < difficulty; x++) {
+                createJigsawPiece(x, y, pieceWidth, pieceHeight, layout[y][x]);
+            }
+        }
     }
 
     shufflePieces();
     pieces.forEach(piece => {
-        piece.style.position = 'static';
+        if (shape === 'jigsaw') { // 为 jigsaw 块在备选区增加间距，防止重叠
+             piece.style.margin = `${(pieceHeight * JIGSAW_TAB_RATIO) / 2}px`;
+        }
+        //piece.style.position = 'static';
         piecesZone.appendChild(piece);
-        setupPieceEvents(piece);
+        //setupPieceEvents(piece);
     });
 
     puzzleBoard.addEventListener('dragover', dragOver);
@@ -255,7 +281,8 @@ function dragEnd() {
         document.body.removeChild(customFollower);
         customFollower = null;
     }
-    checkPuzzleCompletion();
+    setTimeout(checkPuzzleCompletion, 50);
+    //checkPuzzleCompletion();
 }
 
 function dragOver(e) {
@@ -267,6 +294,8 @@ function dropOnBoard(e) {
     e.preventDefault();
     if (!draggedPiece) return;
 
+    draggedPiece.style.margin = '0'; // 放置到棋盘时清除 margin
+
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
     const boardRect = puzzleBoard.getBoundingClientRect();
@@ -277,8 +306,32 @@ function dropOnBoard(e) {
     let gridX = Math.floor(x / pieceWidth);
     let gridY = Math.floor(y / pieceHeight);
 
-    if (shape === 'square') {
-        // ... 方形逻辑保持不变 ...
+    // 边界检查
+    gridX = Math.max(0, Math.min(gridX, difficulty - 1));
+    gridY = Math.max(0, Math.min(gridY, difficulty - 1));
+
+    // 如果目标位置已有拼图块，则不允许放置
+    if (findPieceOnBoard(gridX, gridY)) {
+        return;
+    }
+
+    if (shape === 'jigsaw') {
+        const tabSize = pieceWidth * JIGSAW_TAB_RATIO;
+        // 需要根据这块拼图的原始位置（correctX/Y）来判断它左边和上边是否有“耳朵”
+        const correctX = parseInt(draggedPiece.dataset.correctX);
+        const correctY = parseInt(draggedPiece.dataset.correctY);
+        const hasLeftTab = draggedPiece.dataset.edgeLeft === 'tab';
+        const hasTopTab = draggedPiece.dataset.edgeTop === 'tab';
+
+        // 计算放置时需要的偏移量
+        const offsetXForDiv = hasLeftTab ? tabSize : 0;
+        const offsetYForDiv = hasTopTab ? tabSize : 0;
+
+        finalLeft = `${gridX * pieceWidth - offsetXForDiv}px`;
+        finalTop = `${gridY * pieceHeight - offsetYForDiv}px`;
+    } else if (shape === 'square') {
+        finalLeft = `${gridX * pieceWidth}px`;
+        finalTop = `${gridY * pieceHeight}px`;
     } else if (shape === 'triangle') {
 
         const relX = (x % pieceWidth) / pieceWidth;
@@ -286,14 +339,12 @@ function dropOnBoard(e) {
 
         let position;
 
-        // (行 + 列) 为偶数的格子，是主对角线切割
+        // (行+列) 为偶数的格子，是主对角线切割
         if ((gridX + gridY) % 2 === 0) {
-            // 主对角线的几何判断 (y vs x)，返回的命名与上面创建时完全对应
             position = (relY < relX) ? 'top-right' : 'bottom-left';
         }
-        // (行 + 列) 为奇数的格子，是副对角线切割
+        // (行+列) 为奇数的格子，是副对角线切割
         else {
-            // 副对角线的几何判断 (x+y vs 1)，返回的命名与上面创建时完全对应
             position = (relX + relY < 1) ? 'top-left' : 'bottom-right';
         }
 
@@ -303,11 +354,13 @@ function dropOnBoard(e) {
         }
 
         draggedPiece.dataset.position = position;
+        finalLeft = `${gridX * pieceWidth}px`;
+        finalTop = `${gridY * pieceHeight}px`;
     }
 
     draggedPiece.style.position = "absolute";
-    draggedPiece.style.left = `${gridX * pieceWidth}px`;
-    draggedPiece.style.top = `${gridY * pieceHeight}px`;
+    draggedPiece.style.left = finalLeft;
+    draggedPiece.style.top = finalTop;
     draggedPiece.dataset.currentX = gridX;
     draggedPiece.dataset.currentY = gridY;
 
@@ -324,8 +377,18 @@ function dropOnZone(e) {
     e.preventDefault();
     if (!draggedPiece) return;
     draggedPiece.style.position = 'static';
+
+    draggedPiece.style.left = '';
+    draggedPiece.style.top = '';
+
+    if (shape === 'jigsaw') { // 放回去时恢复 margin
+        const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+        draggedPiece.style.margin = `${(pieceHeight * JIGSAW_TAB_RATIO) / 2}px`;
+    }
+
     delete draggedPiece.dataset.currentX;
     delete draggedPiece.dataset.currentY;
+    delete draggedPiece.dataset.position;
     piecesZone.appendChild(draggedPiece);
     moves++;
     movesElement.textContent = `移动次数: ${moves}`;
@@ -334,13 +397,7 @@ function dropOnZone(e) {
 
 // 查找棋盘上指定格子的拼图块
 function findPieceOnBoard(x, y) {
-    const allPieces = puzzleBoard.querySelectorAll('.puzzle-piece');
-    for (const piece of allPieces) {
-        if (parseInt(piece.dataset.currentX) === x && parseInt(piece.dataset.currentY) === y) {
-            return piece;
-        }
-    }
-    return null;
+    return puzzleBoard.querySelector(`.puzzle-piece[data-current-x='${x}'][data-current-y='${y}']`);
 }
 
 // 检查拼图是否完成
@@ -486,6 +543,10 @@ function createSquarePiece(x, y, width, height) {
 
     piece.dataset.correctX = x;
     piece.dataset.correctY = y;
+
+    piece.dataset.rotation = '0'; // 增加默认值
+    piece.dataset.flipped = 'false'; // 增加默认值
+
     piece.draggable = true;
     setupPieceEvents(piece);
     pieces.push(piece);
@@ -532,6 +593,130 @@ function createTrianglePiece(x, y, width, height, type) {
     pieces.push(piece);
 }
 
+function createJigsawPiece(x, y, width, height, edges) {
+    const piece = document.createElement('div');
+    piece.className = 'puzzle-piece jigsaw';
+
+    const tabSize = width * JIGSAW_TAB_RATIO;
+
+    // div 的尺寸需要比基础尺寸大，以容纳凸出的部分
+    const hasLeftTab = edges.left !== 'flat';
+    const hasRightTab = edges.right !== 'flat';
+    const hasTopTab = edges.top !== 'flat';
+    const hasBottomTab = edges.bottom !== 'flat';
+
+    const divWidth = width + (edges.left === 'tab' ? tabSize : 0) + (edges.right === 'tab' ? tabSize : 0);
+    const divHeight = height + (edges.top === 'tab' ? tabSize : 0) + (edges.bottom === 'tab' ? tabSize : 0);
+    const offsetXForDiv = (edges.left === 'tab' ? tabSize : 0);
+    const offsetYForDiv = (edges.top === 'tab' ? tabSize : 0);
+
+
+    piece.style.width = `${divWidth}px`;
+    piece.style.height = `${divHeight}px`;
+
+    piece.dataset.edgeTop = edges.top;
+    piece.dataset.edgeRight = edges.right;
+    piece.dataset.edgeBottom = edges.bottom;
+    piece.dataset.edgeLeft = edges.left;
+
+    const clipPathId = `clip-piece-${x}-${y}`;
+    const svgClipPath = document.createElementNS('http://www.w3.org/2000/svg', 'clipPath');
+    svgClipPath.id = clipPathId;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', generateJigsawPath(width, height, tabSize, edges));
+    svgClipPath.appendChild(path);
+    svgDefs.appendChild(svgClipPath);
+    piece.style.clipPath = `url(#${clipPathId})`;
+
+    piece.style.backgroundImage = `url(${originalImageUrl})`;
+    piece.style.backgroundSize = `${coveredWidth}px ${coveredHeight}px`;
+
+    const bgPosX = -(x * width) + offsetX + offsetXForDiv; // <--- 减号改加号
+    const bgPosY = -(y * height) + offsetY + offsetYForDiv; // <--- 减号改加号
+    piece.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
+
+
+    piece.dataset.correctX = x;
+    piece.dataset.correctY = y;
+    piece.dataset.rotation = '0';
+    piece.dataset.flipped = 'false';
+    piece.draggable = true;
+    setupPieceEvents(piece);
+    pieces.push(piece);
+}
+
+function generateJigsawLayout() {
+    const layout = Array.from({ length: difficulty }, () =>
+        Array.from({ length: difficulty }, () => ({}))
+    );
+
+    for (let y = 0; y < difficulty; y++) {
+        for (let x = 0; x < difficulty; x++) {
+            // 上边缘和左边缘根据邻居决定，确保匹配
+            const top = y === 0 ? 'flat' : (layout[y - 1][x].bottom === 'tab' ? 'blank' : 'tab');
+            const left = x === 0 ? 'flat' : (layout[y][x - 1].right === 'tab' ? 'blank' : 'tab');
+            // 下边缘和右边缘随机生成
+            const bottom = y === difficulty - 1 ? 'flat' : (Math.random() < 0.5 ? 'tab' : 'blank');
+            const right = x === difficulty - 1 ? 'flat' : (Math.random() < 0.5 ? 'tab' : 'blank');
+            layout[y][x] = { top, right, bottom, left };
+        }
+    }
+    return layout;
+}
+
+function generateJigsawPath(w, h, tabSize, edges) {
+    const { top, right, bottom, left } = edges;
+
+    // 连接头的根部宽度
+    const base = w * (1 - JIGSAW_TAB_RATIO);
+    const neck = w * (1 - JIGSAW_TAB_RATIO) / 2;
+    const pt = tabSize;
+
+    const pathTab = `h ${neck} c ${pt*0.2} 0, ${pt*0.3} ${-pt}, ${pt*0.5} ${-pt} s ${pt*0.3} ${pt}, ${pt*0.5} ${pt} h ${neck}`;
+    const pathBlank = `h ${neck} c ${pt*0.2} 0, ${pt*0.3} ${pt}, ${pt*0.5} ${pt} s ${pt*0.3} ${-pt}, ${pt*0.5} ${-pt} h ${neck}`;
+    const pTop = (top === 'flat') ? `h ${w}` : (top === 'tab' ? pathTab : pathBlank);
+    const pRight = (right === 'flat') ? `v ${h}` : (right === 'tab' ? `v ${neck} c 0 ${pt*0.2}, ${pt} ${pt*0.3}, ${pt} ${pt*0.5} s ${-pt} ${pt*0.3}, ${-pt} ${pt*0.5} v ${neck}` : `v ${neck} c 0 ${pt*0.2}, ${-pt} ${pt*0.3}, ${-pt} ${pt*0.5} s ${pt} ${pt*0.3}, ${pt} ${pt*0.5} v ${neck}`);
+    const pBottom = (bottom === 'flat') ? `h ${-w}` : (bottom === 'tab' ? `h ${-neck} c ${-pt*0.2} 0, ${-pt*0.3} ${pt}, ${-pt*0.5} ${pt} s ${-pt*0.3} ${-pt}, ${-pt*0.5} ${-pt} h ${-neck}` : `h ${-neck} c ${-pt*0.2} 0, ${-pt*0.3} ${-pt}, ${-pt*0.5} ${-pt} s ${-pt*0.3} ${pt}, ${-pt*0.5} ${pt} h ${-neck}`);
+    const pLeft = (left === 'flat') ? `v ${-h}` : (left === 'tab' ? `v ${-neck} c 0 ${-pt*0.2}, ${-pt} ${-pt*0.3}, ${-pt} ${-pt*0.5} s ${pt} ${-pt*0.3}, ${pt} ${-pt*0.5} v ${-neck}` : `v ${-neck} c 0 ${-pt*0.2}, ${pt} ${-pt*0.3}, ${pt} ${-pt*0.5} s ${-pt} ${-pt*0.3}, ${-pt} ${-pt*0.5} v ${-neck}`);
+
+
+
+
+
+    const getEdgePath = (type, multiplier) => {
+        switch (type) {
+            case 'flat': return `h ${w * multiplier.x}`;
+            case 'tab':
+                 return `h ${neck * multiplier.x} c ${pt*0.1*multiplier.x} ${pt*0.5*multiplier.y}, ${pt*0.8*multiplier.x} ${pt*multiplier.y}, ${pt*0.5*multiplier.x} ${pt*multiplier.y} s ${pt*-0.4*multiplier.x} 0, ${pt*0.5*multiplier.x} ${-pt*multiplier.y} c ${pt*0.7*multiplier.x} ${-pt*multiplier.y}, ${pt*0.9*multiplier.x} ${-pt*0.5*multiplier.y}, ${neck*multiplier.x} 0`;
+            case 'blank':
+                 return `h ${neck * multiplier.x} c ${pt*0.1*multiplier.x} ${-pt*0.5*multiplier.y}, ${pt*0.8*multiplier.x} ${-pt*multiplier.y}, ${pt*0.5*multiplier.x} ${-pt*multiplier.y} s ${pt*-0.4*multiplier.x} 0, ${pt*0.5*multiplier.x} ${pt*multiplier.y} c ${pt*0.7*multiplier.x} ${pt*multiplier.y}, ${pt*0.9*multiplier.x} ${pt*0.5*multiplier.y}, ${neck*multiplier.x} 0`;
+        }
+    };
+
+    const startX = left === 'tab' ? tabSize : 0;
+    const startY = top === 'tab' ? tabSize : 0;
+
+    let path = `M ${startX},${startY}`;
+    // Top
+    path += getEdgePath(top, {x:1, y:-1});
+    // Right
+    path = path.replace(/h /g, 'v ').replace(/([0-9.-]+),([0-9.-]+)/g, (m, p1, p2) => `${p2},${p1}`);
+    path += getEdgePath(right, {x:1, y:1}).replace(/h/g, 'v').replace(/(\s[0-9.-]+)(\s[0-9.-]+)/g, (m,p1,p2) => `${p2}${p1}`);
+    // Bottom
+    path += getEdgePath(bottom, {x:-1, y:1});
+    // Left
+    path += getEdgePath(left, {x:-1, y:-1}).replace(/h/g, 'v').replace(/(\s[0-9.-]+)(\s[0-9.-]+)/g, (m,p1,p2) => `${p2}${p1}`);
+
+    // 使用更健壮的相对路径命令
+    //const pTop = (top === 'flat') ? `h ${w}` : `h ${neck} c ${pt*0.2} 0, ${pt*0.3} ${-pt}, ${pt*0.5} ${-pt} s ${pt*0.3} ${pt}, ${pt*0.5} ${pt} h ${neck}`;
+    //const pRight = (right === 'flat') ? `v ${h}` : `v ${neck} c 0 ${pt*0.2}, ${pt} ${pt*0.3}, ${pt} ${pt*0.5} s ${-pt} ${pt*0.3}, ${-pt} ${pt*0.5} v ${neck}`;
+    //const pBottom = (bottom === 'flat') ? `h ${-w}` : `h ${-neck} c ${-pt*0.2} 0, ${-pt*0.3} ${pt}, ${-pt*0.5} ${pt} s ${-pt*0.3} ${-pt}, ${-pt*0.5} ${-pt} h ${-neck}`;
+    //const pLeft = (left === 'flat') ? `v ${-h}` : `v ${-neck} c 0 ${-pt*0.2}, ${-pt} ${-pt*0.3}, ${-pt} ${-pt*0.5} s ${pt} ${-pt*0.3}, ${pt} ${-pt*0.5} v ${-neck}`;
+
+    const finalPath = `M ${startX} ${startY} ${pTop} ${pRight} ${pBottom} ${pLeft} Z`;
+    return finalPath;
+}
+
 // 设置拼图块事件
 function setupPieceEvents(piece) {
     piece.addEventListener('dragstart', dragStart);
@@ -544,12 +729,18 @@ function setupPieceEvents(piece) {
     // 添加右键旋转功能
     piece.addEventListener('contextmenu', function(e) {
         e.preventDefault();
-        rotatePiece(this);
+        if (shape !== 'jigsaw') {
+            rotatePiece(this);
+        }
     });
 
     // 添加双击翻转功能
-    piece.addEventListener('dblclick', function() {
-        flipPiece(this);
+    piece.addEventListener('dblclick', function(e) {
+        e.preventDefault();
+        // --- 新增：jigsaw 形状不支持翻转 ---
+        if (shape !== 'jigsaw') {
+            flipPiece(this);
+        }
     });
     piece.addEventListener('drag', pieceDrag);
 }
@@ -559,7 +750,8 @@ function rotatePiece(piece) {
     const currentRotation = parseInt(piece.dataset.rotation) || 0;
     const newRotation = (currentRotation + 90) % 360;
     piece.dataset.rotation = newRotation;
-    piece.style.transform = `rotate(${newRotation}deg)`;
+    const isFlipped = piece.dataset.flipped === 'true';
+    piece.style.transform = `rotate(${newRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
 }
 
 // 翻转拼图块
@@ -567,7 +759,8 @@ function flipPiece(piece) {
     const isFlipped = piece.dataset.flipped === 'true';
     const newFlipped = !isFlipped;
     piece.dataset.flipped = newFlipped;
-    piece.style.transform = `${piece.style.transform} scaleX(${newFlipped ? -1 : 1})`;
+    const currentRotation = parseInt(piece.dataset.rotation) || 0;
+    piece.style.transform = `rotate(${currentRotation}deg) scaleX(${newFlipped ? -1 : 1})`;
 }
 
 // 确定三角形位置
