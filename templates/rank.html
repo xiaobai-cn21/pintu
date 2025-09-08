@@ -4,523 +4,195 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>拼图排行榜</title>
-    <link rel="stylesheet" href="../css/styles.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/game-rank.css') }}">
     <style>
-        /* 排行榜专用样式 */
-        .rank-container {
-            max-width: 1000px;
-            margin: 0 auto;
-            padding: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-        }
-
-        .rank-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
-        }
-
-        .back-btn {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .back-btn:hover {
-            background-color: #2980b9;
-        }
-
-        .rank-title {
-            font-size: 32px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin: 0;
-        }
-
-        .refresh-btn {
-            background: none;
-            border: none;
-            cursor: pointer;
-            font-size: 20px;
-            color: #3498db;
-            transition: transform 0.3s;
-            padding: 10px;
-        }
-
-        .refresh-btn:hover {
-            transform: rotate(180deg);
-        }
-
-        /* 取消刷新按钮的“刷新中”旋转动画状态 */
-
-        .my-rank-card {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-        }
-
-        .my-rank-title {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 10px;
-            display: flex;
-            align-items: center;
-        }
-
-        .my-rank-title::before {
-            content: "👤";
-            margin-right: 8px;
-        }
-
-        .my-rank-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-        }
-
-        .my-rank-item {
-            text-align: center;
-        }
-
-        .my-rank-label {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-bottom: 5px;
-        }
-
-        .my-rank-value {
-            font-size: 20px;
-            font-weight: bold;
-        }
-
-        .rank-table {
-            width: 100%;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .rank-table th {
-            background: linear-gradient(135deg, #FFE082 0%, #FFC107 100%);
-            color: #4a3b00;
-            padding: 15px;
-            text-align: center;
-            font-weight: bold;
-            font-size: 18px;
-        }
-
-        .rank-table td {
-            padding: 16px;
-            text-align: center;
-            border-bottom: 1px solid #e0e0e0;
-            transition: background-color 0.3s;
-            font-size: 16px;
-        }
-
-        .rank-table tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .rank-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .rank-number {
-            font-weight: bold;
-            font-size: 20px;
-        }
-
-        .rank-number.top3 {
-            font-weight: bold;
-            font-size: 22px;
-        }
-
-        .rank-number.rank-1 {
-            color: #ffd700;
-        }
-
-        .rank-number.rank-2 {
-            color: #c0c0c0;
-        }
-
-        .rank-number.rank-3 {
-            color: #cd7f32;
-        }
-
-        .player-name {
-            font-weight: 500;
-        }
-
-        .player-name.top3 {
-            font-weight: bold;
-        }
-
-        .time-display {
-            font-family: 'Courier New', monospace;
-            font-weight: 500;
-        }
-
-        .time-display.top3 {
-            font-weight: bold;
-        }
-
-        .steps-display {
-            font-weight: 500;
-        }
-
-        .steps-display.top3 {
-            font-weight: bold;
-        }
-
-        .levels-display {
-            font-weight: 500;
-        }
-
-        .levels-display.top3 {
-            font-weight: bold;
-        }
-
-        .loading-message {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            font-size: 18px;
-        }
-
-        .error-message {
-            text-align: center;
-            padding: 40px;
-            color: #e74c3c;
-            font-size: 18px;
-        }
-
-        .empty-message {
-            text-align: center;
-            padding: 40px;
-            color: #666;
-            font-size: 18px;
-        }
-
-        /* 响应式设计 */
+        .rank-container { max-width: 1000px; margin: 80px auto 20px; padding: 20px; background: #20223A; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+        .rank-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #F9E078; }
+        .back-btn { background-color: #F9E078; color: #20223A; border: none; padding: 8px 16px; border-radius: 0; cursor: pointer; text-decoration: none; display: inline-block; font-family: 'Press Start 2P', 'Zpix', monospace; font-size: 12px; }
+        .back-btn:hover { background-color: #E6D166; }
+        .rank-title { font-weight: bold; color: #F9E078; margin: 0; font-family: 'Press Start 2P', 'Zpix', monospace; font-size: 18px; }
+        .refresh-btn { background: #F9E078; color: #20223A; border: none; cursor: pointer; font-size: 12px; padding: 8px 16px; border-radius: 0; font-family: 'Press Start 2P', 'Zpix', monospace; }
+        .my-rank-card { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#fff; padding:20px; border-radius:10px; margin-bottom:20px; box-shadow:0 4px 15px rgba(102,126,234,.3); }
+        .my-rank-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
+        .my-rank-title::before { content: "👤"; margin-right: 8px; }
+        .my-rank-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+        .my-rank-item { text-align: center; }
+        .my-rank-label { font-size: 12px; opacity: .8; margin-bottom: 5px; }
+        .my-rank-value { font-size: 20px; font-weight: bold; }
+        .rank-table { width: 100%; border-collapse: collapse; background: #20223A; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+        .rank-table th { background: #2a2c4a; color:#F9E078; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; }
+        .rank-table td { padding: 16px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 16px; color:#F9E078; }
+        .rank-table tr:hover { background-color: rgba(255,255,255,0.04); }
+        .rank-number { font-weight: bold; font-size: 20px; }
+        .rank-number.top3 { font-size: 22px; }
+        .rank-number.rank-1 { color: #ffd700; }
+        .rank-number.rank-2 { color: #c0c0c0; }
+        .rank-number.rank-3 { color: #cd7f32; }
+        .player-name { font-weight: 500; }
+        .player-name.top3 { font-weight: bold; }
+        .time-display { font-family: 'Courier New', monospace; font-weight: 500; }
+        .time-display.top3 { font-weight: bold; }
+        .steps-display { font-weight: 500; }
+        .steps-display.top3 { font-weight: bold; }
+        .loading-message,.error-message,.empty-message { text-align:center; padding:40px; font-size:18px; }
+        .error-message { color:#e74c3c; }
         @media (max-width: 768px) {
-            .rank-container {
-                margin: 10px;
-                padding: 15px;
-            }
-
-            .rank-header {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
-            }
-
-            .rank-title {
-                font-size: 28px;
-            }
-
-            .my-rank-info {
-                grid-template-columns: repeat(2, 1fr);
-            }
-
+            .rank-container { margin:10px; padding:15px; }
+            .rank-header { flex-direction: column; gap: 15px; text-align: center; }
+            .rank-title { font-size: 28px; }
             .rank-table th { font-size: 16px; }
             .rank-table td { font-size: 15px; padding: 12px 6px; }
         }
-
         @media (max-width: 480px) {
             .rank-table th { font-size: 14px; }
             .rank-table td { font-size: 14px; padding: 10px 4px; }
-
-            .my-rank-info {
-                grid-template-columns: 1fr;
-            }
+            .my-rank-info { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
+    {% include '_navbar.html' %}
     <div class="background-blur"></div>
-    
     <div class="rank-container">
-        <!-- 顶部导航 -->
         <div class="rank-header">
-            <a href="menu.html" class="back-btn">← 返回主界面</a>
-            <h1 class="rank-title">拼图排行榜</h1>
-            <button id="refreshBtn" class="refresh-btn" title="刷新数据">🔄</button>
+            <button class="btn btn-secondary back-btn" onclick="window.location.href='{{ url_for('main') }}'" style="padding: 8px 16px; font-size: 12px;">
+                <span class="chinese-text">返回主界面</span>
+            </button>
+            <h1 class="rank-title chinese-text">拼图排行榜</h1>
+            <button id="refreshBtn" class="btn refresh-btn" title="刷新数据" style="padding: 8px 16px; font-size: 12px;">
+                <span class="chinese-text">刷新</span>
+            </button>
         </div>
-
-        <!-- 我的排名卡片：显示当前登录用户的聚合成绩（排名/总时长/总步数） -->
-        <div id="myRankCard" class="my-rank-card" style="display: none;">
+        <div id="myRankCard" class="my-rank-card" style="display:none;">
             <div class="my-rank-title">我的成绩</div>
             <div class="my-rank-info">
-                <div class="my-rank-item">
-                    <div class="my-rank-label">排名</div>
-                    <div class="my-rank-value" id="myRank">-</div>
-                </div>
-                <div class="my-rank-item">
-                    <div class="my-rank-label">总时长</div>
-                    <div class="my-rank-value" id="myTotalTime">00:00:00</div>
-                </div>
-                <div class="my-rank-item">
-                    <div class="my-rank-label">总步数</div>
-                    <div class="my-rank-value" id="myTotalSteps">0</div>
-                </div>
+                <div class="my-rank-item"><div class="my-rank-label">排名</div><div class="my-rank-value" id="myRank">-</div></div>
+                <div class="my-rank-item"><div class="my-rank-label">总时长</div><div class="my-rank-value" id="myTotalTime">00:00:00</div></div>
+                <div class="my-rank-item"><div class="my-rank-label">总步数</div><div class="my-rank-value" id="myTotalSteps">0</div></div>
             </div>
         </div>
-
-        <!-- 排行榜表格：总榜（后端已按时长降序/步数升序，前端再次稳妥排序） -->
         <div id="rankTableContainer">
             <table class="rank-table">
-                <thead>
-                    <tr>
-                        <th>排名</th>
-                        <th>玩家</th>
-                        <th>游戏总时长</th>
-                        <th>总步数</th>
-                    </tr>
-                </thead>
-                <tbody id="rankTableBody">
-                    <!-- 排行榜数据将通过JavaScript动态加载 -->
-                </tbody>
+                <thead><tr><th>排名</th><th>玩家</th><th>游戏总时长</th><th>总步数</th></tr></thead>
+                <tbody id="rankTableBody"></tbody>
             </table>
         </div>
-
-        <!-- 加载状态 -->
-        <div id="loadingMessage" class="loading-message" style="display: none;">
-            <div>正在加载排行榜数据...</div>
-        </div>
-
-        <!-- 错误状态 -->
-        <div id="errorMessage" class="error-message" style="display: none;">
-            <div>❌ 加载失败，请稍后重试</div>
-        </div>
-
-        <!-- 空数据状态 -->
-        <div id="emptyMessage" class="empty-message" style="display: none;">
-            <div>暂无排行榜数据</div>
-        </div>
+        <div id="loadingMessage" class="loading-message" style="display:none;">正在加载排行榜数据...</div>
+        <div id="errorMessage" class="error-message" style="display:none;">❌ 加载失败，请稍后重试</div>
+        <div id="emptyMessage" class="empty-message" style="display:none;">暂无排行榜数据</div>
     </div>
-
     <script>
         class RankPage {
-            constructor() {
-                this.refreshBtn = document.getElementById('refreshBtn');
-                this.myRankCard = document.getElementById('myRankCard');
-                this.rankTableBody = document.getElementById('rankTableBody');
-                this.loadingMessage = document.getElementById('loadingMessage');
-                this.errorMessage = document.getElementById('errorMessage');
-                this.emptyMessage = document.getElementById('emptyMessage');
-                this.rankTableContainer = document.getElementById('rankTableContainer');
-                // 是否启用前端模拟数据（带上 ?mock=1 开启）
-                this.useMock = new URLSearchParams(location.search).get('mock') === '1';
-                
+            constructor(){
+                this.refreshBtn=document.getElementById('refreshBtn');
+                this.myRankCard=document.getElementById('myRankCard');
+                this.rankTableBody=document.getElementById('rankTableBody');
+                this.loadingMessage=document.getElementById('loadingMessage');
+                this.errorMessage=document.getElementById('errorMessage');
+                this.emptyMessage=document.getElementById('emptyMessage');
+                this.rankTableContainer=document.getElementById('rankTableContainer');
+                this.useMock=new URLSearchParams(location.search).get('mock')==='1';
                 this.bindEvents();
                 this.loadRankData();
             }
-
-            bindEvents() {
-                this.refreshBtn.addEventListener('click', () => this.loadRankData());
-            }
-
-            async loadRankData() {
+            bindEvents(){ this.refreshBtn.addEventListener('click',()=>this.loadRankData()); }
+            async loadRankData(){
                 this.showLoading();
-                
-                try {
-                    // API调用 
-                    const response = await this.fetchRankData();
-                    
-                    if (response.success) {
-                        this.displayRankData(response.data);
-                    } else {
-                        this.showError();
-                    }
-                } catch (error) {
-                    console.error('加载排行榜数据失败:', error);
-                    this.showError();
-                }
+                try{
+                    const response=await this.fetchRankData();
+                    if(response.success){ this.displayRankData(response.data); }
+                    else{ this.showError(); }
+                }catch(e){ console.error(e); this.showError(); }
             }
-
-            // 数据获取：当 URL 带 ?mock=1 时使用内置模拟数据，否则请求后端 API
-            async fetchRankData() {
-                try {
-                    if (this.useMock) {
-                        // 内置部分模拟数据（可根据需要增删改）
-                        const mock = [
-                            { playerName: 'test1', totalTime: 5400, totalSteps: 200 },
-                            { playerName: 'test2', totalTime: 7200, totalSteps: 188 },
-                            { playerName: 'test3', totalTime: 7200, totalSteps: 190 },
-                            { playerName: 'test4', totalTime: 3600, totalSteps: 120 },
-                            { playerName: 'admin', totalTime: 6100, totalSteps: 175 },
-                            { playerName: 'test5', totalTime: 6100, totalSteps: 180 },
-                            { playerName: 'test6', totalTime: 1200, totalSteps: 90 }
+            async fetchRankData(){
+                try{
+                    if(this.useMock){
+                        const mock=[
+                            { playerName:'test1', totalTime:5400, totalSteps:200 },
+                            { playerName:'test2', totalTime:7200, totalSteps:188 },
+                            { playerName:'test3', totalTime:7200, totalSteps:190 },
+                            { playerName:'test4', totalTime:3600, totalSteps:120 },
+                            { playerName:'admin', totalTime:6100, totalSteps:175 },
+                            { playerName:'test5', totalTime:6100, totalSteps:180 },
+                            { playerName:'test6', totalTime:1200, totalSteps:90 }
                         ];
-                        // 按规则排序：总时长降序；相同则步数升序
-                        mock.sort((a, b) => (b.totalTime - a.totalTime) || (a.totalSteps - b.totalSteps));
-                        mock.forEach((p, i) => p.rank = i + 1);
-                        const my = mock.find(p => p.playerName === (localStorage.getItem('username') || '当前用户')) || null;
-                        const myRank = my ? { rank: my.rank, playerName: my.playerName, totalTime: my.totalTime, totalSteps: my.totalSteps } : null;
-                        return { success: true, data: { myRank, rankList: mock } };
+                        mock.sort((a,b)=>(b.totalTime-a.totalTime)||(a.totalSteps-b.totalSteps));
+                        mock.forEach((p,i)=>p.rank=i+1);
+                        const my=null;
+                        return { success:true, data:{ myRank: my, rankList: mock } };
                     }
-                    const res = await fetch('http://localhost:5000/ranking', { credentials: 'include' });
-                    if (!res.ok) return { success: false };
-                    const json = await res.json();
-                    if (json.code !== 200 || !Array.isArray(json.data)) return { success: false };
-
-                    // 映射为前端需要的字段
-                    const rankList = json.data.map((r, i) => ({
-                        rank: i + 1, // 实际会在前端排序后重排
-                        playerName: r.username,
-                        totalTime: Number(r.time_used) || 0,
-                        totalSteps: Number(r.step_count) || 0,
-                        // completedLevels: 已移除列
-                    }));
-
-                    // 计算“我”的占位，具体值在 displayRankData 中按排序列表求
-                    const myRank = null;
-
-                    return { success: true, data: { myRank, rankList } };
-                } catch (e) {
-                    return { success: false };
-                }
+                    const res=await fetch('/ranking/',{ credentials:'include' });
+                    if(!res.ok) return { success:false };
+                    const json=await res.json();
+                    if(json.code!==200||!Array.isArray(json.data)) return { success:false };
+                    const rankList=json.data.map((r,i)=>({ rank:i+1, playerName:r.username, totalTime:Number(r.time_used)||0, totalSteps:Number(r.step_count)||0 }));
+                    return { success:true, data:{ myRank:null, rankList } };
+                }catch(e){ return { success:false }; }
             }
-
-            displayRankData(data) {
-                this.hideAllMessages();
-                
-                // 前端兜底排序：总时长降序，其次总步数升序
-                const sorted = [...data.rankList].sort((a, b) => {
-                    if (b.totalTime !== a.totalTime) return b.totalTime - a.totalTime;
-                    return a.totalSteps - b.totalSteps;
-                });
-                // 重新计算排名序号
-                sorted.forEach((p, idx) => { p.rank = idx + 1; });
-                
-                // 计算“我”的排名（按用户名匹配；若未登录则默认“当前用户”）
-                const currentName = localStorage.getItem('username') || (data.myRank && data.myRank.playerName) || '当前用户';
-                const myEntry = sorted.find(p => p.playerName === currentName);
-                if (myEntry) {
-                    this.displayMyRank({
-                        rank: myEntry.rank,
-                        playerName: myEntry.playerName,
-                        totalTime: myEntry.totalTime,
-                        totalSteps: myEntry.totalSteps
-                    });
-                } else if (data.myRank) {
-                    // 回退：如果列表未包含该用户，则显示后端提供的信息
-                    this.displayMyRank({
-                        rank: data.myRank.rank || '-',
-                        playerName: data.myRank.playerName || currentName,
-                        totalTime: data.myRank.totalTime || 0,
-                        totalSteps: data.myRank.totalSteps || 0
-                    });
-                }
-                
-                // 渲染排行榜
+            displayRankData(data){
+                this.hideAll();
+                const sorted=[...data.rankList].sort((a,b)=>{ if(b.totalTime!==a.totalTime) return b.totalTime-a.totalTime; return a.totalSteps-b.totalSteps; });
+                sorted.forEach((p,idx)=>p.rank=idx+1);
+                const currentName=localStorage.getItem('username')||'当前用户';
+                const myEntry=sorted.find(p=>p.playerName===currentName);
+                if(myEntry){ this.displayMyRank({ rank:myEntry.rank, playerName:myEntry.playerName, totalTime:myEntry.totalTime, totalSteps:myEntry.totalSteps }); }
                 this.displayRankList(sorted);
-                
-                this.rankTableContainer.style.display = 'block';
+                this.rankTableContainer.style.display='block';
             }
-
-            // 渲染“我的成绩”卡片
-            displayMyRank(myRank) {
-                document.getElementById('myRank').textContent = myRank.rank;
-                document.getElementById('myTotalTime').textContent = this.formatTime(myRank.totalTime);
-                document.getElementById('myTotalSteps').textContent = myRank.totalSteps;
-                this.myRankCard.style.display = 'block';
+            displayMyRank(m){
+                document.getElementById('myRank').textContent=m.rank;
+                document.getElementById('myTotalTime').textContent=this.formatTime(m.totalTime);
+                document.getElementById('myTotalSteps').textContent=m.totalSteps;
+                this.myRankCard.style.display='block';
             }
-
-            // 渲染排行榜列表
-            displayRankList(rankList) {
-                this.rankTableBody.innerHTML = '';
-                
-                rankList.forEach(player => {
-                    const row = document.createElement('tr');
-                    const isTop3 = player.rank <= 3;
-                    const isCurrentUser = player.playerName === '当前用户';
-                    
-                    row.innerHTML = `
-                        <td>
-                            <span class="rank-number ${isTop3 ? 'top3' : ''} ${isTop3 ? `rank-${player.rank}` : ''}">
-                                ${player.rank}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="player-name ${isTop3 ? 'top3' : ''}">
-                                ${player.playerName}${isCurrentUser ? ' (我)' : ''}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="time-display ${isTop3 ? 'top3' : ''}">
-                                ${this.formatTime(player.totalTime)}
-                            </span>
-                        </td>
-                        <td>
-                            <span class="steps-display ${isTop3 ? 'top3' : ''}">
-                                ${player.totalSteps}
-                            </span>
-                        </td>
-                    `;
-                    
+            displayRankList(list){
+                this.rankTableBody.innerHTML='';
+                list.forEach(p=>{
+                    const isTop3=p.rank<=3;
+                    const isCurrent=p.playerName==='当前用户';
+                    const row=document.createElement('tr');
+                    row.innerHTML=`
+                        <td><span class="rank-number ${isTop3?'top3':''} ${isTop3?`rank-${p.rank}`:''}">${p.rank}</span></td>
+                        <td><span class="player-name ${isTop3?'top3':''}">${p.playerName}${isCurrent?' (我)':''}</span></td>
+                        <td><span class="time-display ${isTop3?'top3':''}">${this.formatTime(p.totalTime)}</span></td>
+                        <td><span class="steps-display ${isTop3?'top3':''}">${p.totalSteps}</span></td>`;
                     this.rankTableBody.appendChild(row);
                 });
             }
-
-            formatTime(seconds) {
-                const hours = Math.floor(seconds / 3600);
-                const minutes = Math.floor((seconds % 3600) / 60);
-                const secs = seconds % 60;
-                
-                return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-            }
-
-            showLoading() {
-                this.hideAllMessages();
-                this.loadingMessage.style.display = 'block';
-                // 刷新按钮不再改变文案或做动画，仅短暂禁用避免重复点击
-                this.refreshBtn.disabled = true;
-            }
-
-            showError() {
-                this.hideAllMessages();
-                this.errorMessage.style.display = 'block';
-                this.refreshBtn.disabled = false;
-            }
-
-            showEmpty() {
-                this.hideAllMessages();
-                this.emptyMessage.style.display = 'block';
-                this.refreshBtn.disabled = false;
-            }
-
-            hideAllMessages() {
-                this.loadingMessage.style.display = 'none';
-                this.errorMessage.style.display = 'none';
-                this.emptyMessage.style.display = 'none';
-                this.rankTableContainer.style.display = 'none';
-                this.myRankCard.style.display = 'none';
-            }
+            formatTime(s){ const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` }
+            showLoading(){ this.hideAll(); this.loadingMessage.style.display='block'; this.refreshBtn.disabled=true; }
+            showError(){ this.hideAll(); this.errorMessage.style.display='block'; this.refreshBtn.disabled=false; }
+            showEmpty(){ this.hideAll(); this.emptyMessage.style.display='block'; this.refreshBtn.disabled=false; }
+            hideAll(){ this.loadingMessage.style.display='none'; this.errorMessage.style.display='none'; this.emptyMessage.style.display='none'; this.rankTableContainer.style.display='none'; this.myRankCard.style.display='none'; }
         }
-
-        // 页面加载完成后初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            new RankPage();
-        });
+        document.addEventListener('DOMContentLoaded',()=>{ new RankPage(); });
     </script>
+
+<!-- 帮助页面模态框 -->
+<div class="modal-mask" id="helpModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span>操作指南</span>
+            <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
+        </div>
+        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
+            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+            <p>- 单击选中的图块，顺时针旋转90度</p>
+            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
+        </div>
+    </div>
+</div>
 </body>
 </html>
+
+

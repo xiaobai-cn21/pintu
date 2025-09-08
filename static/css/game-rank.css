@@ -1,0 +1,495 @@
+@font-face {
+    font-family: 'Press Start 2P';
+    src: url('../fonts/PressStart2P-Regular.woff2') format('woff2');
+    font-display: swap;
+}
+@font-face {
+    font-family: 'Zpix';
+    src: url('../fonts/Zpix-Regular.ttf') format('truetype');
+    font-display: swap;
+}
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Press Start 2P', 'Zpix', monospace;
+}
+
+/* 中文字体大小调整 */
+.chinese-text {
+    font-size: 1.2em;
+    line-height: 1.3;
+}
+
+/* 排行榜页面样式 */
+.back-btn {
+    font-size: 16px;
+}
+
+.rank-title {
+    font-size: 32px;
+}
+
+/* 按钮字体大小调整 */
+.btn {
+    font-size: 15px;
+    text-decoration: none;  /* 去除下划线 */
+    display: inline-block;  /* 确保a标签和button标签样式一致 */
+}
+
+/* 通用英文数字符号微调 */
+.english-text, .number-text, .symbol-text {
+    position: relative;
+    top: 2px;  /* 微调位置，让英文数字符号稍微下移一点 */
+}
+
+/* 按钮中的英文文字 */
+.btn .english-text {
+    font-size: 15px;
+    font-family: 'Press Start 2P', monospace;
+    vertical-align: middle;  /* 垂直居中对齐 */
+    line-height: 1.2;  /* 调整行高 */
+}
+
+/* 按钮中的中文文字 */
+.btn .chinese-text {
+    font-size: 18px;  /* 中文字体稍大一些 */
+    font-family: 'Zpix', 'Press Start 2P', monospace;
+    vertical-align: middle;  /* 垂直居中对齐 */
+    line-height: 1.2;  /* 调整行高 */
+}
+
+/* 导航栏字体大小调整 */
+.pm-brand {
+    font-size: 16px; /* 主页按钮字体大小 */
+    font-family: 'Press Start 2P', monospace;
+    vertical-align: middle;  /* 垂直居中对齐 */
+    line-height: 1.2;  /* 调整行高 */
+    position: static;  /* 重置位置，不受通用微调影响 */
+    top: auto;  /* 重置top值 */
+}
+
+.pm-link {
+    font-size: 14px; /* 导航栏链接字体大小 */
+}
+
+.pm-link.chinese-text {
+    font-size: 16px;  /* 导航栏中文稍大一些 */
+    font-family: 'Zpix', 'Press Start 2P', monospace;
+    vertical-align: middle;  /* 垂直居中对齐 */
+    line-height: 1.2;  /* 调整行高 */
+}
+
+body {
+    font-family: 'Press Start 2P', 'Zpix', monospace;
+    background-color: #20223A;
+    color: #F9E078;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 20px;  /* 添加与主页面一致的边距 */
+    background-image: url('../images/background2.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+}
+
+.container {
+    max-width: 900px;
+    margin: 80px auto 0;  /* 调整顶部间距，因为body已有padding */
+    padding: 20px;
+    text-align: center;
+}
+
+h1 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.controls {
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#imageUpload {
+    display: none;
+}
+
+.btn {
+    background-color: #20223A;
+    color: #F9E078;
+    border: 3px solid #F9E078;
+    padding: 10px 20px;
+    cursor: pointer;
+    border-radius: 0;
+    font-size: 12px;
+    font-family: 'Press Start 2P', 'Zpix', monospace;
+    letter-spacing: 1px;
+    transition: transform 0.05s ease;
+    box-shadow: 4px 4px 0 #000000;
+}
+
+.btn:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 6px 6px 0 #000000;
+}
+
+.btn:active {
+    transform: translate(0,0);
+    box-shadow: 3px 3px 0 #000000;
+}
+
+.btn:disabled {
+    background-color: #20223A;
+    color: #666;
+    border-color: #666;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn:disabled:hover {
+    transform: none;
+    box-shadow: 4px 4px 0 #000000;
+}
+
+#difficultySelect {
+    padding: 8px;
+    border: 3px solid #F9E078;
+    border-radius: 0;
+    font-size: 10px;
+    background: #20223A;
+    color: #F9E078;
+    box-shadow: 4px 4px 0 #000000;
+    font-family: 'Press Start 2P', 'Zpix', monospace;
+}
+
+.game-info {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.puzzle-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    margin-top: 40px;
+}
+
+.puzzle-board {
+    width: 400px;
+    height: 400px;
+    background: #20223A;
+    border: 2px solid #aedcec;
+    position: relative;
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.puzzle-bg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    opacity: 0.25;
+    z-index: 1;
+    pointer-events: none;
+    background-size: cover;
+    background-position: center;
+    transition: opacity 0.3s;
+}
+
+.puzzle-piece {
+    width: 100px;
+    height: 100px;
+    cursor: pointer;
+    transition: transform 0.3s ease, box-shadow 0.2s;
+    border: 1px solid transparent;
+    box-sizing: border-box;
+    background-repeat: no-repeat;
+    background-size: 400px 400px;
+    margin: 2px;
+    position: static;
+    z-index: 2;
+    flex-shrink: 0;
+    transform-origin: center;
+}
+
+.puzzle-piece:hover {
+    z-index: 10;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    border: 1px solid #3498db;
+}
+
+
+
+.puzzle-piece.dragging {
+    opacity: 0.8;
+    z-index: 100;
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.7);
+    transform: scale(1.05);
+}
+
+.drop-zone-highlight {
+    border: 2px dashed #3498db !important;
+    background-color: rgba(52, 152, 219, 0.2) !important;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.pieces-zone {
+    width: 100%;
+    min-height: 110px;
+    background: #20223A;
+    border: 2px dashed #aedcec;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    align-items: center;
+    padding: 10px 0;
+    gap: 8px;
+}
+
+.game-complete {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.message {
+    background-color: #20223A;
+    padding: 30px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.message h2 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.message p {
+    margin-bottom: 20px;
+    font-size: 18px;
+}
+
+@media (max-width: 850px) {
+    .puzzle-board {
+        width: 320px;
+        height: 320px;
+    }
+    .puzzle-piece {
+        width: 80px;
+        height: 80px;
+        background-size: 320px 320px !important;
+    }
+}
+
+.pieces-zone .puzzle-piece {
+    margin: 0;
+    /* Elimina el gap extra */
+
+}
+  {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        font-family: Arial, sans-serif;
+      }
+      .background-blur {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url('../images/background2.png');
+        background-size: cover;
+        background-position: center;
+        z-index: -2; /* 置于最底层 */
+        opacity: 0.8; /* 降低背景透明度，减少视觉干扰 */
+      }
+      .content {
+        position: relative;
+        z-index: 1; /* 确保内容在背景上方 */
+        color: #F9E078;
+        text-align: center;
+        padding: 50px;
+      }
+
+/* ========== 顶部导航在游戏/排行榜样式表中也生效 ========== */
+
+/* 导航栏容器 - 整体布局和尺寸 */
+.pm-navbar{
+    position:sticky;           /* 粘性定位，滚动时固定在顶部 */
+    top:0;                     /* 距离顶部0像素 */
+    z-index:1000;              /* 层级，确保在其他元素之上 */
+    display:flex;              /* 弹性布局 */
+    justify-content:space-between; /* 子元素两端对齐 */
+    align-items:center;        /* 垂直居中对齐 */
+    padding:16px 60px;         /* 上下12px，左右60px内边距（增加宽度） */
+    background:#20223A;        /* 背景颜色 */
+    border-bottom:1px solid rgba(255,255,255,0.08); /* 底部边框 */
+    width:100%;                /* 宽度占满父容器 */
+    min-width:1400px;          /* 最小宽度1400px（增加宽度） */
+}
+
+/* 左侧品牌标题 "PuzzleMaster" */
+.pm-brand{
+    font-weight:700;           /* 字体粗细 */
+    color:#F9E078;             /* 字体颜色（黄色） */
+    text-decoration:none;      /* 去除下划线 */
+    margin-right:0;            /* 右边距 */
+    font-family:'Press Start 2P', monospace; /* 字体族 */
+    letter-spacing:1px;        /* 字母间距 */
+    font-size:14px;            /* 字体大小 */
+    position:absolute;         /* 绝对定位 */
+    left:60px;                 /* 距离左边60px（与padding保持一致） */
+}
+
+/* 中间导航链接（首页、开始游戏、帮助） */
+.pm-link{
+    color:#F9E078;             /* 字体颜色（黄色） */
+    text-decoration:none;      /* 去除下划线 */
+    margin:0 20px;             /* 左右边距20px */
+    opacity:.9;                /* 透明度90% */
+    font-family:'Press Start 2P', 'Zpix', monospace; /* 字体族 */
+    letter-spacing:1px;        /* 字母间距 */
+    font-size:12px;            /* 字体大小 */
+}
+.pm-link:hover{opacity:1}      /* 鼠标悬停时完全不透明 */
+
+/* 中间导航链接容器 */
+.pm-nav-left{
+    display:flex;              /* 弹性布局 */
+    align-items:center;        /* 垂直居中 */
+    gap:8px;                   /* 子元素间距 */
+    justify-content:center;    /* 水平居中 */
+    flex:1;                    /* 占据剩余空间 */
+}
+
+/* 右侧用户头像容器 */
+.pm-nav-right{
+    display:flex;              /* 弹性布局 */
+    align-items:center;        /* 垂直居中 */
+    position:absolute;         /* 绝对定位 */
+    right:60px;                /* 距离右边60px（与padding保持一致） */
+}
+.pm-avatar-wrap{position:relative}
+.pm-avatar{width:36px;height:36px;border-radius:50%;cursor:pointer;border:2px solid #F9E078}
+.pm-avatar-wrap.open #pm-avatar-menu{display:block}
+.pm-avatar-menu{
+    display:none;
+    position:absolute;
+    right:0;
+    top:44px;
+    background:#20223A;
+    border:2px solid #F9E078;
+    border-radius:0;
+    min-width:160px;
+    box-shadow:4px 4px 0 #000000;
+    z-index:1001;
+}
+.pm-menu-item{
+    display:block;
+    width:100%;
+    text-align:left;
+    background:transparent;
+    border:none;
+    color:#F9E078;
+    padding:12px 16px;
+    cursor:pointer;
+    font-family:'Press Start 2P', 'Zpix', monospace;
+    font-size:12px;
+    text-decoration:none;
+    transition:all 0.1s ease;
+    border-bottom:1px solid rgba(249,224,120,0.1);
+}
+.pm-menu-item:last-child{
+    border-bottom:none;
+}
+.pm-menu-item:hover{
+    background:rgba(249,224,120,0.15);
+    transform:translateX(2px);
+}
+
+/* 模态框样式 */
+.modal-mask {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 999;
+}
+
+.modal-content {
+    background-color: #20223A;
+    border-radius: 0;
+    border: 3px solid #F9E078;
+    box-shadow: 8px 8px 0 #000000;
+    width: 90%;
+    max-width: 400px;
+    padding: 24px;
+}
+
+.modal-header {
+    font-size: 18px;
+    font-weight: bold;
+    color: #F9E078;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-close {
+    font-size: 24px;
+    cursor: pointer;
+    color: #F9E078;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: #E6D166;
+}
+
+.modal-body {
+    margin-bottom: 20px;
+}
+
+.modal-footer {
+    text-align: center;
+}
+
+.modal-footer .btn {
+    background-color: #F9E078;
+    color: #20223A;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 0;
+    cursor: pointer;
+    font-family: 'Press Start 2P', 'Zpix', monospace;
+    font-size: 12px;
+}
+
+.modal-footer .btn:hover {
+    background-color: #E6D166;
+}
+

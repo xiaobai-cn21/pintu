@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拼图预览</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
+    <style>
+        .preview-main { max-width: 900px; margin: 40px auto; display: flex; gap: 32px; flex-wrap: wrap; }
+        .preview-left, .preview-right { flex: 1; min-width: 320px; }
+        .preview-card { background: #20223A; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3); padding: 24px; margin-bottom: 24px; }
+        .preview-upload-box { border: 2px dashed #E5E7EB; border-radius: 8px; padding: 40px; text-align: center; cursor: pointer; }
+        .preview-img { width: 100%; border-radius: 8px; display: block; margin-bottom: 12px; }
+        .preview-grid-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
+        .preview-img-box { position: relative; width: 100%; min-height: 240px; background: #20223A; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .preview-btn-row { text-align: center; margin-top: 24px; }
+    </style>
+    
+</head>
+<body>
+{% include '_navbar.html' %}
+
+<div class="background-blur"></div>
+
+    <div class="page-title" style="margin-top: 20px;">
+        <button class="btn btn-secondary back-btn" onclick="window.location.href='{{ url_for('main') }}'" style="padding: 8px 16px; font-size: 12px; margin-right: 16px;">
+            <span class="chinese-text">返回</span>
+        </button>
+        <span class="chinese-text" style="color: #F9E078; font-size: 18px;">创建拼图</span>
+    </div>
+    <div class="preview-main">
+        <!-- 左侧：上传和配置 -->
+        <div class="preview-left">
+            <div class="preview-card">
+                <h3 style="font-size: 16px; margin-bottom: 16px;">上传图片</h3>
+                <div class="preview-upload-box" id="uploadBox">
+                    <i class="fa fa-cloud-upload" style="font-size: 32px; color: #165DFF; margin-bottom: 12px;"></i>
+                    <p style="font-size: 14px; color: #666;">
+                        <div>点击或拖拽图片上传</div>
+                        <div><span class="number-text">（JPG/PNG，</span>最大<span class="number-text">5MB）</span></div>
+                    </p>
+                    <input type="file" id="imageUpload" accept="image/*" style="display:none;">
+                </div>
+            </div>
+            <div class="preview-card">
+                <h3 style="font-size: 16px; margin-bottom: 16px;">拼图配置</h3>
+                <div class="input-item">
+                    <label>拼图块数</label>
+                    <select id="difficultySelect">
+                        <option value="3">3 x 3</option>
+                        <option value="4" selected>4 x 4</option>
+                        <option value="5">5 x 5</option>
+                        <option value="6">6 x 6</option>
+                        <option value="8">8 x 8</option>
+                    </select>
+                </div>
+                <div class="input-item">
+                    <label>形状</label>
+                    <select id="shapeSelect">
+                        <option value="square" selected>方形</option>
+                        <option value="triangle">三角形</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <!-- 右侧：预览区 -->
+        <div class="preview-right">
+            <div class="preview-card">
+                <h3 style="font-size: 16px; margin-bottom: 16px;">拼图预览</h3>
+                <div class="preview-img-box" id="previewImgBox">
+                    <img id="previewImage" class="preview-img" src="" alt="预览图" style="display:none;">
+                    <canvas id="gridCanvas" class="preview-grid-canvas" style="display:none;"></canvas>
+                    <p id="previewTip" style="color:#666;">上传图片并选择块数后预览效果</p>
+                </div>
+                <div style="margin-top: 16px; text-align: right;">
+                    <p style="font-size: 14px; color: #666;">预计难度：<span id="difficultyText">简单</span></p>
+                </div>
+                <div class="preview-btn-row">
+                    <button id="playBtn" class="btn btn-primary" disabled>开始游戏</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const uploadBox = document.getElementById('uploadBox');
+        const imageUpload = document.getElementById('imageUpload');
+        const previewImage = document.getElementById('previewImage');
+        const gridCanvas = document.getElementById('gridCanvas');
+        const difficultySelect = document.getElementById('difficultySelect');
+        const playBtn = document.getElementById('playBtn');
+        const previewTip = document.getElementById('previewTip');
+        const difficultyText = document.getElementById('difficultyText');
+        const shapeSelect = document.getElementById('shapeSelect');
+        let imgData = null;
+        let currentShape = 'square';
+
+        uploadBox.onclick = () => imageUpload.click();
+        uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.style.borderColor = "#165DFF"; });
+        uploadBox.addEventListener('dragleave', e => { e.preventDefault(); uploadBox.style.borderColor = "#E5E7EB"; });
+        uploadBox.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadBox.style.borderColor = "#E5E7EB";
+            if (e.dataTransfer.files.length > 0) {
+                imageUpload.files = e.dataTransfer.files;
+                handleImage();
+            }
+        });
+        imageUpload.addEventListener('change', handleImage);
+
+        function handleImage() {
+            if (imageUpload.files.length > 0) {
+                const file = imageUpload.files[0];
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('图片太大，请选择小于5MB的图片');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imgData = e.target.result;
+                    previewImage.src = imgData;
+                    previewImage.style.display = 'block';
+                    gridCanvas.style.display = 'block';
+                    previewTip.style.display = 'none';
+                    drawGrid();
+                    playBtn.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateDifficultyText() {
+            const val = parseInt(difficultySelect.value);
+            let txt = '简单';
+            if (val >= 5 && val < 8) txt = '中等';
+            if (val >= 8) txt = '困难';
+            difficultyText.textContent = txt;
+        }
+        difficultySelect.addEventListener('change', () => {
+            drawGrid();
+            updateDifficultyText();
+        });
+        updateDifficultyText();
+
+        shapeSelect.addEventListener('change', () => {
+            currentShape = shapeSelect.value;
+            drawGrid();
+        });
+
+        function drawGrid() {
+            if (!imgData) return;
+            previewImage.onload = function() {
+                gridCanvas.width = previewImage.width;
+                gridCanvas.height = previewImage.height;
+                gridCanvas.style.width = previewImage.width + 'px';
+                gridCanvas.style.height = previewImage.height + 'px';
+                const ctx = gridCanvas.getContext('2d');
+                ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+                ctx.strokeStyle = "#FFFFFF";
+                ctx.lineWidth = 2;
+                const grid = parseInt(difficultySelect.value);
+                currentShape = shapeSelect.value;
+                for (let i = 1; i < grid; i++) {
+                    let x = i * gridCanvas.width / grid;
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, gridCanvas.height);
+                    ctx.stroke();
+                }
+                for (let i = 1; i < grid; i++) {
+                    let y = i * gridCanvas.height / grid;
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(gridCanvas.width, y);
+                    ctx.stroke();
+                }
+                if (currentShape === 'triangle') {
+                    for (let i = 0; i < grid; i++) {
+                        for (let j = 0; j < grid; j++) {
+                            const x = j * gridCanvas.width / grid;
+                            const y = i * gridCanvas.height / grid;
+                            const nextX = (j + 1) * gridCanvas.width / grid;
+                            const nextY = (i + 1) * gridCanvas.height / grid;
+                            if ((i % 2 === 0 && j % 2 === 0) || (i % 2 === 1 && j % 2 === 1)) {
+                                ctx.beginPath();
+                                ctx.moveTo(x, y);
+                                ctx.lineTo(nextX, nextY);
+                                ctx.stroke();
+                            } else {
+                                ctx.beginPath();
+                                ctx.moveTo(nextX, y);
+                                ctx.lineTo(x, nextY);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+            };
+            previewImage.src = imgData;
+        }
+
+        playBtn.addEventListener('click', function() {
+            localStorage.setItem('customImage', imgData);
+            localStorage.setItem('customSize', difficultySelect.value);
+            localStorage.setItem('customShape', shapeSelect.value);
+            window.location.href = '{{ url_for('game_page') }}';
+        });
+
+        window.addEventListener('DOMContentLoaded', function() {
+            const customImage = localStorage.getItem('customImage');
+            const customSize = localStorage.getItem('customSize');
+            const customShape = localStorage.getItem('customShape');
+            if (customImage && customSize) {
+                imgData = customImage;
+                previewImage.src = imgData;
+                previewImage.style.display = 'block';
+                gridCanvas.style.display = 'block';
+                previewTip.style.display = 'none';
+                difficultySelect.value = customSize;
+                if (customShape) { shapeSelect.value = customShape; currentShape = customShape; }
+                updateDifficultyText();
+                drawGrid();
+                playBtn.disabled = false;
+                localStorage.removeItem('customImage');
+                localStorage.removeItem('customSize');
+                localStorage.removeItem('customShape');
+            }
+        });
+    </script>
+
+<!-- 帮助页面模态框 -->
+<div class="modal-mask" id="helpModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span>操作指南</span>
+            <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
+        </div>
+        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
+            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+            <p>- 单击选中的图块，顺时针旋转90度</p>
+            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
+
