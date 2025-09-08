@@ -152,7 +152,11 @@ function createPuzzlePieces() {
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
 
     if (shape === 'square') {
-        // ... 方形逻辑保持不变 ...
+        for (let y = 0; y < difficulty; y++) {
+            for (let x = 0; x < difficulty; x++) {
+                createSquarePiece(x, y, pieceWidth, pieceHeight);
+            }
+        }
     } else if (shape === 'triangle') {
         for (let y = 0; y < difficulty; y++) {
             for (let x = 0; x < difficulty; x++) {
