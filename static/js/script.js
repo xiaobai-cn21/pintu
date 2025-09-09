@@ -844,10 +844,16 @@ function showCompletionMessage() {
     timeInfo.textContent = `用时: ${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     timeInfo.style.fontSize = '1.2rem';
 
+    // 添加按钮容器
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.justifyContent = 'center';
+    buttonContainer.style.gap = '1rem';
+    buttonContainer.style.marginTop = '1rem';
+
     // 添加重新开始按钮
     const restartBtn = document.createElement('button');
     restartBtn.textContent = '再玩一次';
-    restartBtn.style.marginTop = '1rem';
     restartBtn.style.padding = '0.8rem 1.5rem';
     restartBtn.style.fontSize = '1rem';
     restartBtn.style.backgroundColor = '#4CAF50';
@@ -860,11 +866,27 @@ function showCompletionMessage() {
         resetGame(); // 假设存在重置拼图的函数
     });
 
+    // 添加返回按钮
+    const backBtn = document.createElement('button');
+    backBtn.textContent = '返回选择关卡';
+    backBtn.style.padding = '0.8rem 1.5rem';
+    backBtn.style.fontSize = '1rem';
+    backBtn.style.backgroundColor = '#2196F3';
+    backBtn.style.color = 'white';
+    backBtn.style.border = 'none';
+    backBtn.style.borderRadius = '5px';
+    backBtn.style.cursor = 'pointer';
+    backBtn.addEventListener('click', () => {
+        window.location.href = '/option'; // 返回选择关卡页面
+    });
+
     // 组装提示信息
     messageContainer.appendChild(title);
     messageContainer.appendChild(timeInfo);  // 添加时间显示
     messageContainer.appendChild(movesInfo);
-    messageContainer.appendChild(restartBtn);
+    buttonContainer.appendChild(restartBtn);
+    buttonContainer.appendChild(backBtn);
+    messageContainer.appendChild(buttonContainer);
 
     // 添加到页面
     document.body.appendChild(messageContainer);
