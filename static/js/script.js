@@ -618,17 +618,5 @@ function pieceDrag(e) {
 }
 
 // 兼容 game.html 对 window.puzzleGame 的依赖（用于帮助弹窗暂停/恢复）
-window.puzzleGame = {
-    get gameStarted() { return gameStarted; },
-    pauseGame() {
-        if (gameStarted && timerInterval) {
-            clearInterval(timerInterval);
-            timerInterval = null;
-        }
-    },
-    resumeGame() {
-        if (gameStarted && !timerInterval) {
-            timerInterval = setInterval(updateTimer, 1000);
-        }
-    }
-};
+// 注意：game.js 中会创建完整的 PuzzleGame 实例并赋值给 window.puzzleGame
+// 这里只保留基本的接口以避免冲突
