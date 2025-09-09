@@ -21,9 +21,10 @@
         <div id="moves">移动次数: 0</div>
     </div>
     <div class="puzzle-container">
-        <div id="puzzleBoard" class="puzzle-board">
-            <div id="puzzleBg" class="puzzle-bg"></div>
-        </div>
+        <div class="puzzle-board-wrapper"> <!-- 新增一个 wrapper -->
+                <div id="puzzleBg" class="puzzle-bg"></div>
+                <div id="puzzleBoard" class="puzzle-board"></div>
+            </div>
         <div id="piecesZone" class="pieces-zone"></div>
     </div>
     <div id="gameComplete" class="game-complete">
@@ -59,7 +60,9 @@
         </div>
     </div>
 </div>
-
+    <svg width="0" height="0" style="position: absolute; z-index: -1;">
+      <defs id="puzzle-defs"></defs>
+    </svg>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 <script>
 // 游戏暂停/继续功能
