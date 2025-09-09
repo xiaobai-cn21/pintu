@@ -120,6 +120,24 @@ document.addEventListener('DOMContentLoaded', function() {
             openHelpModal();
         });
     }
+    const piecesZone = document.getElementById('piecesZone');
+    if (piecesZone) {
+        piecesZone.addEventListener('wheel', function(event) {
+            const hasHorizontalScrollbar = piecesZone.scrollWidth > piecesZone.clientWidth;
+
+            if (hasHorizontalScrollbar) {
+                event.preventDefault();
+
+                let scrollAmount = event.deltaY;
+                if (scrollAmount === 0 && event.deltaX !== 0) {
+                    scrollAmount = event.deltaX;
+                }
+
+                piecesZone.scrollLeft += scrollAmount;
+            }
+
+        }, { passive: false });
+    }
 });
 </script>
     <!-- 页面特定的背景音乐 -->
