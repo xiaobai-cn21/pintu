@@ -15,6 +15,30 @@
         .preview-grid-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .preview-img-box { position: relative; width: 100%; min-height: 240px; background: #20223A; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
         .preview-btn-row { text-align: center; margin-top: 24px; }
+     /* 新增选项样式 */
+        .random-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #2d3250;
+        }
+        .random-option-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .random-option-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #165DFF;
+        }
+        .random-option-item label {
+            font-size: 14px;
+            color: #E5E7EB;
+            cursor: pointer;
+        }
     </style>
     
 </head>
@@ -63,6 +87,17 @@
                           <option value="jigsaw">拼图块</option>
                     </select>
                 </div>
+                <!-- 新增的随机选项 -->
+                <div class="random-options">
+                    <div class="random-option-item">
+                        <input type="checkbox" id="randomRotation" checked>
+                        <label for="randomRotation">随机旋转</label>
+                    </div>
+                    <div class="random-option-item">
+                        <input type="checkbox" id="randomFlip" checked>
+                        <label for="randomFlip">随机翻转</label>
+                    </div>
+                </div>
             </div>
         </div>
         <!-- 右侧：预览区 -->
@@ -93,6 +128,9 @@
         const previewTip = document.getElementById('previewTip');
         const difficultyText = document.getElementById('difficultyText');
         const shapeSelect = document.getElementById('shapeSelect');
+        // 获取新增的复选框元素
+        const randomRotationCheckbox = document.getElementById('randomRotation');
+        const randomFlipCheckbox = document.getElementById('randomFlip');
         let imgData = null;
         let currentShape = 'square';
 
@@ -204,6 +242,9 @@
             localStorage.setItem('customImage', imgData);
             localStorage.setItem('customSize', difficultySelect.value);
             localStorage.setItem('customShape', shapeSelect.value);
+            // 存储新的选项状态
+            localStorage.setItem('randomRotation', randomRotationCheckbox.checked);
+            localStorage.setItem('randomFlip', randomFlipCheckbox.checked);
             window.location.href = '{{ url_for('game_page') }}';
         });
 
@@ -211,6 +252,9 @@
             const customImage = localStorage.getItem('customImage');
             const customSize = localStorage.getItem('customSize');
             const customShape = localStorage.getItem('customShape');
+            // 获取新的选项状态
+            const storedRandomRotation = localStorage.getItem('randomRotation');
+            const storedRandomFlip = localStorage.getItem('randomFlip');
             if (customImage && customSize) {
                 imgData = customImage;
                 previewImage.src = imgData;
@@ -219,12 +263,21 @@
                 previewTip.style.display = 'none';
                 difficultySelect.value = customSize;
                 if (customShape) { shapeSelect.value = customShape; currentShape = customShape; }
+                // 设置新的选项状态
+                if (storedRandomRotation !== null) {
+                    randomRotationCheckbox.checked = storedRandomRotation === 'true';
+                }
+                if (storedRandomFlip !== null) {
+                    randomFlipCheckbox.checked = storedRandomFlip === 'true';
+                }
                 updateDifficultyText();
                 drawGrid();
                 playBtn.disabled = false;
                 localStorage.removeItem('customImage');
                 localStorage.removeItem('customSize');
                 localStorage.removeItem('customShape');
+                localStorage.removeItem('randomRotation');
+                localStorage.removeItem('randomFlip');
             }
         });
     </script>
