@@ -66,7 +66,7 @@ class MoveCommand extends Command {
         this.toX = toX;     // 新的网格坐标
         this.toY = toY;
     }
-
+moves
     execute() {
         // 执行移动（已经在原函数中处理）
     }
@@ -185,6 +185,7 @@ function flipPiece(piece) {
     // 更新移动次数
     moves++;
     movesElement.textContent = `移动次数: ${moves}`;
+    emitMyMoves()
 }
 // 修复鼠标按下事件处理
 function handleDragStart(e) {
@@ -1135,6 +1136,7 @@ function returnToZone(piece, incrementMoves = true) {
     if (incrementMoves) {
         moves++;
         movesElement.textContent = `移动次数: ${moves}`;
+        emitMyMoves()
     }
 }
 
@@ -1247,11 +1249,47 @@ function calculatePieceFinalPosition(piece, gridX, gridY) {
     return null;
 }
 // 兼容 game.html 对 window.puzzleGame 的依赖（用于帮助弹窗暂停/恢复）
-try {
-    window.puzzleGame = {
-        pauseGame,
-        resumeGame,
-        get gameStarted() { return typeof gameStarted !== 'undefined' ? gameStarted : false; }
-    };
-} catch (e) {}
+// try {
+//     window.puzzleGame = {
+//         pauseGame,
+//         resumeGame,
+//         get gameStarted() { return typeof gameStarted !== 'undefined' ? gameStarted : false; }
+//     };
+// } catch (e) {}
 
+
+function countCorrectPieces() {
+    let correct = 0;
+    const allPieces = document.querySelectorAll('#puzzleBoard .puzzle-piece');
+    allPieces.forEach(piece => {
+        const currentX = parseInt(piece.dataset.currentX);
+        const currentY = parseInt(piece.dataset.currentY);
+        const correctX = parseInt(piece.dataset.correctX);
+        const correctY = parseInt(piece.dataset.correctY);
+        const rotation = parseInt(piece.dataset.rotation) || 0;
+        const flipped = piece.dataset.flipped === 'true';
+        // Only count as correct if position matches and no rotation/flip
+        if (
+            currentX === correctX &&
+            currentY === correctY &&
+            rotation === 0 &&
+            !flipped
+        ) {
+            correct++;
+        }
+    });
+    return correct;
+}
+
+function emitMyMoves() {
+    const roomId = new URLSearchParams(window.location.search).get('room_id');
+    const movesToSend = window.puzzleGame ? window.puzzleGame.moves : moves;
+    const correctToSend = countCorrectPieces();
+    if (window.socket && roomId) {
+        window.socket.emit('pvp_moves_update', {
+            room_id: roomId,
+            moves: movesToSend,
+            correct: correctToSend
+        });
+    }
+}

@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>拼图游戏</title>
-    
     <link rel="stylesheet" href="{{ url_for('static', filename='css/game-rank.css') }}">
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
 <body>
 {% include '_navbar.html' %}
@@ -21,6 +19,10 @@
     <div class="game-info">
         <div id="timer">时间: 00:00</div>
         <div id="moves">移动次数: 0</div>
+        <div id="opponentMovesBox">
+            对手移动次数: <span id="opponentMoves">0</span>
+            ，正确块数: <span id="opponentCorrect">0</span>
+        </div>
     </div>
     <div class="puzzle-container">
         <div class="puzzle-board-wrapper">
@@ -69,15 +71,6 @@
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
-// 连接 socket
-const socket = io("http://localhost:5000");
-
-// 解析URL参数
-function getQueryParam(name) {
-    const url = new URL(window.location.href);
-    return url.searchParams.get(name);
-}
-
 // 游戏暂停/继续功能
 let gamePaused = false;
 let gameInstance = null;
@@ -126,9 +119,23 @@ document.addEventListener('DOMContentLoaded', function() {
             openHelpModal();
         });
     }
+    const piecesZone = document.getElementById('piecesZone');
+    if (piecesZone) {
+        piecesZone.addEventListener('wheel', function(event) {
+            const hasHorizontalScrollbar = piecesZone.scrollWidth > piecesZone.clientWidth;
+            if (hasHorizontalScrollbar) {
+                event.preventDefault();
+                let scrollAmount = event.deltaY;
+                if (scrollAmount === 0 && event.deltaX !== 0) {
+                    scrollAmount = event.deltaX;
+                }
+                piecesZone.scrollLeft += scrollAmount;
+            }
+        }, { passive: false });
+    }
 });
 
-// 页面音乐
+// 页面特定的背景音乐
 function initPageMusic() {
     if (window.musicManager) {
         window.musicManager.playScene('game');
@@ -140,19 +147,25 @@ document.addEventListener('DOMContentLoaded', function() {
     initPageMusic();
 });
 
-// === 只用 room_id 拉取拼图数据并初始化游戏 ===
+// Socket.IO 连接与对手步数/正确块数监听
+if (!window.socket) {
+    window.socket = io();
+    const roomId = new URLSearchParams(window.location.search).get('room_id');
+    window.socket.emit('join_room', { room_id: roomId, username: localStorage.getItem('pvp_username') || '玩家' });
+}
+window.socket.on('opponent_moves', function(data) {
+    document.getElementById('opponentMoves').textContent = data.moves;
+    document.getElementById('opponentCorrect').textContent = data.correct;
+});
+
+// 拉取房间拼图数据并初始化游戏
 document.addEventListener('DOMContentLoaded', function() {
     const roomId = new URLSearchParams(window.location.search).get('room_id');
     if (roomId) {
         fetch(`/pvp/room_info?room_id=${roomId}`)
             .then(res => res.json())
             .then(data => {
-                console.log(data)
                 if (data.code === 200) {
-                    // Initialize your puzzle game here
-                    // Example:
-                    console.log('window.puzzleGame:', window.puzzleGame);
-                    console.log("i did it");
                     window.puzzleGame && window.puzzleGame.init({
                         img: '/static/uploads/' + data.image,
                         ...data.config
@@ -167,6 +180,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = '/versus';
             });
     }
+});
+
+window.socket.on('pvp_game_over', function(data) {
+    const myName = localStorage.getItem('pvp_username') || '玩家';
+    let msg = '';
+    if (data.winner === myName) {
+        msg = `🎉 你赢了！<br>用时: ${data.time} 秒<br>步数: ${data.moves}`;
+    } else {
+        msg = `😢 你输了！<br>对手: ${data.winner}<br>用时: ${data.time} 秒<br>步数: ${data.moves}`;
+    }
+    // 弹窗
+    const winDiv = document.createElement('div');
+    winDiv.style.position = 'fixed';
+    winDiv.style.top = '50%';
+    winDiv.style.left = '50%';
+    winDiv.style.transform = 'translate(-50%, -50%)';
+    winDiv.style.background = 'rgba(0,0,0,0.9)';
+    winDiv.style.color = '#fff';
+    winDiv.style.padding = '2rem';
+    winDiv.style.borderRadius = '12px';
+    winDiv.style.fontSize = '1.5rem';
+    winDiv.style.zIndex = 9999;
+    winDiv.innerHTML = `<div style="text-align:center;">${msg}</div>
+        <button style="margin-top:1.5rem;font-size:1rem;" onclick="location.reload()">再来一局</button>`;
+    document.body.appendChild(winDiv);
+    setTimeout(function() {
+        window.location.href = '/menu';
+    }, 2000); // 3 seconds
 });
 </script>
 </body>

@@ -69,7 +69,7 @@ def create_app():
     def messages_page():
         return render_template('messages.html')
 
-    @app.route('/friends')
+    @app.route('/friends_page')
     def friends_page():
         return render_template('search_friend.html')
 
@@ -93,6 +93,7 @@ def create_app():
     @app.route('/online_editor')
     def online_game_editor():
         return render_template('online_editor.html')
+
 
     return app
 

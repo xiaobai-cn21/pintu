@@ -15,6 +15,29 @@
         .preview-grid-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .preview-img-box { position: relative; width: 100%; min-height: 240px; background: #20223A; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
         .preview-btn-row { text-align: center; margin-top: 24px; }
+        .random-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #2d3250;
+        }
+        .random-option-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .random-option-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #165DFF;
+        }
+        .random-option-item label {
+            font-size: 14px;
+            color: #E5E7EB;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -62,6 +85,16 @@
                     <option value="jigsaw">拼图块</option>
                 </select>
             </div>
+            <div class="random-options">
+                <div class="random-option-item">
+                    <input type="checkbox" id="randomRotation" checked>
+                    <label for="randomRotation">随机旋转</label>
+                </div>
+                <div class="random-option-item">
+                    <input type="checkbox" id="randomFlip" checked>
+                    <label for="randomFlip">随机翻转</label>
+                </div>
+            </div>
         </div>
     </div>
     <!-- 右侧：预览区 -->
@@ -84,14 +117,7 @@
 </div>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
-    // 工具函数：获取URL参数
-    function getQueryParam(name) {
-        const url = new URL(window.location.href);
-        return url.searchParams.get(name);
-    }
-    // 只允许对战模式
-    const isPvp = true;
-
+    // 上传和预览逻辑同edditor.html
     const uploadBox = document.getElementById('uploadBox');
     const imageUpload = document.getElementById('imageUpload');
     const previewImage = document.getElementById('previewImage');
@@ -101,6 +127,8 @@
     const previewTip = document.getElementById('previewTip');
     const difficultyText = document.getElementById('difficultyText');
     const shapeSelect = document.getElementById('shapeSelect');
+    const randomRotationCheckbox = document.getElementById('randomRotation');
+    const randomFlipCheckbox = document.getElementById('randomFlip');
     let imgData = null;
     let currentShape = 'square';
 
@@ -216,7 +244,9 @@
         const puzzleData = {
             img: imgData,
             size: difficultySelect.value,
-            shape: shapeSelect.value
+            shape: shapeSelect.value,
+            randomRotation: randomRotationCheckbox.checked,
+            randomFlip: randomFlipCheckbox.checked
         };
         let username = localStorage.getItem('pvp_username');
         if (!username) {
@@ -255,30 +285,5 @@
     });
 
 </script>
-
-<!-- 帮助页面模态框 -->
-<div class="modal-mask" id="helpModal" style="display: none;">
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header">
-            <span>操作指南</span>
-            <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
-        </div>
-        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
-            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
-            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
-            <p>- 单击选中的图块，顺时针旋转90度</p>
-            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
-            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
-            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
-            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
-            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
-            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
-            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
-        </div>
-        <div class="modal-footer">
-            <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
-        </div>
-    </div>
-</div>
 </body>
 </html>

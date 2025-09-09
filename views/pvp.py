@@ -23,6 +23,31 @@ def generate_room_id():
             return room_id
 
 def register_socketio_events(socketio):
+    @socketio.on('pvp_win')
+    def handle_pvp_win(data):
+        room_id = data.get('room_id')
+        winner = data.get('username')
+        moves = data.get('moves')
+        time = data.get('time')
+        # 只允许第一个完成的人为胜者
+        if not hasattr(handle_pvp_win, 'winner_announced'):
+            handle_pvp_win.winner_announced = {}
+        if room_id not in handle_pvp_win.winner_announced:
+            handle_pvp_win.winner_announced[room_id] = True
+            emit('pvp_game_over', {
+                'winner': winner,
+                'moves': moves,
+                'time': time
+            }, room=room_id)
+            
+    @socketio.on('pvp_moves_update')
+    def handle_pvp_moves_update(data):
+        room_id = data.get('room_id')
+        moves = data.get('moves')
+        correct = data.get('correct')
+        print(f"[pvp_moves_update] room_id={room_id}, moves={moves}, correct={correct}, sid={request.sid}")  # <-- Add this line
+        emit('opponent_moves', {'moves': moves, 'correct': correct}, room=room_id, include_self=False)
+    
     @socketio.on('create_room')
     def create_room(data):
         username = data.get('username')

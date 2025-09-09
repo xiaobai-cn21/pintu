@@ -1,12 +1,20 @@
 // 游戏状态管理
 class PuzzleGame {
-    init({ img, size, shape }) {
-    this.originalImageUrl = img;
-    this.difficulty = parseInt(size);
-    if (shape) this.shape = shape;
-    this.setPuzzleBg();
-    this.startGame();
-}
+    init({ img, size, shape, randomRotation, randomFlip }) {
+        this.originalImageUrl = img;
+        this.difficulty = parseInt(size);
+        if (shape) this.shape = shape;
+        // 支持随机旋转/翻转配置
+        if (typeof randomRotation !== 'undefined') {
+            localStorage.setItem('randomRotation', randomRotation);
+        }
+        if (typeof randomFlip !== 'undefined') {
+            localStorage.setItem('randomFlip', randomFlip);
+        }
+        this.setPuzzleBg();
+        this.startGame();
+    }
+    
     constructor() {
         this.pieces = [];
         this.difficulty = 4;
@@ -24,6 +32,17 @@ class PuzzleGame {
         this.initializeElements();
         this.bindEvents();
         this.setPuzzleBg();
+    }
+        sendWinMessage() {
+        const roomId = new URLSearchParams(window.location.search).get('room_id');
+        if (window.socket && roomId) {
+            window.socket.emit('pvp_win', {
+                room_id: roomId,
+                username: localStorage.getItem('pvp_username') || '玩家',
+                moves: this.moves,
+                time: this.seconds
+            });
+        }
     }
 
     initializeElements() {
@@ -509,6 +528,7 @@ class PuzzleGame {
         }
         
         this.moves++;
+        emitMyMoves()
         this.updateUI();
         this.checkPuzzleCompletion();
     }
@@ -572,6 +592,7 @@ class PuzzleGame {
 
     // 检查拼图是否完成
     checkPuzzleCompletion() {
+        
         const allPieces = this.puzzleBoard.querySelectorAll('.puzzle-piece');
         if (allPieces.length !== this.difficulty * this.difficulty) return false;
         
@@ -591,6 +612,7 @@ class PuzzleGame {
         
         if (completed && this.gameStarted) {
             this.gameStarted = false;
+            this.sendWinMessage(); // 调用上面的方法
             this.clearTimer();
             const minutes = Math.floor(this.seconds / 60);
             const remainingSeconds = this.seconds % 60;
