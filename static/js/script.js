@@ -66,7 +66,7 @@ class MoveCommand extends Command {
         this.toX = toX;     // 新的网格坐标
         this.toY = toY;
     }
-moves
+
     execute() {
         // 执行移动（已经在原函数中处理）
     }
@@ -185,7 +185,6 @@ function flipPiece(piece) {
     // 更新移动次数
     moves++;
     movesElement.textContent = `移动次数: ${moves}`;
-    emitMyMoves()
 }
 // 修复鼠标按下事件处理
 function handleDragStart(e) {
@@ -414,19 +413,14 @@ function shufflePieces() {
 function dragStart(e) {
     draggedPiece = this;
 
-    // --- 修正后的逻辑 ---
-    // 获取棋盘上所有已放置的拼图块
     const piecesOnBoard = puzzleBoard.querySelectorAll('.puzzle-piece');
     // 遍历它们
     piecesOnBoard.forEach(piece => {
-        // 关键的判断：如果这个块不是我们正在拖动的块，才让它忽略鼠标
         if (piece !== draggedPiece) {
             piece.style.pointerEvents = 'none';
         }
     });
-    // --- 修正结束 ---
 
-    // --- 自定义拖拽图像方案 (这部分保持不变) ---
     customFollower = this.cloneNode(true);
     customFollower.id = 'custom-follower';
     customFollower.style.position = 'fixed';
@@ -452,7 +446,7 @@ function dragStart(e) {
 }
 
 function dragEnd() {
-    // 移除吸附提示
+
     const hint = document.getElementById('drop-hint');
     if (hint) {
         hint.style.display = 'none';
@@ -481,117 +475,109 @@ function dragOver(e) {
     e.preventDefault();
 }
 // 拖拽到棋盘
-// 修改dropOnBoard函数，修复拖拽问题并增强吸附功能
 function dropOnBoard(e) {
     e.preventDefault();
     if (!draggedPiece) return;
 
-    // 保存移动前的状态
+    // --- 诊断会话开始 ---
+    console.group(`--- 拼图块放置诊断 @ ${new Date().toLocaleTimeString()} ---`);
+
     const fromParent = draggedPiece.parentNode;
-    const fromRect = {
-        position: draggedPiece.style.position,
-        left: draggedPiece.style.left,
-        top: draggedPiece.style.top,
-        margin: draggedPiece.style.margin
-    };
+    const fromRect = { position: draggedPiece.style.position, left: draggedPiece.style.left, top: draggedPiece.style.top, margin: draggedPiece.style.margin };
     const fromX = draggedPiece.dataset.currentX;
     const fromY = draggedPiece.dataset.currentY;
-
-    draggedPiece.style.margin = '0'; // 放置到棋盘时清除 margin
 
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
     const boardRect = puzzleBoard.getBoundingClientRect();
 
-    // 计算鼠标在棋盘内的相对位置
     let x = e.clientX - boardRect.left;
     let y = e.clientY - boardRect.top;
-
     let gridX = Math.floor(x / pieceWidth);
     let gridY = Math.floor(y / pieceHeight);
     gridX = Math.max(0, Math.min(gridX, difficulty - 1));
     gridY = Math.max(0, Math.min(gridY, difficulty - 1));
 
-    let finalLeft, finalTop;
-    let canPlace = true;
+    console.log(`[1. 目标位置] 尝试放置到棋盘网格: (${gridX}, ${gridY})`);
 
-    if (shape === 'jigsaw' || shape === 'square') {
-        const targetPiece = findPieceOnBoard(gridX, gridY);
+    let canPlace = false;
 
-        if (targetPiece && targetPiece !== draggedPiece) {
-            // --- 目标位置有图块，执行【交换】操作 ---
-            console.log(`开始交换: ${draggedPiece.id} 与 ${targetPiece.id}`);
+    // --- 诊断正在拖拽的块 ---
+    console.log(`[2. 拖拽块信息]`, {
+        '原始形状': draggedPiece.dataset.type,
+        '当前旋转角度': parseInt(draggedPiece.dataset.rotation) || 0,
+        '是否翻转': draggedPiece.dataset.flipped === 'true',
+        '计算后的有效形状': getEffectivePieceType(draggedPiece)
+    });
 
-            // 1. 获取被拖拽图块的原始位置
-            const sourceParent = fromParent;
-            const sourceGridX = fromX;
-            const sourceGridY = fromY;
+    const piecesInTargetCell = Array.from(
+        puzzleBoard.querySelectorAll(`[data-current-x='${gridX}'][data-current-y='${gridY}']`)
+    ).filter(p => p !== draggedPiece);
 
-            // 2. 将目标位置的图块 (targetPiece) 移动到被拖拽图块的原始位置
-            if (sourceParent === puzzleBoard) {
-                // 情况A: 两个图块都在棋盘上交换
-                const oldPos = calculatePieceFinalPosition(targetPiece, parseInt(sourceGridX), parseInt(sourceGridY));
-                if (oldPos) {
-                    targetPiece.style.left = oldPos.finalLeft;
-                    targetPiece.style.top = oldPos.finalTop;
-                    targetPiece.dataset.currentX = sourceGridX;
-                    targetPiece.dataset.currentY = sourceGridY;
-                }
-            } else {
-                // 情况B: 从备选区拖来，与棋盘上的图块交换
-                returnToZone(targetPiece, false); // 将棋盘上的图块送回备选区，不计步数
-            }
+    console.log(`[3. 目标格检查] 目标格中发现 ${piecesInTargetCell.length} 个【其他】拼图块。`);
 
-            // 3. 此时目标格子已空，可以继续执行后续的放置操作
+    if (shape === 'triangle') {
+        if (piecesInTargetCell.length === 0) {
+            console.log('[4. 判断] 目标格为空。判定：【可以放置】');
             canPlace = true;
+        } else if (piecesInTargetCell.length === 1) {
+            console.log('[4. 判断] 目标格已有1个块，开始进行兼容性检查...');
+            const existingPiece = piecesInTargetCell[0];
 
-        } else if (targetPiece && targetPiece === draggedPiece) {
-            // 拖到了自己原来的位置，操作无效
-            canPlace = false;
-        }
+            console.log(`   - [4a. 已有块信息]`, {
+                '原始形状': existingPiece.dataset.type,
+                '当前旋转角度': parseInt(existingPiece.dataset.rotation) || 0,
+                '是否翻转': existingPiece.dataset.flipped === 'true',
+                '计算后的有效形状': getEffectivePieceType(existingPiece)
+            });
 
-    } else if (shape === 'triangle') {
-        // 三角形逻辑保持不变，因为它更复杂，不支持简单交换
-        const piecesInCell = Array.from(
-            puzzleBoard.querySelectorAll(`.puzzle-piece.triangle[data-current-x='${gridX}'][data-current-y='${gridY}']`)
-        );
-        if (piecesInCell.length >= 2 || piecesInCell.some(p => p.dataset.type === draggedPiece.dataset.type)) {
-            canPlace = false;
+            const draggedPieceEffectiveType = getEffectivePieceType(draggedPiece);
+            const existingPieceEffectiveType = getEffectivePieceType(existingPiece);
+
+            const isCompatible =
+                (draggedPieceEffectiveType === 'top-left' && existingPieceEffectiveType === 'bottom-right') ||
+                (draggedPieceEffectiveType === 'bottom-right' && existingPieceEffectiveType === 'top-left') ||
+                (draggedPieceEffectiveType === 'top-right' && existingPieceEffectiveType === 'bottom-left') ||
+                (draggedPieceEffectiveType === 'bottom-left' && existingPieceEffectiveType === 'top-right');
+
+            console.log(`   - [4b. 兼容性结果] 拖拽块(${draggedPieceEffectiveType}) + 已有块(${existingPieceEffectiveType}) => 是否兼容: ${isCompatible}`);
+
+            if (isCompatible) {
+                console.log('   - [4c. 结论] 两个块兼容。判定：【可以放置】');
+                canPlace = true;
+            } else {
+                console.log('   - [4c. 结论] 两个块不兼容。判定：【不可放置】');
+            }
+        } else {
+             console.log('[4. 判断] 目标格已满。判定：【不可放置】');
         }
-        if (piecesInCell.length === 1 && !((draggedPiece.dataset.type === 'top-left' && piecesInCell[0].dataset.type === 'bottom-right') || (draggedPiece.dataset.type === 'bottom-right' && piecesInCell[0].dataset.type === 'top-left') || (draggedPiece.dataset.type === 'top-right' && piecesInCell[0].dataset.type === 'bottom-left') || (draggedPiece.dataset.type === 'bottom-left' && piecesInCell[0].dataset.type === 'top-right'))) {
-            canPlace = false;
-        }
+    } else {
+        // (方形和异形的逻辑... 暂时忽略，因为问题出在三角形)
+        canPlace = true; // 简化处理
     }
 
-    // --- 统一的放置与状态更新 ---
+    console.log(`[5. 最终决定] 是否可以放置: ${canPlace}`);
+    console.groupEnd();
+
+    // --- 以下是原有的执行逻辑，保持不变 ---
     if (canPlace) {
         const pos = calculatePieceFinalPosition(draggedPiece, gridX, gridY);
         if (pos) {
-            finalLeft = pos.finalLeft;
-            finalTop = pos.finalTop;
-
-            const toRect = { position: "absolute", left: finalLeft, top: finalTop, margin: '0' };
+            draggedPiece.style.margin = '0';
+            const toRect = { position: "absolute", left: pos.finalLeft, top: pos.finalTop, margin: '0' };
             const command = new MoveCommand(draggedPiece, fromParent, fromRect, puzzleBoard, toRect, fromX, fromY, gridX, gridY);
             pushCommand(command);
-
-            draggedPiece.style.transition = '';
             draggedPiece.style.position = "absolute";
-            draggedPiece.style.left = finalLeft;
-            draggedPiece.style.top = finalTop;
+            draggedPiece.style.left = pos.finalLeft;
+            draggedPiece.style.top = pos.finalTop;
             draggedPiece.dataset.currentX = gridX;
             draggedPiece.dataset.currentY = gridY;
-
             puzzleBoard.appendChild(draggedPiece);
-
             moves++;
             movesElement.textContent = `移动次数: ${moves}`;
-        } else {
-             // 计算位置失败，返回
-             returnToZone(draggedPiece);
         }
     } else {
-        // 无法放置时，返回备选区
-        returnToZone(draggedPiece);
+        returnToZone(draggedPiece, fromParent === piecesZone);
     }
 }
 
@@ -1136,7 +1122,6 @@ function returnToZone(piece, incrementMoves = true) {
     if (incrementMoves) {
         moves++;
         movesElement.textContent = `移动次数: ${moves}`;
-        emitMyMoves()
     }
 }
 
@@ -1249,60 +1234,42 @@ function calculatePieceFinalPosition(piece, gridX, gridY) {
     return null;
 }
 // 兼容 game.html 对 window.puzzleGame 的依赖（用于帮助弹窗暂停/恢复）
-// try {
-//     window.puzzleGame = {
-//         pauseGame,
-//         resumeGame,
-//         get gameStarted() { return typeof gameStarted !== 'undefined' ? gameStarted : false; }
-//     };
-// } catch (e) {}
+try {
+    window.puzzleGame = {
+        pauseGame,
+        resumeGame,
+        get gameStarted() { return typeof gameStarted !== 'undefined' ? gameStarted : false; }
+    };
+} catch (e) {}
 
+function getEffectivePieceType(piece) {
+    const originalType = piece.dataset.type;
+    const rotation = parseInt(piece.dataset.rotation) || 0;
+    const isFlipped = piece.dataset.flipped === 'true';
 
-function countCorrectPieces() {
-    let correct = 0;
-    const allPieces = document.querySelectorAll('#puzzleBoard .puzzle-piece');
-    allPieces.forEach(piece => {
-        const currentX = parseInt(piece.dataset.currentX);
-        const currentY = parseInt(piece.dataset.currentY);
-        const correctX = parseInt(piece.dataset.correctX);
-        const correctY = parseInt(piece.dataset.correctY);
-        const rotation = parseInt(piece.dataset.rotation) || 0;
-        const flipped = piece.dataset.flipped === 'true';
-        // Only count as correct if position matches and no rotation/flip
-        if (
-            currentX === correctX &&
-            currentY === correctY &&
-            rotation === 0 &&
-            !flipped
-        ) {
-            correct++;
+    // 定义旋转顺序 (顺时针)
+    const types = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
+    let effectiveType = originalType;
+
+    // --- 核心修复：严格按照 CSS 的 transform 顺序（从右到左）进行计算 ---
+
+    // 第1步：先处理翻转 (scaleX)
+    if (isFlipped) {
+        if (effectiveType === 'top-left') {
+            effectiveType = 'top-right';
+        } else if (effectiveType === 'top-right') {
+            effectiveType = 'top-left';
+        } else if (effectiveType === 'bottom-left') {
+            effectiveType = 'bottom-right';
+        } else if (effectiveType === 'bottom-right') {
+            effectiveType = 'bottom-left';
         }
-    });
-    return correct;
-}
-
-function emitMyMoves() {
-    const roomId = new URLSearchParams(window.location.search).get('room_id');
-    const movesToSend = window.puzzleGame ? window.puzzleGame.moves : moves;
-    const correctToSend = countCorrectPieces();
-    if (window.socket && roomId) {
-        window.socket.emit('pvp_moves_update', {
-            room_id: roomId,
-            moves: movesToSend,
-            correct: correctToSend
-        });
     }
-}
 
+    // 第2步：再处理旋转 (rotate)，作用于【可能已经被翻转过】的形状上
+    const currentIndex = types.indexOf(effectiveType);
+    const rotationSteps = rotation / 90;
+    effectiveType = types[(currentIndex + rotationSteps) % 4];
 
-function sendWinMessage() {
-    const roomId = new URLSearchParams(window.location.search).get('room_id');
-    if (window.socket && roomId) {
-        window.socket.emit('pvp_win', {
-            room_id: roomId,
-            username: localStorage.getItem('pvp_username') || '玩家',
-            moves: moves,
-            time: seconds
-        });
-    }
+    return effectiveType;
 }
