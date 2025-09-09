@@ -21,20 +21,17 @@
         <div id="moves">移动次数: 0</div>
     </div>
     <div class="puzzle-container">
-        <div id="puzzleBoard" class="puzzle-board">
-            <div id="puzzleBg" class="puzzle-bg"></div>
-        </div>
+        <div class="puzzle-board-wrapper"> <!-- 新增一个 wrapper -->
+                <div id="puzzleBg" class="puzzle-bg"></div>
+                <div id="puzzleBoard" class="puzzle-board"></div>
+            </div>
         <div id="piecesZone" class="pieces-zone"></div>
     </div>
     <div id="gameComplete" class="game-complete">
         <div class="message">
             <h2>恭喜！拼图完成！</h2>
             <p id="completeInfo"></p>
-            <div id="bestScoreInfo" style="margin: 15px 0; color: #F9E078;"></div>
-            <div style="display: flex; gap: 15px; justify-content: center;">
-                <button id="playAgainBtn" class="btn">再玩一次</button>
-                <button id="backToMenuBtn" class="btn">返回</button>
-            </div>
+            <button id="playAgainBtn" class="btn">再玩一次</button>
         </div>
     </div>
 </div>
@@ -63,7 +60,9 @@
         </div>
     </div>
 </div>
-
+    <svg width="0" height="0" style="position: absolute; z-index: -1;">
+      <defs id="puzzle-defs"></defs>
+    </svg>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 <script>
 // 游戏暂停/继续功能
@@ -140,29 +139,6 @@ document.addEventListener('DOMContentLoaded', function() {
         document.addEventListener('DOMContentLoaded', function() {
             // 直接尝试播放音乐
             initPageMusic();
-            
-            // 修改返回按钮行为，使其返回到选择关卡界面
-            const backToMenuBtn = document.getElementById('backToMenuBtn');
-            if (backToMenuBtn) {
-                // 创建一个新的函数来覆盖原有的行为
-                const originalClickHandler = backToMenuBtn.onclick;
-                backToMenuBtn.onclick = null;
-                
-                // 添加新的点击事件监听器
-                backToMenuBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // 隐藏游戏完成界面
-                    const gameComplete = document.getElementById('gameComplete');
-                    if (gameComplete) {
-                        gameComplete.style.display = 'none';
-                    }
-                    
-                    // 跳转到选择关卡界面
-                    window.location.href = '/option';
-                });
-            }
         });
     </script>
 </body>
