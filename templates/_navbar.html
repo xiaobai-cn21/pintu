@@ -51,8 +51,18 @@
 // 加载音乐管理模块
 const musicScript = document.createElement('script');
 musicScript.src = '/static/js/music.js';
-musicScript.onload = initMusicControl;
-document.head.appendChild(musicScript);
+musicScript.onload = function() {
+    initMusicControl();
+};
+document.body.appendChild(musicScript);
+
+// 加载简单直接的点击音效模块（独立于音乐管理器）
+const clickSoundScript = document.createElement('script');
+clickSoundScript.src = '/static/js/click_sound.js';
+clickSoundScript.onload = function() {
+    console.log('点击音效模块加载完成');
+};
+document.body.appendChild(clickSoundScript);
 
 (function(){
   const token = localStorage.getItem('puzzleToken');
