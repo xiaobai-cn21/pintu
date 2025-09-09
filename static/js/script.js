@@ -320,6 +320,9 @@ function createPuzzlePieces() {
 
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+    // 从 localStorage 获取随机选项
+    const randomRotation = localStorage.getItem('randomRotation') === 'true';
+    const randomFlip = localStorage.getItem('randomFlip') === 'true';
 
     if (shape === 'square') {
         for (let y = 0; y < difficulty; y++) {
@@ -349,6 +352,26 @@ function createPuzzlePieces() {
     }
 
     shufflePieces();
+    pieces.forEach(piece => {
+        // 随机旋转 (0, 90, 180, 270度)
+        if (randomRotation) {
+            const rotations = [0, 90, 180, 270];
+            const randomRotationValue = rotations[Math.floor(Math.random() * rotations.length)];
+            piece.dataset.rotation = randomRotationValue;
+        }
+
+        // 随机翻转
+        if (randomFlip) {
+            const shouldFlip = Math.random() < 0.5; // 50% 概率翻转
+            piece.dataset.flipped = shouldFlip;
+        }
+
+        // 应用变换
+        const rotation = parseInt(piece.dataset.rotation) || 0;
+        const isFlipped = piece.dataset.flipped === 'true';
+        piece.style.transform = `rotate(${rotation}deg) scaleX(${isFlipped ? -1 : 1})`;
+    });
+
     pieces.forEach(piece => {
         if (shape === 'jigsaw') {
             piece.style.margin = `${(pieceHeight * JIGSAW_TAB_RATIO) / 2}px`;
