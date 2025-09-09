@@ -10,6 +10,9 @@ class MusicManager {
             versus: null     // 对战界面音乐
         };
         
+        // 创建点击音效音频对象
+        this.clickSound = null;
+        
         // 当前播放的音频
         this.currentAudio = null;
         
@@ -27,6 +30,15 @@ class MusicManager {
         this.audioMap.game = new Audio('/static/audio/game_theme.mp3');
         this.audioMap.ai = new Audio('/static/audio/ai_theme.mp3');
         this.audioMap.versus = new Audio('/static/audio/versus_theme.mp3');
+        
+        // 创建点击音效
+        this.clickSound = new Audio('/static/audio/click_sound.mp3');
+        this.clickSound.volume = 0.5; // 点击音效音量
+        
+        // 音频加载失败时的处理
+        this.clickSound.addEventListener('error', (e) => {
+            console.warn(`点击音效加载失败: ${e.target.src}，请确保已添加对应的音频文件`);
+        });
         
         // 设置所有音频循环播放
         Object.values(this.audioMap).forEach(audio => {
@@ -134,6 +146,17 @@ class MusicManager {
         volume = Math.max(0, Math.min(1, volume));
         Object.values(this.audioMap).forEach(audio => {
             audio.volume = volume;
+        });
+    }
+    
+    // 播放点击音效
+    playClickSound() {
+        if (this.isMuted || !this.clickSound) return;
+        
+        // 重置音频并播放
+        this.clickSound.currentTime = 0;
+        this.clickSound.play().catch(err => {
+            console.warn('点击音效播放失败:', err);
         });
     }
 }
