@@ -208,22 +208,22 @@
 
         window.addEventListener('DOMContentLoaded', function() {
             const customImage = localStorage.getItem('customImage');
-            let customSize = localStorage.getItem('customSize');
+            const customSize = localStorage.getItem('customSize');
             const customShape = localStorage.getItem('customShape');
-            if (customImage) {
+            if (customImage && customSize) {
                 imgData = customImage;
                 previewImage.src = imgData;
                 previewImage.style.display = 'block';
                 gridCanvas.style.display = 'block';
                 previewTip.style.display = 'none';
-                // 若未提供难度，默认 4x4
-                if (!customSize) { customSize = '4'; }
                 difficultySelect.value = customSize;
                 if (customShape) { shapeSelect.value = customShape; currentShape = customShape; }
                 updateDifficultyText();
                 drawGrid();
                 playBtn.disabled = false;
-                // 不在此处清空，允许用户返回游戏后仍可复用；仅在进入游戏时由游戏页清空
+                localStorage.removeItem('customImage');
+                localStorage.removeItem('customSize');
+                localStorage.removeItem('customShape');
             }
         });
     </script>
@@ -252,6 +252,25 @@
         </div>
     </div>
 </div>
+    <!-- 页面特定的背景音乐 -->
+    <script>
+        // 等待音乐管理器加载完成
+        function initPageMusic() {
+            if (window.musicManager) {
+                // 拼图编辑器页面自动播放主界面音乐
+                window.musicManager.playScene('main');
+            } else {
+                // 如果音乐管理器尚未加载，稍后重试
+                setTimeout(initPageMusic, 100);
+            }
+        }
+        
+        // 页面加载完成后直接初始化音乐，无需等待用户交互
+        document.addEventListener('DOMContentLoaded', function() {
+            // 直接尝试播放音乐
+            initPageMusic();
+        });
+    </script>
 </body>
 </html>
 

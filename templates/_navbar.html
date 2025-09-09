@@ -6,6 +6,11 @@
         <a class="pm-link chinese-text" id="pm-help-link" href="#">帮助</a>
     </div>
     <div class="pm-nav-right">
+        <!-- 音乐控制按钮 -->
+        <button id="musicToggle" class="pm-music-btn" title="切换背景音乐">
+            <i class="fa fa-music"></i>
+        </button>
+        
         <div class="pm-avatar-wrap" id="pm-avatar-wrap">
             <img class="pm-avatar" src="{{ url_for('static', filename='images/用户头像.jpg') }}" alt="avatar">
             <div class="pm-avatar-menu" id="pm-avatar-menu">
@@ -16,7 +21,39 @@
         </div>
     </div>
 </nav>
+
+<style>
+/* 音乐控制按钮样式 */
+.pm-music-btn {
+    background: transparent;
+    border: none;
+    color: #F9E078;
+    font-size: 18px;
+    padding: 8px 12px;
+    cursor: pointer;
+    margin-right: 16px;
+    transition: transform 0.2s ease;
+}
+
+.pm-music-btn:hover {
+    transform: scale(1.1);
+}
+
+.pm-music-btn.muted i:before {
+    content: "\f026"; /* 静音图标 */
+}
+
+.pm-music-btn:not(.muted) i:before {
+    content: "\f001"; /* 播放图标 */
+}
+</style>
 <script>
+// 加载音乐管理模块
+const musicScript = document.createElement('script');
+musicScript.src = '/static/js/music.js';
+musicScript.onload = initMusicControl;
+document.head.appendChild(musicScript);
+
 (function(){
   const token = localStorage.getItem('puzzleToken');
   const loginBtn = document.getElementById('pm-login-btn');
@@ -66,5 +103,35 @@
   menu && menu.addEventListener('click',(e)=>{ e.stopPropagation(); });
   document.addEventListener('click', ()=> closeMenu());
 })();
+
+// 初始化音乐控制
+function initMusicControl() {
+  // 等待DOM加载完成
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMusicButton);
+  } else {
+    setupMusicButton();
+  }
+  
+  function setupMusicButton() {
+    const musicToggle = document.getElementById('musicToggle');
+    if (musicToggle && window.musicManager) {
+      // 设置初始状态
+      if (window.musicManager.isMuted) {
+        musicToggle.classList.add('muted');
+      }
+      
+      // 添加点击事件
+      musicToggle.addEventListener('click', function() {
+        const isMuted = window.musicManager.toggleMute();
+        if (isMuted) {
+          musicToggle.classList.add('muted');
+        } else {
+          musicToggle.classList.remove('muted');
+        }
+      });
+    }
+  }
+}
 </script>
 
