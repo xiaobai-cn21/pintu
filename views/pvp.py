@@ -3,6 +3,7 @@ from flask_socketio import emit, join_room, leave_room
 import random, os
 from werkzeug.utils import secure_filename
 import base64
+import threading
 
 pvp = Blueprint('pvp', __name__)
 
@@ -12,6 +13,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 # 房间结构：{room_id: {"users": [...], "image": "filename"}}
 room_pool = {}
 user_sid_map = {}
+room_delete_timers = {}  # 新增：用于延迟删除房间
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -45,7 +47,7 @@ def register_socketio_events(socketio):
         room_id = data.get('room_id')
         moves = data.get('moves')
         correct = data.get('correct')
-        print(f"[pvp_moves_update] room_id={room_id}, moves={moves}, correct={correct}, sid={request.sid}")  # <-- Add this line
+        print(f"[pvp_moves_update] room_id={room_id}, moves={moves}, correct={correct}, sid={request.sid}")
         emit('opponent_moves', {'moves': moves, 'correct': correct}, room=room_id, include_self=False)
     
     @socketio.on('create_room')
@@ -55,7 +57,6 @@ def register_socketio_events(socketio):
         if not username:
             emit('error', {'code': 400, 'msg': '用户名不能为空', 'data': None})
             return
-        # 这里socketio方式不支持图片上传，图片上传请用HTTP POST
         emit('error', {'code': 400, 'msg': '请通过表单上传图片创建房间', 'data': None})
 
     @socketio.on('join_room')
@@ -73,6 +74,11 @@ def register_socketio_events(socketio):
         if username not in room_pool[room_id]["users"]:
             room_pool[room_id]["users"].append(username)
         user_sid_map[request.sid] = {'username': username, 'room_id': room_id}
+
+        # 取消延迟删除定时器（如果有）
+        if room_id in room_delete_timers:
+            room_delete_timers[room_id].cancel()
+            del room_delete_timers[room_id]
 
         image = room_pool[room_id].get("image")
         config = room_pool[room_id].get("config", {})
@@ -92,8 +98,15 @@ def register_socketio_events(socketio):
             leave_room(room_id)
             if room_id in room_pool and username in room_pool[room_id]["users"]:
                 room_pool[room_id]["users"].remove(username)
-                #if not room_pool[room_id]["users"]:
-                #   del room_pool[room_id]
+                # 延迟删除房间
+                if not room_pool[room_id]["users"]:
+                    # 如果已有定时器，先取消
+                    if room_id in room_delete_timers:
+                        room_delete_timers[room_id].cancel()
+                    # 新建一个定时器，30秒后删除房间
+                    timer = threading.Timer(3, lambda: room_pool.pop(room_id, None))
+                    room_delete_timers[room_id] = timer
+                    timer.start()
             emit('left', {'code': 200, 'msg': '用户已断开并离开房间', 'data': {'room_id': room_id, 'username': username}}, room=room_id)
             user_sid_map.pop(request.sid, None)
 

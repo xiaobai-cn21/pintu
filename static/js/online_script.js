@@ -824,8 +824,8 @@ window.addEventListener('DOMContentLoaded', function() {
         startGame();
         localStorage.removeItem('customImage');
     } else {
-        console.log("没有找到拼图数据，请从预览页面开始游戏。");
-        puzzleBoard.innerHTML = '<p style="text-align:center; color:#666; margin-top: 40px;">请先选择一张图片来创建拼图</p>';
+        //console.log("没有找到拼图数据，请从预览页面开始游戏。");
+        //puzzleBoard.innerHTML = '<p style="text-align:center; color:#666; margin-top: 40px;">请先选择一张图片来创建拼图</p>';
 
         // 禁用不需要的按钮
         if(resetBtn) resetBtn.disabled = true;
@@ -1281,6 +1281,7 @@ function countCorrectPieces() {
     return correct;
 }
 
+window.addEventListener
 function emitMyMoves() {
     const roomId = new URLSearchParams(window.location.search).get('room_id');
     const movesToSend = window.puzzleGame ? window.puzzleGame.moves : moves;
