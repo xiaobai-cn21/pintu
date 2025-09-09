@@ -512,7 +512,7 @@ function dropOnBoard(e) {
     gridY = Math.max(0, Math.min(gridY, difficulty - 1));
 
     let finalLeft, finalTop;
-    let canPlace = true; // 新增：标记是否可以放置
+    let canPlace = true;
 
     if (shape === 'jigsaw' || shape === 'square') {
         const targetPiece = findPieceOnBoard(gridX, gridY);
@@ -1197,6 +1197,7 @@ function pieceDrag(e) {
     }
 }
 
+
 function calculatePieceFinalPosition(piece, gridX, gridY) {
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
@@ -1255,3 +1256,4 @@ try {
         get gameStarted() { return typeof gameStarted !== 'undefined' ? gameStarted : false; }
     };
 } catch (e) {}
+
