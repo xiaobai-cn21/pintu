@@ -413,19 +413,14 @@ function shufflePieces() {
 function dragStart(e) {
     draggedPiece = this;
 
-    // --- 修正后的逻辑 ---
-    // 获取棋盘上所有已放置的拼图块
     const piecesOnBoard = puzzleBoard.querySelectorAll('.puzzle-piece');
     // 遍历它们
     piecesOnBoard.forEach(piece => {
-        // 关键的判断：如果这个块不是我们正在拖动的块，才让它忽略鼠标
         if (piece !== draggedPiece) {
             piece.style.pointerEvents = 'none';
         }
     });
-    // --- 修正结束 ---
 
-    // --- 自定义拖拽图像方案 (这部分保持不变) ---
     customFollower = this.cloneNode(true);
     customFollower.id = 'custom-follower';
     customFollower.style.position = 'fixed';
@@ -451,7 +446,7 @@ function dragStart(e) {
 }
 
 function dragEnd() {
-    // 移除吸附提示
+
     const hint = document.getElementById('drop-hint');
     if (hint) {
         hint.style.display = 'none';
@@ -485,98 +480,84 @@ function dropOnBoard(e) {
     e.preventDefault();
     if (!draggedPiece) return;
 
-    // 保存移动前的状态
-    const fromParent = draggedPiece.parentNode;
-    const fromRect = {
-        position: draggedPiece.style.position,
-        left: draggedPiece.style.left,
-        top: draggedPiece.style.top,
-        margin: draggedPiece.style.margin
-    };
+    // --- 准备工作：获取基本信息 ---
+    const fromParent = draggedPiece.parentNode; // 记录原始父容器
+    const fromRect = { position: draggedPiece.style.position, left: draggedPiece.style.left, top: draggedPiece.style.top, margin: draggedPiece.style.margin };
     const fromX = draggedPiece.dataset.currentX;
     const fromY = draggedPiece.dataset.currentY;
-
-    draggedPiece.style.margin = '0'; // 放置到棋盘时清除 margin
 
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
     const boardRect = puzzleBoard.getBoundingClientRect();
 
-    // 计算鼠标在棋盘内的相对位置
     let x = e.clientX - boardRect.left;
     let y = e.clientY - boardRect.top;
-
     let gridX = Math.floor(x / pieceWidth);
     let gridY = Math.floor(y / pieceHeight);
     gridX = Math.max(0, Math.min(gridX, difficulty - 1));
     gridY = Math.max(0, Math.min(gridY, difficulty - 1));
 
-    let finalLeft, finalTop;
-    let canPlace = true;
+    let canPlace = false; // 默认不允许放置
+
+    // --- 核心判断逻辑 ---
+
+    // 获取目标格子里的所有“其他”块 (把自己排除在外，这是关键！)
+    const piecesInTargetCell = Array.from(
+        puzzleBoard.querySelectorAll(`[data-current-x='${gridX}'][data-current-y='${gridY}']`)
+    ).filter(p => p !== draggedPiece);
 
     if (shape === 'jigsaw' || shape === 'square') {
-        const targetPiece = findPieceOnBoard(gridX, gridY);
-
-        if (targetPiece && targetPiece !== draggedPiece) {
-            // --- 目标位置有图块，执行【交换】操作 ---
-            console.log(`开始交换: ${draggedPiece.id} 与 ${targetPiece.id}`);
-
-            // 1. 获取被拖拽图块的原始位置
-            const sourceParent = fromParent;
-            const sourceGridX = fromX;
-            const sourceGridY = fromY;
-
-            // 2. 将目标位置的图块 (targetPiece) 移动到被拖拽图块的原始位置
-            if (sourceParent === puzzleBoard) {
-                // 情况A: 两个图块都在棋盘上交换
-                const oldPos = calculatePieceFinalPosition(targetPiece, parseInt(sourceGridX), parseInt(sourceGridY));
+        if (piecesInTargetCell.length === 0) {
+            // 目标格子是空的，直接放置
+            canPlace = true;
+        } else if (piecesInTargetCell.length === 1) {
+            // 目标格有1个块，执行交换
+            const targetPiece = piecesInTargetCell[0];
+            if (fromParent === puzzleBoard) { // 从棋盘到棋盘的交换
+                const oldPos = calculatePieceFinalPosition(targetPiece, parseInt(fromX), parseInt(fromY));
                 if (oldPos) {
                     targetPiece.style.left = oldPos.finalLeft;
                     targetPiece.style.top = oldPos.finalTop;
-                    targetPiece.dataset.currentX = sourceGridX;
-                    targetPiece.dataset.currentY = sourceGridY;
+                    targetPiece.dataset.currentX = fromX;
+                    targetPiece.dataset.currentY = fromY;
                 }
-            } else {
-                // 情况B: 从备选区拖来，与棋盘上的图块交换
-                returnToZone(targetPiece, false); // 将棋盘上的图块送回备选区，不计步数
+            } else { // 从备选区到棋盘的交换
+                returnToZone(targetPiece, false);
             }
-
-            // 3. 此时目标格子已空，可以继续执行后续的放置操作
-            canPlace = true;
-
-        } else if (targetPiece && targetPiece === draggedPiece) {
-            // 拖到了自己原来的位置，操作无效
-            canPlace = false;
+            canPlace = true; // 交换后，位置变空，允许放置
         }
 
     } else if (shape === 'triangle') {
-        // 三角形逻辑保持不变，因为它更复杂，不支持简单交换
-        const piecesInCell = Array.from(
-            puzzleBoard.querySelectorAll(`.puzzle-piece.triangle[data-current-x='${gridX}'][data-current-y='${gridY}']`)
-        );
-        if (piecesInCell.length >= 2 || piecesInCell.some(p => p.dataset.type === draggedPiece.dataset.type)) {
-            canPlace = false;
+        const draggedPieceType = draggedPiece.dataset.type;
+
+        if (piecesInTargetCell.length === 0) {
+            // 目标格子是空的，直接放置
+            canPlace = true;
+        } else if (piecesInTargetCell.length === 1) {
+            // 目标格有1个块，检查是否互补
+            const existingPiece = piecesInTargetCell[0];
+            const isCompatible = (draggedPieceType === 'top-left' && existingPiece.dataset.type === 'bottom-right') || (draggedPieceType === 'bottom-right' && existingPiece.dataset.type === 'top-left') || (draggedPieceType === 'top-right' && existingPiece.dataset.type === 'bottom-left') || (draggedPieceType === 'bottom-left' && existingPiece.dataset.type === 'top-right');
+            if (isCompatible) {
+                canPlace = true;
+            }
         }
-        if (piecesInCell.length === 1 && !((draggedPiece.dataset.type === 'top-left' && piecesInCell[0].dataset.type === 'bottom-right') || (draggedPiece.dataset.type === 'bottom-right' && piecesInCell[0].dataset.type === 'top-left') || (draggedPiece.dataset.type === 'top-right' && piecesInCell[0].dataset.type === 'bottom-left') || (draggedPiece.dataset.type === 'bottom-left' && piecesInCell[0].dataset.type === 'top-right'))) {
-            canPlace = false;
-        }
+        // 如果目标格有2个块，canPlace 保持 false，不允许放置
     }
 
-    // --- 统一的放置与状态更新 ---
+
+    // --- 执行操作 ---
     if (canPlace) {
+        // 计算最终位置并执行移动
         const pos = calculatePieceFinalPosition(draggedPiece, gridX, gridY);
         if (pos) {
-            finalLeft = pos.finalLeft;
-            finalTop = pos.finalTop;
-
-            const toRect = { position: "absolute", left: finalLeft, top: finalTop, margin: '0' };
+            draggedPiece.style.margin = '0';
+            const toRect = { position: "absolute", left: pos.finalLeft, top: pos.finalTop, margin: '0' };
             const command = new MoveCommand(draggedPiece, fromParent, fromRect, puzzleBoard, toRect, fromX, fromY, gridX, gridY);
             pushCommand(command);
 
-            draggedPiece.style.transition = '';
             draggedPiece.style.position = "absolute";
-            draggedPiece.style.left = finalLeft;
-            draggedPiece.style.top = finalTop;
+            draggedPiece.style.left = pos.finalLeft;
+            draggedPiece.style.top = pos.finalTop;
             draggedPiece.dataset.currentX = gridX;
             draggedPiece.dataset.currentY = gridY;
 
@@ -584,13 +565,10 @@ function dropOnBoard(e) {
 
             moves++;
             movesElement.textContent = `移动次数: ${moves}`;
-        } else {
-             // 计算位置失败，返回
-             returnToZone(draggedPiece);
         }
     } else {
-        // 无法放置时，返回备选区
-        returnToZone(draggedPiece);
+        // 如果不能放置，则安全地送回备选区 (只有从备选区来时才计步)
+        returnToZone(draggedPiece, fromParent === piecesZone);
     }
 }
 
