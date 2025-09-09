@@ -311,6 +311,21 @@ function updateTimer() {
     timerElement.textContent = `时间: ${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
+// 暂停游戏（供外部调用：帮助弹窗）
+function pauseGame() {
+    if (gameStarted && timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+// 继续游戏（供外部调用：帮助弹窗）
+function resumeGame() {
+    if (gameStarted && !timerInterval) {
+        timerInterval = setInterval(updateTimer, 1000);
+    }
+}
+
 // 创建拼图块
 function createPuzzlePieces() {
     puzzleBoard.innerHTML = '';
@@ -320,6 +335,9 @@ function createPuzzlePieces() {
 
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+    // 从 localStorage 获取随机选项
+    const randomRotation = localStorage.getItem('randomRotation') === 'true';
+    const randomFlip = localStorage.getItem('randomFlip') === 'true';
 
     if (shape === 'square') {
         for (let y = 0; y < difficulty; y++) {
@@ -349,6 +367,26 @@ function createPuzzlePieces() {
     }
 
     shufflePieces();
+    pieces.forEach(piece => {
+        // 随机旋转 (0, 90, 180, 270度)
+        if (randomRotation) {
+            const rotations = [0, 90, 180, 270];
+            const randomRotationValue = rotations[Math.floor(Math.random() * rotations.length)];
+            piece.dataset.rotation = randomRotationValue;
+        }
+
+        // 随机翻转
+        if (randomFlip) {
+            const shouldFlip = Math.random() < 0.5; // 50% 概率翻转
+            piece.dataset.flipped = shouldFlip;
+        }
+
+        // 应用变换
+        const rotation = parseInt(piece.dataset.rotation) || 0;
+        const isFlipped = piece.dataset.flipped === 'true';
+        piece.style.transform = `rotate(${rotation}deg) scaleX(${isFlipped ? -1 : 1})`;
+    });
+
     pieces.forEach(piece => {
         if (shape === 'jigsaw') {
             piece.style.margin = `${(pieceHeight * JIGSAW_TAB_RATIO) / 2}px`;
@@ -474,9 +512,8 @@ function dropOnBoard(e) {
     gridY = Math.max(0, Math.min(gridY, difficulty - 1));
 
     let finalLeft, finalTop;
-    let canPlace = true;
+    let canPlace = true; // 新增：标记是否可以放置
 
-    // --- 核心修改：实现交换逻辑 ---
     if (shape === 'jigsaw' || shape === 'square') {
         const targetPiece = findPieceOnBoard(gridX, gridY);
 
@@ -511,7 +548,6 @@ function dropOnBoard(e) {
             // 拖到了自己原来的位置，操作无效
             canPlace = false;
         }
-        // 如果目标位置为空，canPlace 保持 true，直接执行放置
 
     } else if (shape === 'triangle') {
         // 三角形逻辑保持不变，因为它更复杂，不支持简单交换
@@ -656,9 +692,12 @@ function checkPuzzleCompletion() {
     // 如果全部正确且尚未显示完成提示
     if (allCorrect && !document.getElementById('completion-message')) {
         clearInterval(timerInterval); // 停止计时器
-        showCompletionMessage();
-         // 提交成绩到排行榜
-        submitToRanking();
+        // 提交关卡成绩（需要登录）
+        submitLevelRecord().finally(() => {
+            // 提交排行榜（游客也可尝试）
+            submitToRanking();
+            showCompletionMessage();
+        });
         return true;
     }
 
@@ -779,6 +818,12 @@ window.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem('customImage');
         localStorage.removeItem('customSize');
         localStorage.removeItem('customShape'); // 清除
+    } else if (customImage && !customSize) {
+        // 仅有图片（来自 AI 页），默认 4x4 方形
+        originalImageUrl = customImage;
+        difficulty = 4;
+        startGame();
+        localStorage.removeItem('customImage');
     } else {
         console.log("没有找到拼图数据，请从预览页面开始游戏。");
         puzzleBoard.innerHTML = '<p style="text-align:center; color:#666; margin-top: 40px;">请先选择一张图片来创建拼图</p>';
@@ -1062,8 +1107,8 @@ function submitToRanking() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         user_id: Number(userId),
-                        step_count: this.moves,
-                        time_used: this.seconds
+                        step_count: moves,
+                        time_used: seconds
                     })
                 }).catch(error => {
                     console.error('提交排行榜成绩失败:', error);
@@ -1092,6 +1137,51 @@ function returnToZone(piece, incrementMoves = true) {
     if (incrementMoves) {
         moves++;
         movesElement.textContent = `移动次数: ${moves}`;
+    }
+}
+
+// 提交关卡成绩到后端 levels（需登录 token）
+function submitLevelRecord() {
+    try {
+        const token = localStorage.getItem('puzzleToken');
+        if (!token) return Promise.resolve();
+
+        const info = extractLevelInfo();
+        if (!info) return Promise.resolve();
+
+        return fetch('/levels/record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                level_id: info.levelId,
+                level_name: info.levelName,
+                image_url: info.imageUrl,
+                difficulty: info.difficulty,
+                time_used: seconds,
+                step_count: moves
+            })
+        }).then(r => r.json()).catch(() => {});
+    } catch (e) { return Promise.resolve(); }
+}
+
+// 从当前 customImage/customSize 推导关卡信息
+function extractLevelInfo() {
+    try {
+        const imageUrl = originalImageUrl;
+        const diff = difficulty;
+        if (!imageUrl || !diff) return null;
+        // 关卡命名策略：图片文件名 + 难度
+        const urlObj = new URL(imageUrl, window.location.origin);
+        const pathname = urlObj.pathname || '';
+        const fileName = pathname.split('/').pop() || 'custom';
+        const levelId = `${fileName}-${diff}`;
+        const levelName = fileName.replace(/\.[a-zA-Z0-9]+$/, '');
+        return { levelId, levelName, imageUrl, difficulty: diff };
+    } catch (e) {
+        return null;
     }
 }
 
@@ -1157,3 +1247,11 @@ function calculatePieceFinalPosition(piece, gridX, gridY) {
     }
     return null;
 }
+// 兼容 game.html 对 window.puzzleGame 的依赖（用于帮助弹窗暂停/恢复）
+try {
+    window.puzzleGame = {
+        pauseGame,
+        resumeGame,
+        get gameStarted() { return typeof gameStarted !== 'undefined' ? gameStarted : false; }
+    };
+} catch (e) {}
