@@ -10,12 +10,19 @@
         <button id="musicToggle" class="pm-music-btn" title="切换背景音乐">
             <i class="fa fa-music"></i>
         </button>
+        <button id="inviteToggle" class="pm-invite-btn" title="挑战邀请" aria-label="挑战邀请">
+            <i class="fa fa-bell"></i>
+            <span id="inviteBadge" class="pm-badge-dot" style="display:none;"></span>
+        </button>
+        <span id="pm-username-label" class="pm-username">未登录</span>
         
         <div class="pm-avatar-wrap" id="pm-avatar-wrap">
             <img class="pm-avatar" src="{{ url_for('static', filename='images/用户头像.jpg') }}" alt="avatar">
             <div class="pm-avatar-menu" id="pm-avatar-menu">
                 <button id="pm-login-btn" class="pm-menu-item chinese-text"><span class="chinese-text">登录</span><span class="symbol-text"> / </span><span class="chinese-text">注册</span></button>
                 <a id="pm-my-puzzle-btn" class="pm-menu-item chinese-text" href="{{ url_for('my_puzzle_page') }}" style="display:none;"><span class="chinese-text">我的拼图</span></a>
+                <a id="pm-friend-btn" class="pm-menu-item chinese-text" href="{{ url_for('friends_page') }}" style="display:none;"><span class="chinese-text">添加好友</span></a>
+                <a id="pm-messages-btn" class="pm-menu-item chinese-text" href="{{ url_for('messages_page') }}" style="display:none;"><span class="chinese-text">消息中心</span></a>
                 <button id="pm-logout-btn" class="pm-menu-item chinese-text" style="display:none;"><span class="chinese-text">退出登录</span></button>
             </div>
         </div>
@@ -31,7 +38,7 @@
     font-size: 18px;
     padding: 8px 12px;
     cursor: pointer;
-    margin-right: 16px;
+    margin-right: 3px;
     transition: transform 0.2s ease;
 }
 
@@ -46,27 +53,107 @@
 .pm-music-btn:not(.muted) i:before {
     content: "\f001"; /* 播放图标 */
 }
+
+.pm-username {
+    color: #F9E078;
+    font-size: 12px;
+    margin-right: 8px;
+    font-family: 'Press Start 2P', 'Zpix', monospace;
+}
+.pm-username.guest {
+    font-size: 14px;
+}
+
+/* 挑战邀请按钮样式 */
+.pm-invite-btn {
+    background: transparent;
+    border: none;
+    color: #F9E078;
+    font-size: 18px;
+    padding: 8px 12px;
+    cursor: pointer;
+    margin-right: 8px;
+    position: relative;
+}
+.pm-badge-dot {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 8px;
+    height: 8px;
+    background: #FF4D4F;
+    border-radius: 50%;
+    box-shadow: 0 0 6px rgba(255,77,79,0.8);
+}
 </style>
 <script>
+// 确保 Font Awesome 可用（用于音乐/邀请图标）。若未加载则动态注入。
+try {
+  const hasFA = Array.from(document.styleSheets).some(s => (s.href||'').includes('font-awesome'));
+  if (!hasFA) {
+    const fa = document.createElement('link');
+    fa.rel = 'stylesheet';
+    fa.href = 'https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css';
+    document.head.appendChild(fa);
+  }
+} catch (e) {
+  const fa = document.createElement('link');
+  fa.rel = 'stylesheet';
+  fa.href = 'https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css';
+  document.head.appendChild(fa);
+}
 // 加载音乐管理模块
 const musicScript = document.createElement('script');
 musicScript.src = '/static/js/music.js';
-musicScript.onload = initMusicControl;
-document.head.appendChild(musicScript);
+musicScript.onload = function() {
+    initMusicControl();
+};
+document.body.appendChild(musicScript);
+
+// 加载简单直接的点击音效模块（独立于音乐管理器）
+const clickSoundScript = document.createElement('script');
+clickSoundScript.src = '/static/js/click_sound.js';
+clickSoundScript.onload = function() {
+    console.log('点击音效模块加载完成');
+};
+document.body.appendChild(clickSoundScript);
 
 (function(){
   const token = localStorage.getItem('puzzleToken');
   const loginBtn = document.getElementById('pm-login-btn');
   const logoutBtn = document.getElementById('pm-logout-btn');
   const myPuzzleBtn = document.getElementById('pm-my-puzzle-btn');
+  const friendBtn = document.getElementById('pm-friend-btn');
+  const messagesBtn = document.getElementById('pm-messages-btn');
+  const usernameLabel = document.getElementById('pm-username-label');
+  const inviteBtn = document.getElementById('inviteToggle');
+  const inviteBadge = document.getElementById('inviteBadge');
   if(token){
     loginBtn.style.display='none';
     logoutBtn.style.display='block';
     myPuzzleBtn.style.display='block';
+    friendBtn && (friendBtn.style.display='block');
+    messagesBtn && (messagesBtn.style.display='block');
+    usernameLabel && usernameLabel.classList.remove('guest');
+    (async function(){
+      try{
+        const res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const json = await res.json();
+        const uname = (json && json.data && json.data.username) || localStorage.getItem('username') || localStorage.getItem('nickName') || '已登录';
+        if (usernameLabel) { usernameLabel.textContent = uname; }
+        localStorage.setItem('username', uname);
+      }catch(e){ if (usernameLabel) { usernameLabel.textContent = localStorage.getItem('username') || '已登录'; } }
+    })();
   } else {
     loginBtn.style.display='block';
     logoutBtn.style.display='none';
     myPuzzleBtn.style.display='none';
+    friendBtn && (friendBtn.style.display='none');
+    messagesBtn && (messagesBtn.style.display='none');
+    if (usernameLabel) {
+      usernameLabel.textContent = '未登录';
+      usernameLabel.classList.add('guest');
+    }
   }
   loginBtn && (loginBtn.onclick = function(){
     const modal = document.getElementById('loginModal');
@@ -103,6 +190,20 @@ document.head.appendChild(musicScript);
   menu && menu.addEventListener('click',(e)=>{ e.stopPropagation(); });
   document.addEventListener('click', ()=> closeMenu());
 })();
+
+// 暴露全局控制挑战邀请红点的API
+window.challengeInvite = {
+  set(has) {
+    const badge = document.getElementById('inviteBadge');
+    if (!badge) return;
+    badge.style.display = has ? 'block' : 'none';
+  }
+};
+
+// 点击邀请按钮，跳转到对战页（可改为弹出邀请列表）
+document.getElementById('inviteToggle')?.addEventListener('click', function(){
+  window.location.href = '{{ url_for('versus_page') }}';
+});
 
 // 初始化音乐控制
 function initMusicControl() {
