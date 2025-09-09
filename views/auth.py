@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from extensions import db, users
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 import re
 
 auth = Blueprint('auth', __name__)
@@ -61,6 +61,23 @@ def  login():
 
 def is_email(s):
     return re.match(r'[\w\.-]+@[\w\.-]+\w+$', s)
+
+# 获取当前登录用户信息
+@auth.route('/me', methods=['GET'])
+@jwt_required()
+def me():
+    try:
+        user_id = get_jwt_identity()
+        u = users.query.get(int(user_id))
+        if not u:
+            return jsonify({"code": 404, "message": "用户不存在", "data": None})
+        return jsonify({
+            "code": 200,
+            "message": "OK",
+            "data": {"userId": u.user_id, "username": u.username}
+        })
+    except Exception as e:
+        return jsonify({"code": 500, "message": f"服务器内部错误: {str(e)}", "data": None})
 
 def is_valid_password(s):
     return len(s) >= 6 and len(s) <= 20 

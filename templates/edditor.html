@@ -15,259 +15,274 @@
         .preview-grid-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         .preview-img-box { position: relative; width: 100%; min-height: 240px; background: #20223A; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
         .preview-btn-row { text-align: center; margin-top: 24px; }
+     /* 新增选项样式 */
+        .random-options {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid #2d3250;
+        }
+        .random-option-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .random-option-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: #165DFF;
+        }
+        .random-option-item label {
+            font-size: 14px;
+            color: #E5E7EB;
+            cursor: pointer;
+        }
     </style>
+    
 </head>
 <body>
 {% include '_navbar.html' %}
 
 <div class="background-blur"></div>
 
-<div class="page-title" style="margin-top: 20px;">
-    <button class="btn btn-secondary back-btn" onclick="window.location.href='{{ url_for('main') }}'" style="padding: 8px 16px; font-size: 12px; margin-right: 16px;">
-        <span class="chinese-text">返回</span>
-    </button>
-    <span class="chinese-text" style="color: #F9E078; font-size: 18px;">创建拼图</span>
-</div>
-<div class="preview-main">
-    <!-- 左侧：上传和配置 -->
-    <div class="preview-left">
-        <div class="preview-card">
-            <h3 style="font-size: 16px; margin-bottom: 16px;">上传图片</h3>
-            <div class="preview-upload-box" id="uploadBox">
-                <i class="fa fa-cloud-upload" style="font-size: 32px; color: #165DFF; margin-bottom: 12px;"></i>
-                <p style="font-size: 14px; color: #666;">
-                    <div>点击或拖拽图片上传</div>
-                    <div><span class="number-text">（JPG/PNG，</span>最大<span class="number-text">5MB）</span></div>
-                </p>
-                <input type="file" id="imageUpload" accept="image/*" style="display:none;">
+    <div class="page-title" style="margin-top: 20px;">
+        <button class="btn btn-secondary back-btn" onclick="window.location.href='{{ url_for('main') }}'" style="padding: 8px 16px; font-size: 12px; margin-right: 16px;">
+            <span class="chinese-text">返回</span>
+        </button>
+        <span class="chinese-text" style="color: #F9E078; font-size: 18px;">创建拼图</span>
+    </div>
+    <div class="preview-main">
+        <!-- 左侧：上传和配置 -->
+        <div class="preview-left">
+            <div class="preview-card">
+                <h3 style="font-size: 16px; margin-bottom: 16px;">上传图片</h3>
+                <div class="preview-upload-box" id="uploadBox">
+                    <i class="fa fa-cloud-upload" style="font-size: 32px; color: #165DFF; margin-bottom: 12px;"></i>
+                    <p style="font-size: 14px; color: #666;">
+                        <div>点击或拖拽图片上传</div>
+                        <div><span class="number-text">（JPG/PNG，</span>最大<span class="number-text">5MB）</span></div>
+                    </p>
+                    <input type="file" id="imageUpload" accept="image/*" style="display:none;">
+                </div>
+            </div>
+            <div class="preview-card">
+                <h3 style="font-size: 16px; margin-bottom: 16px;">拼图配置</h3>
+                <div class="input-item">
+                    <label>拼图块数</label>
+                    <select id="difficultySelect">
+                        <option value="3">3 x 3</option>
+                        <option value="4" selected>4 x 4</option>
+                        <option value="5">5 x 5</option>
+                        <option value="6">6 x 6</option>
+                        <option value="8">8 x 8</option>
+                    </select>
+                </div>
+                <div class="input-item">
+                    <label>形状</label>
+                    <select id="shapeSelect">
+                        <option value="square" selected>方形</option>
+                        <option value="triangle">三角形</option>
+                          <option value="jigsaw">拼图块</option>
+                    </select>
+                </div>
+                <!-- 新增的随机选项 -->
+                <div class="random-options">
+                    <div class="random-option-item">
+                        <input type="checkbox" id="randomRotation" checked>
+                        <label for="randomRotation">随机旋转</label>
+                    </div>
+                    <div class="random-option-item">
+                        <input type="checkbox" id="randomFlip" checked>
+                        <label for="randomFlip">随机翻转</label>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="preview-card">
-            <h3 style="font-size: 16px; margin-bottom: 16px;">拼图配置</h3>
-            <div class="input-item">
-                <label>拼图块数</label>
-                <select id="difficultySelect">
-                    <option value="3">3 x 3</option>
-                    <option value="4" selected>4 x 4</option>
-                    <option value="5">5 x 5</option>
-                    <option value="6">6 x 6</option>
-                    <option value="8">8 x 8</option>
-                </select>
-            </div>
-            <div class="input-item">
-                <label>形状</label>
-                <select id="shapeSelect">
-                    <option value="square" selected>方形</option>
-                    <option value="triangle">三角形</option>
-                    <option value="jigsaw">拼图块</option>
-                </select>
+        <!-- 右侧：预览区 -->
+        <div class="preview-right">
+            <div class="preview-card">
+                <h3 style="font-size: 16px; margin-bottom: 16px;">拼图预览</h3>
+                <div class="preview-img-box" id="previewImgBox">
+                    <img id="previewImage" class="preview-img" src="" alt="预览图" style="display:none;">
+                    <canvas id="gridCanvas" class="preview-grid-canvas" style="display:none;"></canvas>
+                    <p id="previewTip" style="color:#666;">上传图片并选择块数后预览效果</p>
+                </div>
+                <div style="margin-top: 16px; text-align: right;">
+                    <p style="font-size: 14px; color: #666;">预计难度：<span id="difficultyText">简单</span></p>
+                </div>
+                <div class="preview-btn-row">
+                    <button id="playBtn" class="btn btn-primary" disabled>开始游戏</button>
+                </div>
             </div>
         </div>
     </div>
-    <!-- 右侧：预览区 -->
-    <div class="preview-right">
-        <div class="preview-card">
-            <h3 style="font-size: 16px; margin-bottom: 16px;">拼图预览</h3>
-            <div class="preview-img-box" id="previewImgBox">
-                <img id="previewImage" class="preview-img" src="" alt="预览图" style="display:none;">
-                <canvas id="gridCanvas" class="preview-grid-canvas" style="display:none;"></canvas>
-                <p id="previewTip" style="color:#666;">上传图片并选择块数后预览效果</p>
-            </div>
-            <div style="margin-top: 16px; text-align: right;">
-                <p style="font-size: 14px; color: #666;">预计难度：<span id="difficultyText">简单</span></p>
-            </div>
-            <div class="preview-btn-row">
-                <button id="playBtn" class="btn btn-primary" disabled>开始游戏</button>
-            </div>
-        </div>
-    </div>
-</div>
-<script>
-    // 工具函数：获取URL参数
-    function getQueryParam(name) {
-        const url = new URL(window.location.href);
-        return url.searchParams.get(name);
-    }
-    const isPvp = getQueryParam('pvp') === '1';
+    <script>
+        const uploadBox = document.getElementById('uploadBox');
+        const imageUpload = document.getElementById('imageUpload');
+        const previewImage = document.getElementById('previewImage');
+        const gridCanvas = document.getElementById('gridCanvas');
+        const difficultySelect = document.getElementById('difficultySelect');
+        const playBtn = document.getElementById('playBtn');
+        const previewTip = document.getElementById('previewTip');
+        const difficultyText = document.getElementById('difficultyText');
+        const shapeSelect = document.getElementById('shapeSelect');
+        // 获取新增的复选框元素
+        const randomRotationCheckbox = document.getElementById('randomRotation');
+        const randomFlipCheckbox = document.getElementById('randomFlip');
+        let imgData = null;
+        let currentShape = 'square';
 
-    const uploadBox = document.getElementById('uploadBox');
-    const imageUpload = document.getElementById('imageUpload');
-    const previewImage = document.getElementById('previewImage');
-    const gridCanvas = document.getElementById('gridCanvas');
-    const difficultySelect = document.getElementById('difficultySelect');
-    const playBtn = document.getElementById('playBtn');
-    const previewTip = document.getElementById('previewTip');
-    const difficultyText = document.getElementById('difficultyText');
-    const shapeSelect = document.getElementById('shapeSelect');
-    let imgData = null;
-    let currentShape = 'square';
-
-    uploadBox.onclick = () => imageUpload.click();
-    uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.style.borderColor = "#165DFF"; });
-    uploadBox.addEventListener('dragleave', e => { e.preventDefault(); uploadBox.style.borderColor = "#E5E7EB"; });
-    uploadBox.addEventListener('drop', function(e) {
-        e.preventDefault();
-        uploadBox.style.borderColor = "#E5E7EB";
-        if (e.dataTransfer.files.length > 0) {
-            imageUpload.files = e.dataTransfer.files;
-            handleImage();
-        }
-    });
-    imageUpload.addEventListener('change', handleImage);
-
-    function handleImage() {
-        if (imageUpload.files.length > 0) {
-            const file = imageUpload.files[0];
-            if (file.size > 5 * 1024 * 1024) {
-                alert('图片太大，请选择小于5MB的图片');
-                return;
+        uploadBox.onclick = () => imageUpload.click();
+        uploadBox.addEventListener('dragover', e => { e.preventDefault(); uploadBox.style.borderColor = "#165DFF"; });
+        uploadBox.addEventListener('dragleave', e => { e.preventDefault(); uploadBox.style.borderColor = "#E5E7EB"; });
+        uploadBox.addEventListener('drop', function(e) {
+            e.preventDefault();
+            uploadBox.style.borderColor = "#E5E7EB";
+            if (e.dataTransfer.files.length > 0) {
+                imageUpload.files = e.dataTransfer.files;
+                handleImage();
             }
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                imgData = e.target.result;
+        });
+        imageUpload.addEventListener('change', handleImage);
+
+        function handleImage() {
+            if (imageUpload.files.length > 0) {
+                const file = imageUpload.files[0];
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('图片太大，请选择小于5MB的图片');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    imgData = e.target.result;
+                    previewImage.src = imgData;
+                    previewImage.style.display = 'block';
+                    gridCanvas.style.display = 'block';
+                    previewTip.style.display = 'none';
+                    drawGrid();
+                    playBtn.disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateDifficultyText() {
+            const val = parseInt(difficultySelect.value);
+            let txt = '简单';
+            if (val >= 5 && val < 8) txt = '中等';
+            if (val >= 8) txt = '困难';
+            difficultyText.textContent = txt;
+        }
+        difficultySelect.addEventListener('change', () => {
+            drawGrid();
+            updateDifficultyText();
+        });
+        updateDifficultyText();
+
+        shapeSelect.addEventListener('change', () => {
+            currentShape = shapeSelect.value;
+            drawGrid();
+        });
+
+        function drawGrid() {
+            if (!imgData) return;
+            previewImage.onload = function() {
+                gridCanvas.width = previewImage.width;
+                gridCanvas.height = previewImage.height;
+                gridCanvas.style.width = previewImage.width + 'px';
+                gridCanvas.style.height = previewImage.height + 'px';
+                const ctx = gridCanvas.getContext('2d');
+                ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
+                ctx.strokeStyle = "#FFFFFF";
+                ctx.lineWidth = 2;
+                const grid = parseInt(difficultySelect.value);
+                currentShape = shapeSelect.value;
+                for (let i = 1; i < grid; i++) {
+                    let x = i * gridCanvas.width / grid;
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, gridCanvas.height);
+                    ctx.stroke();
+                }
+                for (let i = 1; i < grid; i++) {
+                    let y = i * gridCanvas.height / grid;
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(gridCanvas.width, y);
+                    ctx.stroke();
+                }
+                if (currentShape === 'triangle') {
+                    for (let i = 0; i < grid; i++) {
+                        for (let j = 0; j < grid; j++) {
+                            const x = j * gridCanvas.width / grid;
+                            const y = i * gridCanvas.height / grid;
+                            const nextX = (j + 1) * gridCanvas.width / grid;
+                            const nextY = (i + 1) * gridCanvas.height / grid;
+                            if ((i % 2 === 0 && j % 2 === 0) || (i % 2 === 1 && j % 2 === 1)) {
+                                ctx.beginPath();
+                                ctx.moveTo(x, y);
+                                ctx.lineTo(nextX, nextY);
+                                ctx.stroke();
+                            } else {
+                                ctx.beginPath();
+                                ctx.moveTo(nextX, y);
+                                ctx.lineTo(x, nextY);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+            };
+            previewImage.src = imgData;
+        }
+
+        playBtn.addEventListener('click', function() {
+            localStorage.setItem('customImage', imgData);
+            localStorage.setItem('customSize', difficultySelect.value);
+            localStorage.setItem('customShape', shapeSelect.value);
+            // 存储新的选项状态
+            localStorage.setItem('randomRotation', randomRotationCheckbox.checked);
+            localStorage.setItem('randomFlip', randomFlipCheckbox.checked);
+            window.location.href = '{{ url_for('game_page') }}';
+        });
+
+        window.addEventListener('DOMContentLoaded', function() {
+            const customImage = localStorage.getItem('customImage');
+            const customSize = localStorage.getItem('customSize');
+            const customShape = localStorage.getItem('customShape');
+
+            // 获取新的选项状态
+            const storedRandomRotation = localStorage.getItem('randomRotation');
+            const storedRandomFlip = localStorage.getItem('randomFlip');
+
+            if (customImage && customSize) {
+                imgData = customImage;
                 previewImage.src = imgData;
                 previewImage.style.display = 'block';
                 gridCanvas.style.display = 'block';
                 previewTip.style.display = 'none';
+                difficultySelect.value = customSize;
+                if (customShape) { shapeSelect.value = customShape; currentShape = customShape; }
+                // 设置新的选项状态
+                if (storedRandomRotation !== null) {
+                    randomRotationCheckbox.checked = storedRandomRotation === 'true';
+                }
+                if (storedRandomFlip !== null) {
+                    randomFlipCheckbox.checked = storedRandomFlip === 'true';
+                }
+                updateDifficultyText();
                 drawGrid();
                 playBtn.disabled = false;
-            };
-            reader.readAsDataURL(file);
-        }
-    }
-
-    function updateDifficultyText() {
-        const val = parseInt(difficultySelect.value);
-        let txt = '简单';
-        if (val >= 5 && val < 8) txt = '中等';
-        if (val >= 8) txt = '困难';
-        difficultyText.textContent = txt;
-    }
-    difficultySelect.addEventListener('change', () => {
-        drawGrid();
-        updateDifficultyText();
-    });
-    updateDifficultyText();
-
-    shapeSelect.addEventListener('change', () => {
-        currentShape = shapeSelect.value;
-        drawGrid();
-    });
-
-    function drawGrid() {
-        if (!imgData) return;
-        previewImage.onload = function() {
-            gridCanvas.width = previewImage.width;
-            gridCanvas.height = previewImage.height;
-            gridCanvas.style.width = previewImage.width + 'px';
-            gridCanvas.style.height = previewImage.height + 'px';
-            const ctx = gridCanvas.getContext('2d');
-            ctx.clearRect(0, 0, gridCanvas.width, gridCanvas.height);
-            ctx.strokeStyle = "#FFFFFF";
-            ctx.lineWidth = 2;
-            const grid = parseInt(difficultySelect.value);
-            currentShape = shapeSelect.value;
-            for (let i = 1; i < grid; i++) {
-                let x = i * gridCanvas.width / grid;
-                ctx.beginPath();
-                ctx.moveTo(x, 0);
-                ctx.lineTo(x, gridCanvas.height);
-                ctx.stroke();
+                localStorage.removeItem('customImage');
+                localStorage.removeItem('customSize');
+                localStorage.removeItem('customShape');
+                localStorage.removeItem('randomRotation');
+                localStorage.removeItem('randomFlip');
             }
-            for (let i = 1; i < grid; i++) {
-                let y = i * gridCanvas.height / grid;
-                ctx.beginPath();
-                ctx.moveTo(0, y);
-                ctx.lineTo(gridCanvas.width, y);
-                ctx.stroke();
-            }
-            if (currentShape === 'triangle') {
-                for (let i = 0; i < grid; i++) {
-                    for (let j = 0; j < grid; j++) {
-                        const x = j * gridCanvas.width / grid;
-                        const y = i * gridCanvas.height / grid;
-                        const nextX = (j + 1) * gridCanvas.width / grid;
-                        const nextY = (i + 1) * gridCanvas.height / grid;
-                        if ((i % 2 === 0 && j % 2 === 0) || (i % 2 === 1 && j % 2 === 1)) {
-                            ctx.beginPath();
-                            ctx.moveTo(x, y);
-                            ctx.lineTo(nextX, nextY);
-                            ctx.stroke();
-                        } else {
-                            ctx.beginPath();
-                            ctx.moveTo(nextX, y);
-                            ctx.lineTo(x, nextY);
-                            ctx.stroke();
-                        }
-                    }
-                }
-            }
-        };
-        previewImage.src = imgData;
-    }
-
-    playBtn.addEventListener('click', async function() {
-        if (!imgData) {
-            alert('请先上传图片');
-            return;
-        }
-        const puzzleData = {
-            img: imgData,
-            size: difficultySelect.value,
-            shape: shapeSelect.value
-        };
-        if (isPvp) {
-            // 对战模式：发送到后端创建房间
-            let username = localStorage.getItem('pvp_username');
-            if (!username) {
-                username = prompt('请输入你的昵称') || ('玩家' + Math.floor(Math.random() * 10000));
-                localStorage.setItem('pvp_username', username);
-            }
-            try {
-                const res = await fetch('/pvp/create_room', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({username, puzzle: puzzleData})
-                });
-                const data = await res.json();
-                if (data.code === 200) {
-                    window.location.href = '/versus?room_id=' + data.room_id;
-                } else {
-                    alert('创建房间失败: ' + (data.msg || JSON.stringify(data)));
-                }
-            } catch (e) {
-                alert('网络错误，无法创建房间');
-            }
-        } else {
-            // 普通模式：本地游玩
-            localStorage.setItem('customImage', imgData);
-            localStorage.setItem('customSize', difficultySelect.value);
-            localStorage.setItem('customShape', shapeSelect.value);
-            window.location.href = '{{ url_for('game_page') }}';
-        }
-    });
-
-    window.addEventListener('DOMContentLoaded', function() {
-        const customImage = localStorage.getItem('customImage');
-        const customSize = localStorage.getItem('customSize');
-        const customShape = localStorage.getItem('customShape');
-        if (customImage && customSize) {
-            imgData = customImage;
-            previewImage.src = imgData;
-            previewImage.style.display = 'block';
-            gridCanvas.style.display = 'block';
-            previewTip.style.display = 'none';
-            difficultySelect.value = customSize;
-            if (customShape) { shapeSelect.value = customShape; currentShape = customShape; }
-            updateDifficultyText();
-            drawGrid();
-            playBtn.disabled = false;
-            localStorage.removeItem('customImage');
-            localStorage.removeItem('customSize');
-            localStorage.removeItem('customShape');
-        }
-    });
-</script>
+        });
+    </script>
 
 <!-- 帮助页面模态框 -->
 <div class="modal-mask" id="helpModal" style="display: none;">
@@ -293,22 +308,25 @@
         </div>
     </div>
 </div>
-<!-- 页面特定的背景音乐 -->
-<script>
-    // 等待音乐管理器加载完成
-    function initPageMusic() {
-        if (window.musicManager) {
-            // 拼图编辑器页面自动播放主界面音乐
-            window.musicManager.playScene('main');
-        } else {
-            // 如果音乐管理器尚未加载，稍后重试
-            setTimeout(initPageMusic, 100);
+    <!-- 页面特定的背景音乐 -->
+    <script>
+        // 等待音乐管理器加载完成
+        function initPageMusic() {
+            if (window.musicManager) {
+                // 拼图编辑器页面自动播放主界面音乐
+                window.musicManager.playScene('main');
+            } else {
+                // 如果音乐管理器尚未加载，稍后重试
+                setTimeout(initPageMusic, 100);
+            }
         }
-    }
-    // 页面加载完成后直接初始化音乐，无需等待用户交互
-    document.addEventListener('DOMContentLoaded', function() {
-        initPageMusic();
-    });
-</script>
+        
+        // 页面加载完成后直接初始化音乐，无需等待用户交互
+        document.addEventListener('DOMContentLoaded', function() {
+            // 直接尝试播放音乐
+            initPageMusic();
+        });
+    </script>
 </body>
 </html>
+

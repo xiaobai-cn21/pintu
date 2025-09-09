@@ -311,6 +311,21 @@ function updateTimer() {
     timerElement.textContent = `时间: ${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
+// 暂停游戏（供外部调用：帮助弹窗）
+function pauseGame() {
+    if (gameStarted && timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+}
+
+// 继续游戏（供外部调用：帮助弹窗）
+function resumeGame() {
+    if (gameStarted && !timerInterval) {
+        timerInterval = setInterval(updateTimer, 1000);
+    }
+}
+
 // 创建拼图块
 function createPuzzlePieces() {
     puzzleBoard.innerHTML = '';
@@ -320,6 +335,9 @@ function createPuzzlePieces() {
 
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+    // 从 localStorage 获取随机选项
+    const randomRotation = localStorage.getItem('randomRotation') === 'true';
+    const randomFlip = localStorage.getItem('randomFlip') === 'true';
 
     if (shape === 'square') {
         for (let y = 0; y < difficulty; y++) {
@@ -349,6 +367,26 @@ function createPuzzlePieces() {
     }
 
     shufflePieces();
+    pieces.forEach(piece => {
+        // 随机旋转 (0, 90, 180, 270度)
+        if (randomRotation) {
+            const rotations = [0, 90, 180, 270];
+            const randomRotationValue = rotations[Math.floor(Math.random() * rotations.length)];
+            piece.dataset.rotation = randomRotationValue;
+        }
+
+        // 随机翻转
+        if (randomFlip) {
+            const shouldFlip = Math.random() < 0.5; // 50% 概率翻转
+            piece.dataset.flipped = shouldFlip;
+        }
+
+        // 应用变换
+        const rotation = parseInt(piece.dataset.rotation) || 0;
+        const isFlipped = piece.dataset.flipped === 'true';
+        piece.style.transform = `rotate(${rotation}deg) scaleX(${isFlipped ? -1 : 1})`;
+    });
+
     pieces.forEach(piece => {
         if (shape === 'jigsaw') {
             piece.style.margin = `${(pieceHeight * JIGSAW_TAB_RATIO) / 2}px`;
@@ -468,181 +506,77 @@ function dropOnBoard(e) {
     let x = e.clientX - boardRect.left;
     let y = e.clientY - boardRect.top;
 
-    // 计算初始网格位置
     let gridX = Math.floor(x / pieceWidth);
     let gridY = Math.floor(y / pieceHeight);
-
-    // 边界检查
     gridX = Math.max(0, Math.min(gridX, difficulty - 1));
     gridY = Math.max(0, Math.min(gridY, difficulty - 1));
 
     let finalLeft, finalTop;
-    let canPlace = true; // 新增：标记是否可以放置
+    let canPlace = true;
 
     if (shape === 'jigsaw' || shape === 'square') {
-        // 检查目标位置是否已有拼图块
-        if (findPieceOnBoard(gridX, gridY)) {
-            // 尝试找到附近的空位置，增强容错性
-            const nearbyPositions = [
-                {x: gridX - 1, y: gridY},
-                {x: gridX + 1, y: gridY},
-                {x: gridX, y: gridY - 1},
-                {x: gridX, y: gridY + 1}
-            ];
+        const targetPiece = findPieceOnBoard(gridX, gridY);
 
-            let found = false;
-            for (const pos of nearbyPositions) {
-                if (pos.x >= 0 && pos.x < difficulty && pos.y >= 0 && pos.y < difficulty) {
-                    if (!findPieceOnBoard(pos.x, pos.y)) {
-                        gridX = pos.x;
-                        gridY = pos.y;
-                        found = true;
-                        break;
-                    }
+        if (targetPiece && targetPiece !== draggedPiece) {
+            // --- 目标位置有图块，执行【交换】操作 ---
+            console.log(`开始交换: ${draggedPiece.id} 与 ${targetPiece.id}`);
+
+            // 1. 获取被拖拽图块的原始位置
+            const sourceParent = fromParent;
+            const sourceGridX = fromX;
+            const sourceGridY = fromY;
+
+            // 2. 将目标位置的图块 (targetPiece) 移动到被拖拽图块的原始位置
+            if (sourceParent === puzzleBoard) {
+                // 情况A: 两个图块都在棋盘上交换
+                const oldPos = calculatePieceFinalPosition(targetPiece, parseInt(sourceGridX), parseInt(sourceGridY));
+                if (oldPos) {
+                    targetPiece.style.left = oldPos.finalLeft;
+                    targetPiece.style.top = oldPos.finalTop;
+                    targetPiece.dataset.currentX = sourceGridX;
+                    targetPiece.dataset.currentY = sourceGridY;
                 }
+            } else {
+                // 情况B: 从备选区拖来，与棋盘上的图块交换
+                returnToZone(targetPiece, false); // 将棋盘上的图块送回备选区，不计步数
             }
 
-            if (!found) {
-                canPlace = false; // 找不到可放置位置
-            }
-        }
+            // 3. 此时目标格子已空，可以继续执行后续的放置操作
+            canPlace = true;
 
-        if (canPlace) {
-            if (shape === 'jigsaw') {
-                const rotation = parseInt(draggedPiece.dataset.rotation) || 0;
-                const isFlipped = draggedPiece.dataset.flipped === 'true';
-                const tabSize = pieceWidth * JIGSAW_TAB_RATIO;
-
-                let edges = {
-                    top: draggedPiece.dataset.edgeTop, right: draggedPiece.dataset.edgeRight,
-                    bottom: draggedPiece.dataset.edgeBottom, left: draggedPiece.dataset.edgeLeft
-                };
-                if (isFlipped) { [edges.left, edges.right] = [edges.right, edges.left]; }
-                const rotationSteps = rotation / 90;
-                for (let i = 0; i < rotationSteps; i++) {
-                    const tempTop = edges.top; edges.top = edges.left; edges.left = edges.bottom;
-                    edges.bottom = edges.right; edges.right = tempTop;
-                }
-
-                const offsetXForDiv = (edges.left === 'tab' ? tabSize : 0);
-                const offsetYForDiv = (edges.top === 'tab' ? tabSize : 0);
-
-                let calculatedLeft = gridX * pieceWidth - offsetXForDiv;
-                let calculatedTop = gridY * pieceHeight - offsetYForDiv;
-
-                if (rotation === 90 || rotation === 270) {
-                    const divWidth = parseFloat(draggedPiece.style.width);
-                    const divHeight = parseFloat(draggedPiece.style.height);
-                    calculatedLeft += (divWidth - divHeight) / 2;
-                    calculatedTop += (divHeight - divWidth) / 2;
-                }
-                finalLeft = `${calculatedLeft}px`;
-                finalTop = `${calculatedTop}px`;
-            } else { // 'square'
-                finalLeft = `${gridX * pieceWidth}px`;
-                finalTop = `${gridY * pieceHeight}px`;
-            }
+        } else if (targetPiece && targetPiece === draggedPiece) {
+            // 拖到了自己原来的位置，操作无效
+            canPlace = false;
         }
 
     } else if (shape === 'triangle') {
-        // 三角形拼图逻辑
-        const draggedPieceType = draggedPiece.dataset.type;
-
-        // 查找目标格子里所有已经存在的三角块
+        // 三角形逻辑保持不变，因为它更复杂，不支持简单交换
         const piecesInCell = Array.from(
             puzzleBoard.querySelectorAll(`.puzzle-piece.triangle[data-current-x='${gridX}'][data-current-y='${gridY}']`)
         );
-
-        // 检查格子是否已满 (最多只能有2个)
-        if (piecesInCell.length >= 2) {
-            // 尝试附近的格子
-            const nearbyPositions = [
-                {x: gridX - 1, y: gridY},
-                {x: gridX + 1, y: gridY},
-                {x: gridX, y: gridY - 1},
-                {x: gridX, y: gridY + 1}
-            ];
-
-            let found = false;
-            for (const pos of nearbyPositions) {
-                if (pos.x >= 0 && pos.x < difficulty && pos.y >= 0 && pos.y < difficulty) {
-                    const nearbyPieces = puzzleBoard.querySelectorAll(`.puzzle-piece.triangle[data-current-x='${pos.x}'][data-current-y='${pos.y}']`);
-                    if (nearbyPieces.length < 2) {
-                        gridX = pos.x;
-                        gridY = pos.y;
-                        found = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!found) {
-                canPlace = false;
-            }
+        if (piecesInCell.length >= 2 || piecesInCell.some(p => p.dataset.type === draggedPiece.dataset.type)) {
+            canPlace = false;
         }
-
-        if (canPlace) {
-            // 检查是否要放置的“类型”已经存在于格子中
-            const typeAlreadyExists = piecesInCell.some(p => p.dataset.type === draggedPieceType);
-            if (typeAlreadyExists) {
-                canPlace = false;
-            }
-        }
-
-        if (canPlace && piecesInCell.length === 1) {
-            const existingPieceType = piecesInCell[0].dataset.type;
-
-            // 定义所有兼容的配对关系
-            const isCompatible =
-                (draggedPieceType === 'top-left' && existingPieceType === 'bottom-right') ||
-                (draggedPieceType === 'bottom-right' && existingPieceType === 'top-left') ||
-                (draggedPieceType === 'top-right' && existingPieceType === 'bottom-left') ||
-                (draggedPieceType === 'bottom-left' && existingPieceType === 'top-right');
-
-            if (!isCompatible) {
-                canPlace = false;
-            }
-        }
-
-        if (canPlace) {
-            draggedPiece.dataset.position = draggedPieceType;
-            finalLeft = `${gridX * pieceWidth}px`;
-            finalTop = `${gridY * pieceHeight}px`;
+        if (piecesInCell.length === 1 && !((draggedPiece.dataset.type === 'top-left' && piecesInCell[0].dataset.type === 'bottom-right') || (draggedPiece.dataset.type === 'bottom-right' && piecesInCell[0].dataset.type === 'top-left') || (draggedPiece.dataset.type === 'top-right' && piecesInCell[0].dataset.type === 'bottom-left') || (draggedPiece.dataset.type === 'bottom-left' && piecesInCell[0].dataset.type === 'top-right'))) {
+            canPlace = false;
         }
     }
 
-    // 如果可以放置，则执行放置操作
-    if (canPlace && finalLeft && finalTop) {
-        // 创建移动命令并推入栈
-        const toRect = {
-            position: "absolute",
-            left: finalLeft,
-            top: finalTop,
-            margin: '0'
-        };
+    // --- 统一的放置与状态更新 ---
+    if (canPlace) {
+        const pos = calculatePieceFinalPosition(draggedPiece, gridX, gridY);
+        if (pos) {
+            finalLeft = pos.finalLeft;
+            finalTop = pos.finalTop;
 
-        const command = new MoveCommand(
-            draggedPiece,
-            fromParent,
-            fromRect,
-            puzzleBoard,
-            toRect,
-            fromX,
-            fromY,
-            gridX,
-            gridY
-        );
-        pushCommand(command);
-        // 添加吸附动画效果
-        //draggedPiece.style.transition = 'transform 0.2s ease-out';
-        //draggedPiece.style.transform = `${draggedPiece.style.transform || ''} translate(${finalLeft}px, ${finalTop}px)`;
+            const toRect = { position: "absolute", left: finalLeft, top: finalTop, margin: '0' };
+            const command = new MoveCommand(draggedPiece, fromParent, fromRect, puzzleBoard, toRect, fromX, fromY, gridX, gridY);
+            pushCommand(command);
 
-        // 动画结束后应用最终位置
             draggedPiece.style.transition = '';
             draggedPiece.style.position = "absolute";
             draggedPiece.style.left = finalLeft;
             draggedPiece.style.top = finalTop;
-            draggedPiece.style.transform = draggedPiece.style.transform.replace(/ translate\([^)]*\)/, '') || '';
             draggedPiece.dataset.currentX = gridX;
             draggedPiece.dataset.currentY = gridY;
 
@@ -650,13 +584,13 @@ function dropOnBoard(e) {
 
             moves++;
             movesElement.textContent = `移动次数: ${moves}`;
+        } else {
+             // 计算位置失败，返回
+             returnToZone(draggedPiece);
+        }
     } else {
-        // 无法放置时，添加返回动画
-        draggedPiece.style.transition = 'transform 0.3s ease-out';
-        setTimeout(() => {
-            draggedPiece.style.transition = '';
-            returnToZone(draggedPiece);
-        }, 300);
+        // 无法放置时，返回备选区
+        returnToZone(draggedPiece);
     }
 }
 
@@ -722,9 +656,11 @@ function findPieceOnBoard(x, y) {
 // 修复拼图完成检测及提示功能
 function checkPuzzleCompletion() {
     const piecesOnBoard = puzzleBoard.querySelectorAll('.puzzle-piece');
-    const totalPieces = difficulty * difficulty;
 
-    // 检查是否所有拼图都已放置到棋盘上
+    const totalPieces = shape === 'triangle'
+        ? difficulty * difficulty * 2
+        : difficulty * difficulty;
+
     if (piecesOnBoard.length !== totalPieces) {
         return false;
     }
@@ -737,19 +673,15 @@ function checkPuzzleCompletion() {
         const correctX = parseInt(piece.dataset.correctX);
         const correctY = parseInt(piece.dataset.correctY);
 
-        // 检查位置是否正确
         if (pieceX !== correctX || pieceY !== correctY) {
             allCorrect = false;
         }
 
-        // 对于拼图形状，还要检查旋转和翻转是否正确
-        if (shape === 'jigsaw') {
+        if (shape === 'jigsaw' || shape === 'triangle') {
             const rotation = parseInt(piece.dataset.rotation) || 0;
-            const correctRotation = parseInt(piece.dataset.correctRotation) || 0;
             const isFlipped = piece.dataset.flipped === 'true';
-            const shouldBeFlipped = piece.dataset.shouldBeFlipped === 'true';
 
-            if (rotation !== correctRotation || isFlipped !== shouldBeFlipped) {
+            if (rotation !== 0 || isFlipped) {
                 allCorrect = false;
             }
         }
@@ -758,9 +690,12 @@ function checkPuzzleCompletion() {
     // 如果全部正确且尚未显示完成提示
     if (allCorrect && !document.getElementById('completion-message')) {
         clearInterval(timerInterval); // 停止计时器
-        showCompletionMessage();
-         // 提交成绩到排行榜
-        submitToRanking();
+        // 提交关卡成绩（需要登录）
+        submitLevelRecord().finally(() => {
+            // 提交排行榜（游客也可尝试）
+            submitToRanking();
+            showCompletionMessage();
+        });
         return true;
     }
 
@@ -881,6 +816,12 @@ window.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem('customImage');
         localStorage.removeItem('customSize');
         localStorage.removeItem('customShape'); // 清除
+    } else if (customImage && !customSize) {
+        // 仅有图片（来自 AI 页），默认 4x4 方形
+        originalImageUrl = customImage;
+        difficulty = 4;
+        startGame();
+        localStorage.removeItem('customImage');
     } else {
         console.log("没有找到拼图数据，请从预览页面开始游戏。");
         puzzleBoard.innerHTML = '<p style="text-align:center; color:#666; margin-top: 40px;">请先选择一张图片来创建拼图</p>';
@@ -1164,8 +1105,8 @@ function submitToRanking() {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         user_id: Number(userId),
-                        step_count: this.moves,
-                        time_used: this.seconds
+                        step_count: moves,
+                        time_used: seconds
                     })
                 }).catch(error => {
                     console.error('提交排行榜成绩失败:', error);
@@ -1176,13 +1117,70 @@ function submitToRanking() {
         }
     }
 // 放回备选区
-function returnToZone(piece) {
+function returnToZone(piece, incrementMoves = true) {
     piece.style.position = 'static';
+    piece.style.left = '';
+    piece.style.top = '';
     delete piece.dataset.currentX;
     delete piece.dataset.currentY;
+    delete piece.dataset.position;
+
+    if (shape === 'jigsaw') {
+        const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+        draggedPiece.style.margin = `${(pieceHeight * JIGSAW_TAB_RATIO) / 2}px`;
+    }
+
     piecesZone.appendChild(piece);
-    moves++;
-    movesElement.textContent = `移动次数: ${moves}`;
+
+    if (incrementMoves) {
+        moves++;
+        movesElement.textContent = `移动次数: ${moves}`;
+    }
+}
+
+// 提交关卡成绩到后端 levels（需登录 token）
+function submitLevelRecord() {
+    try {
+        const token = localStorage.getItem('puzzleToken');
+        if (!token) return Promise.resolve();
+
+        const info = extractLevelInfo();
+        if (!info) return Promise.resolve();
+
+        return fetch('/levels/record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                level_id: info.levelId,
+                level_name: info.levelName,
+                image_url: info.imageUrl,
+                difficulty: info.difficulty,
+                time_used: seconds,
+                step_count: moves
+            })
+        }).then(r => r.json()).catch(() => {});
+    } catch (e) { return Promise.resolve(); }
+}
+
+// 从当前 customImage/customSize 推导关卡信息
+function extractLevelInfo() {
+    try {
+        const imageUrl = originalImageUrl;
+        const diff = difficulty;
+        if (!imageUrl || !diff) return null;
+        // 关卡命名策略：图片文件名 + 难度
+        const urlObj = new URL(imageUrl, window.location.origin);
+        const pathname = urlObj.pathname || '';
+        const fileName = pathname.split('/').pop() || 'custom';
+        const levelId = `${fileName}-${diff}`;
+        const levelName = fileName.replace(/\.[a-zA-Z0-9]+$/, '');
+        return { levelId, levelName, imageUrl, difficulty: diff };
+    } catch (e) {
+        return null;
+    }
 }
 
 function pieceDrag(e) {
@@ -1196,3 +1194,64 @@ function pieceDrag(e) {
         customFollower.style.top = `${e.clientY - customFollower.offsetY}px`;
     }
 }
+
+
+function calculatePieceFinalPosition(piece, gridX, gridY) {
+    const pieceWidth = puzzleBoard.offsetWidth / difficulty;
+    const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+    let finalLeft, finalTop;
+
+    if (shape === 'jigsaw') {
+        const rotation = parseInt(piece.dataset.rotation) || 0;
+        const isFlipped = piece.dataset.flipped === 'true';
+        const tabSize = pieceWidth * JIGSAW_TAB_RATIO;
+
+        let edges = {
+            top: piece.dataset.edgeTop, right: piece.dataset.edgeRight,
+            bottom: piece.dataset.edgeBottom, left: piece.dataset.edgeLeft
+        };
+        if (isFlipped) { [edges.left, edges.right] = [edges.right, edges.left]; }
+        const rotationSteps = rotation / 90;
+        for (let i = 0; i < rotationSteps; i++) {
+            const tempTop = edges.top; edges.top = edges.left; edges.left = edges.bottom;
+            edges.bottom = edges.right; edges.right = tempTop;
+        }
+
+        const offsetXForDiv = (edges.left === 'tab' ? tabSize : 0);
+        const offsetYForDiv = (edges.top === 'tab' ? tabSize : 0);
+
+        let calculatedLeft = gridX * pieceWidth - offsetXForDiv;
+        let calculatedTop = gridY * pieceHeight - offsetYForDiv;
+
+        if (rotation === 90 || rotation === 270) {
+            const divWidth = parseFloat(piece.style.width);
+            const divHeight = parseFloat(piece.style.height);
+            calculatedLeft += (divWidth - divHeight) / 2;
+            calculatedTop += (divHeight - divWidth) / 2;
+        }
+        finalLeft = `${calculatedLeft}px`;
+        finalTop = `${calculatedTop}px`;
+
+    } else if (shape === 'square') {
+        finalLeft = `${gridX * pieceWidth}px`;
+        finalTop = `${gridY * pieceHeight}px`;
+
+    } else if (shape === 'triangle') {
+        finalLeft = `${gridX * pieceWidth}px`;
+        finalTop = `${gridY * pieceHeight}px`;
+    }
+
+    if (finalLeft !== undefined && finalTop !== undefined) {
+        return { finalLeft, finalTop };
+    }
+    return null;
+}
+// 兼容 game.html 对 window.puzzleGame 的依赖（用于帮助弹窗暂停/恢复）
+try {
+    window.puzzleGame = {
+        pauseGame,
+        resumeGame,
+        get gameStarted() { return typeof gameStarted !== 'undefined' ? gameStarted : false; }
+    };
+} catch (e) {}
+

@@ -65,6 +65,14 @@ def create_app():
     def share_page():
         return render_template('share.html')
 
+    @app.route('/messages')
+    def messages_page():
+        return render_template('messages.html')
+
+    @app.route('/friends')
+    def friends_page():
+        return render_template('search_friend.html')
+
     @app.route('/loading')
     def loading_page():
         return render_template('loading.html')
@@ -76,14 +84,7 @@ def create_app():
     @app.route('/versus')
     def versus_page():
         return render_template('versus.html')
-    
-    @app.route('/messages')
-    def messages_page():
-        return render_template('messages.html')
-    
-    @app.route('/search_friends')
-    def search_friend():
-        return render_template('search_friend.html')
+
     
     @app.route('/online_game')
     def online_game_page():
@@ -92,6 +93,7 @@ def create_app():
     @app.route('/online_editor')
     def online_game_editor():
         return render_template('online_editor.html')
+
     return app
 
 
