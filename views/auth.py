@@ -8,7 +8,7 @@ import re
 auth = Blueprint('auth', __name__)
 
 
-@auth.route('signin', methods=['GET', 'POST'])
+@auth.route('/signin', methods=['GET', 'POST'])
 def signin():
     try:
         if request.method == 'POST':
@@ -30,7 +30,7 @@ def signin():
     except Exception as e:
         return jsonify({"code": "500", "message": f"服务器内部错误: {str(e)}", "data": None})
     
-@auth.route('login', methods=['GET', 'POST'])
+@auth.route('/login', methods=['GET', 'POST'])
 def  login():
     try:
         if request.method == 'POST':
@@ -43,7 +43,7 @@ def  login():
             ).first()
 
             if user and check_password_hash(user.hash_password, password):
-                acces_token = create_access_token(identity=user.user_id)
+                acces_token = create_access_token(identity=str(user.user_id))
                 return jsonify({
                     "code": 200, 
                     "message": "登录成功", 

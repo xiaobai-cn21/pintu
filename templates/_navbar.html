@@ -1,0 +1,137 @@
+<nav class="pm-navbar">
+    <div class="pm-nav-left">
+        <a class="pm-brand" href="{{ url_for('main') }}">PuzzleMaster</a>
+        <a class="pm-link chinese-text" href="{{ url_for('main') }}">首页</a>
+        <a class="pm-link chinese-text" href="{{ url_for('option_page') }}">开始游戏</a>
+        <a class="pm-link chinese-text" id="pm-help-link" href="#">帮助</a>
+    </div>
+    <div class="pm-nav-right">
+        <!-- 音乐控制按钮 -->
+        <button id="musicToggle" class="pm-music-btn" title="切换背景音乐">
+            <i class="fa fa-music"></i>
+        </button>
+        
+        <div class="pm-avatar-wrap" id="pm-avatar-wrap">
+            <img class="pm-avatar" src="{{ url_for('static', filename='images/用户头像.jpg') }}" alt="avatar">
+            <div class="pm-avatar-menu" id="pm-avatar-menu">
+                <button id="pm-login-btn" class="pm-menu-item chinese-text"><span class="chinese-text">登录</span><span class="symbol-text"> / </span><span class="chinese-text">注册</span></button>
+                <a id="pm-my-puzzle-btn" class="pm-menu-item chinese-text" href="{{ url_for('my_puzzle_page') }}" style="display:none;"><span class="chinese-text">我的拼图</span></a>
+                <button id="pm-logout-btn" class="pm-menu-item chinese-text" style="display:none;"><span class="chinese-text">退出登录</span></button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<style>
+/* 音乐控制按钮样式 */
+.pm-music-btn {
+    background: transparent;
+    border: none;
+    color: #F9E078;
+    font-size: 18px;
+    padding: 8px 12px;
+    cursor: pointer;
+    margin-right: 16px;
+    transition: transform 0.2s ease;
+}
+
+.pm-music-btn:hover {
+    transform: scale(1.1);
+}
+
+.pm-music-btn.muted i:before {
+    content: "\f026"; /* 静音图标 */
+}
+
+.pm-music-btn:not(.muted) i:before {
+    content: "\f001"; /* 播放图标 */
+}
+</style>
+<script>
+// 加载音乐管理模块
+const musicScript = document.createElement('script');
+musicScript.src = '/static/js/music.js';
+musicScript.onload = initMusicControl;
+document.head.appendChild(musicScript);
+
+(function(){
+  const token = localStorage.getItem('puzzleToken');
+  const loginBtn = document.getElementById('pm-login-btn');
+  const logoutBtn = document.getElementById('pm-logout-btn');
+  const myPuzzleBtn = document.getElementById('pm-my-puzzle-btn');
+  if(token){
+    loginBtn.style.display='none';
+    logoutBtn.style.display='block';
+    myPuzzleBtn.style.display='block';
+  } else {
+    loginBtn.style.display='block';
+    logoutBtn.style.display='none';
+    myPuzzleBtn.style.display='none';
+  }
+  loginBtn && (loginBtn.onclick = function(){
+    const modal = document.getElementById('loginModal');
+    if(modal){ modal.style.display='flex'; } else { window.location.href='{{ url_for('main') }}'; }
+  });
+  logoutBtn && (logoutBtn.onclick = function(){
+    localStorage.removeItem('puzzleToken');
+    localStorage.removeItem('userId');
+    window.location.reload();
+  });
+  const helpLink = document.getElementById('pm-help-link');
+  if(helpLink){
+    helpLink.addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      const help = document.getElementById('helpModal');
+      if(help){ 
+        help.style.display='flex'; 
+      }
+    });
+  }
+
+
+  // 控制头像菜单打开/关闭，不依赖 hover，避免闪退
+  const wrap = document.getElementById('pm-avatar-wrap');
+  const menu = document.getElementById('pm-avatar-menu');
+  const avatar = document.querySelector('.pm-avatar');
+  function openMenu(){ wrap.classList.add('open'); }
+  function closeMenu(){ wrap.classList.remove('open'); }
+  avatar && avatar.addEventListener('click', (e)=>{
+    e.stopPropagation();
+    if(wrap.classList.contains('open')) closeMenu(); else openMenu();
+  });
+  menu && menu.addEventListener('click',(e)=>{ e.stopPropagation(); });
+  document.addEventListener('click', ()=> closeMenu());
+})();
+
+// 初始化音乐控制
+function initMusicControl() {
+  // 等待DOM加载完成
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupMusicButton);
+  } else {
+    setupMusicButton();
+  }
+  
+  function setupMusicButton() {
+    const musicToggle = document.getElementById('musicToggle');
+    if (musicToggle && window.musicManager) {
+      // 设置初始状态
+      if (window.musicManager.isMuted) {
+        musicToggle.classList.add('muted');
+      }
+      
+      // 添加点击事件
+      musicToggle.addEventListener('click', function() {
+        const isMuted = window.musicManager.toggleMute();
+        if (isMuted) {
+          musicToggle.classList.add('muted');
+        } else {
+          musicToggle.classList.remove('muted');
+        }
+      });
+    }
+  }
+}
+</script>
+

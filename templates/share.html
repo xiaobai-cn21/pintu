@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>分享中心</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% include '_navbar.html' %}
+<div class="background-blur"></div>
+<div class="container" style="max-width: 1200px; margin: 0 auto;">
+    <div class="page-title" style="margin-top: 20px;">
+        <button class="btn btn-secondary back-btn" onclick="window.location.href='{{ url_for('main') }}'" style="padding: 8px 16px; font-size: 12px; margin-right: 16px;">
+            <span class="chinese-text">返回</span>
+        </button>
+        <span class="chinese-text" style="color: #F9E078; font-size: 18px;">分享中心</span>
+    </div>
+    
+    <div class="card" style="max-width: 800px; margin: 20px auto; padding: 16px; background-color: #20223A;">
+        <p class="chinese-text" style="color: #B8BCC8; text-align: center; font-size: 16px;">建设中...</p>
+    </div>
+</div>
+
+<!-- 帮助页面模态框 -->
+<div class="modal-mask" id="helpModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span>操作指南</span>
+            <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
+        </div>
+        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
+            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+            <p>- 单击选中的图块，顺时针旋转90度</p>
+            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
+        </div>
+    </div>
+</div>
+    <!-- 页面特定的背景音乐 -->
+    <script>
+        // 等待音乐管理器加载完成
+        function initPageMusic() {
+            if (window.musicManager) {
+                // 分享中心页面自动播放主界面音乐
+                window.musicManager.playScene('main');
+            } else {
+                // 如果音乐管理器尚未加载，稍后重试
+                setTimeout(initPageMusic, 100);
+            }
+        }
+        
+        // 页面加载完成后直接初始化音乐，无需等待用户交互
+        document.addEventListener('DOMContentLoaded', function() {
+            // 直接尝试播放音乐
+            initPageMusic();
+        });
+    </script>
+</body>
+</html>
+
+

@@ -27,3 +27,33 @@ CREATE TABLE records (
     time_used INT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
+
+CREATE TABLE messages (
+    message_id INT PRIMARY KEY AUTO_INCREMENT,
+    sender_id INT NOT NULL,
+    receiver_id INT NOT NULL,
+    content VARCHAR(500) NOT NULL,
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sender_id) REFERENCES users(user_id),
+    FOREIGN KEY (receiver_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE friend_requests (
+    request_id INT PRIMARY KEY AUTO_INCREMENT,
+    sender_id INT NOT NULL,
+    receiver_id INT NOT NULL,
+    status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (sender_id) REFERENCES users(user_id),
+    FOREIGN KEY (receiver_id) REFERENCES users(user_id)
+);
+
+CREATE TABLE friends (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    friend_id INT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (friend_id) REFERENCES users(user_id),
+    UNIQUE KEY unique_friendship (user_id, friend_id)
+);

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 生成图片</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+{% include '_navbar.html' %}
+<div class="background-blur"></div>
+<div class="container" style="max-width: 1100px; margin: 20px auto;">
+  <style>
+    .ai-layout{display:flex;gap:20px;align-items:flex-start;height:680px}
+    .ai-left{flex:0 0 260px;height:680px;overflow:auto}
+    .ai-right{flex:1 1 auto;display:flex;flex-direction:column;gap:16px;height:680px}
+    .ai-result{flex: 2 1 0;min-height:0;display:flex;align-items:center;justify-content:center}
+    .ai-result img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px}
+    .ai-chat{flex: 1 1 0;min-height:0;display:flex;flex-direction:column;padding:0;overflow:hidden}
+    .ai-chat-box{height:100%;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+    .ai-chat-input{display:flex;gap:10px;padding:12px;border-top:1px solid rgba(255,255,255,0.1)}
+    .ai-tag-title{font-size:14px;margin:6px 0 8px;color:#F9E078;opacity:.9}
+    .ai-tags{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+    .tag-btn{height:36px;display:inline-flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,.15);background:transparent;color:#F9E078;border-radius:6px;cursor:pointer;pointer-events:auto;position:relative;z-index:1}
+    .tag-btn:hover{background:rgba(249,224,120,0.08)}
+    .tag-btn.active{outline:2px solid #F9E078;background:rgba(249,224,120,0.15);box-shadow:0 0 8px rgba(249,224,120,0.3)}
+    .size-tag{font-size:10px;font-family:'Press Start 2P', monospace}
+    .number-text{font-family:'Press Start 2P', monospace}
+    .symbol-text{font-family:'Press Start 2P', monospace}
+  </style>
+  <div class="ai-layout">
+    <!-- 左侧：预置 Prompt 标签 -->
+    <aside class="card ai-left">
+      <h3 style="margin-bottom:12px;">常用标签</h3>
+      <div id="promptTags">
+        <div class="ai-tag-title">尺寸</div>
+        <div class="ai-tags" id="sizeTags">
+          <button class="tag-btn size-tag active" data-size="1024x1024"><span class="number-text">1024</span><span class="symbol-text">×</span><span class="number-text">1024</span></button>
+          <button class="tag-btn size-tag" data-size="1280x720"><span class="number-text">1280</span><span class="symbol-text">×</span><span class="number-text">720</span></button>
+          <button class="tag-btn size-tag" data-size="1024x768"><span class="number-text">1024</span><span class="symbol-text">×</span><span class="number-text">768</span></button>
+          <button class="tag-btn size-tag" data-size="720x1280"><span class="number-text">720</span><span class="symbol-text">×</span><span class="number-text">1280</span></button>
+        </div>
+        <div class="ai-tag-title">画风</div>
+        <div class="ai-tags">
+          <button class="tag-btn" data-val="像素风">像素风</button>
+          <button class="tag-btn" data-val="赛博朋克">赛博朋克</button>
+          <button class="tag-btn" data-val="蒸汽波">蒸汽波</button>
+          <button class="tag-btn" data-val="水彩">水彩</button>
+          <button class="tag-btn" data-val="油画">油画</button>
+          <button class="tag-btn" data-val="低多边形">低多边形</button>
+          <button class="tag-btn" data-val="漫画">漫画</button>
+          <button class="tag-btn" data-val="日系">日系</button>
+          <button class="tag-btn" data-val="写实">写实</button>
+          <button class="tag-btn" data-val="3D渲染"><span class="number-text">3</span><span class="symbol-text">D</span></span>渲染</button>
+        </div>
+        <div class="ai-tag-title">图片类型</div>
+        <div class="ai-tags">
+          <button class="tag-btn" data-val="自然风景">自然风景</button>
+          <button class="tag-btn" data-val="城市夜景">城市夜景</button>
+          <button class="tag-btn" data-val="人物肖像">人物肖像</button>
+          <button class="tag-btn" data-val="动物">动物</button>
+          <button class="tag-btn" data-val="建筑">建筑</button>
+          <button class="tag-btn" data-val="食物">食物</button>
+          <button class="tag-btn" data-val="科幻机甲">科幻机甲</button>
+          <button class="tag-btn" data-val="奇幻">奇幻</button>
+        </div>
+        <div class="ai-tag-title">其他</div>
+        <div class="ai-tags">
+          <button class="tag-btn" data-val="黄昏光影">黄昏光影</button>
+          <button class="tag-btn" data-val="体积光">体积光</button>
+          <button class="tag-btn" data-val="高对比">高对比</button>
+          <button class="tag-btn" data-val="柔和色调">柔和色调</button>
+          <button class="tag-btn" data-val="冷色调">冷色调</button>
+          <button class="tag-btn" data-val="暖色调">暖色调</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 右侧：上图下对话输入 -->
+    <section class="ai-right">
+      <!-- 生成结果展示 -->
+      <div id="aiResult" class="card ai-result">
+        <img id="aiImg" src="" alt="AI图片" style="display:none;">
+        <div id="aiPlaceholder" style="color:#F9E078; opacity:.7;">生成结果将显示在这里</div>
+      </div>
+
+      <!-- 对话+输入区 -->
+      <div class="card ai-chat">
+        <div id="chatBox" class="ai-chat-box"></div>
+        <div class="ai-chat-input">
+          <input id="aiPrompt" placeholder="输入描述，例如：像素风森林中的小屋，黄昏光影" style="flex:1; padding:10px 12px; border:1px solid #E5E7EB; border-radius:6px;">
+          <button id="genBtn" class="btn btn-primary">生成</button>
+        </div>
+        <div style="padding: 0 12px 12px 12px;"><span id="aiTip" style="font-size:12px;color:#F9E078;opacity:.8;"></span></div>
+      </div>
+    </section>
+  </div>
+</div>
+<script>
+const genBtn=document.getElementById('genBtn');
+const aiPrompt=document.getElementById('aiPrompt');
+const aiTip=document.getElementById('aiTip');
+const aiResult=document.getElementById('aiResult');
+const aiImg=document.getElementById('aiImg');
+const aiPlaceholder=document.getElementById('aiPlaceholder');
+const chatBox=document.getElementById('chatBox');
+const promptTags=document.getElementById('promptTags');
+const sizeTags=document.getElementById('sizeTags');
+let selectedSize="1024x1024"; // 默认选中第一个尺寸
+
+function appendMsg(who,text){
+  const row=document.createElement('div');
+  row.style.display='flex';
+  row.style.gap='8px';
+  row.style.alignItems='flex-start';
+  const badge=document.createElement('span');
+  badge.textContent=who;
+  badge.style.background='rgba(249,224,120,0.12)';
+  badge.style.border='1px solid rgba(249,224,120,0.35)';
+  badge.style.color='#F9E078';
+  badge.style.borderRadius='6px';
+  badge.style.fontSize='12px';
+  badge.style.padding='2px 6px';
+  const textEl=document.createElement('div');
+  textEl.textContent=text;
+  row.appendChild(badge);
+  row.appendChild(textEl);
+  chatBox.appendChild(row);
+  chatBox.scrollTop=chatBox.scrollHeight;
+}
+
+promptTags.addEventListener('click',(e)=>{
+  if(e.target && e.target.matches('button[data-val]')){
+    const val=e.target.getAttribute('data-val');
+    if(aiPrompt.value){ aiPrompt.value += '，' + val; } else { aiPrompt.value = val; }
+    aiPrompt.focus();
+  }
+});
+
+sizeTags.addEventListener('click',(e)=>{
+  if(e.target && e.target.matches('button[data-size]')){
+    // toggle active
+    [...sizeTags.querySelectorAll('button')].forEach(b=>b.classList.remove('active'));
+    e.target.classList.add('active');
+    selectedSize=e.target.getAttribute('data-size');
+    console.log('尺寸选择:', selectedSize); // 调试信息
+  }
+});
+
+genBtn.addEventListener('click', async ()=>{
+  const token=localStorage.getItem('puzzleToken');
+  if(!token){
+    aiTip.textContent='请先登录后再使用 AI 生成功能。';
+    return;
+  }
+  const prompt=(aiPrompt.value||'').trim();
+  if(!prompt){ aiTip.textContent='请输入描述'; return; }
+  console.log('当前选择的尺寸:', selectedSize); // 调试信息
+  aiTip.textContent='生成中...';
+  appendMsg('我', prompt);
+  try{
+    const form=new FormData();
+    form.append('prompt', prompt);
+    const res=await fetch('/ai/generate',{ method:'POST', body:form });
+    const json=await res.json();
+    if(json.code===200 && json.data && json.data.url){
+      let url=json.data.url;
+      if(selectedSize){
+        const [w,h]=selectedSize.split('x');
+        url += `?width=${encodeURIComponent(w)}&height=${encodeURIComponent(h)}`;
+      }
+      aiImg.src=url;
+      aiResult.style.display='flex';
+      aiImg.style.display='block';
+      if(aiPlaceholder) aiPlaceholder.style.display='none';
+      appendMsg('AI', '已生成图片，见上方预览');
+      aiTip.textContent='';
+    }else{
+      aiTip.textContent=json.message||'生成失败';
+      appendMsg('AI', '生成失败');
+    }
+  }catch(e){ aiTip.textContent='网络错误'; }
+});
+</script>
+
+<!-- 帮助页面模态框 -->
+<div class="modal-mask" id="helpModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span>操作指南</span>
+            <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
+        </div>
+        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
+            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+            <p>- 单击选中的图块，顺时针旋转90度</p>
+            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
+        </div>
+    </div>
+</div>
+    <!-- 页面特定的背景音乐 -->
+    <script>
+        // 等待音乐管理器加载完成
+        function initPageMusic() {
+            if (window.musicManager) {
+                // AI生成页面自动播放AI音乐
+                window.musicManager.playScene('ai');
+            } else {
+                // 如果音乐管理器尚未加载，稍后重试
+                setTimeout(initPageMusic, 100);
+            }
+        }
+        
+        // 页面加载完成后直接初始化音乐，无需等待用户交互
+        document.addEventListener('DOMContentLoaded', function() {
+            // 直接尝试播放音乐
+            initPageMusic();
+        });
+    </script>
+</body>
+</html>
+
+

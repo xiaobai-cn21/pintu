@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>音乐测试工具 - 拼图大师</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #20223A;
+            color: #E0E0E0;
+            text-align: center;
+            padding: 40px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #2A2D4A;
+            padding: 30px;
+            border-radius: 8px;
+        }
+        h1 {
+            color: #F9E078;
+            margin-bottom: 20px;
+        }
+        .instruction {
+            text-align: left;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        .audio-player {
+            margin: 20px 0;
+        }
+        audio {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        .tip {
+            background-color: #1A1C30;
+            padding: 15px;
+            border-left: 4px solid #F9E078;
+            text-align: left;
+            margin: 20px 0;
+        }
+        .file-drop-area {
+            border: 2px dashed #F9E078;
+            padding: 20px;
+            margin: 20px 0;
+            cursor: pointer;
+            color: #F9E078;
+        }
+        .file-drop-area:hover {
+            background-color: rgba(249, 224, 120, 0.1);
+        }
+        #fileInput {
+            display: none;
+        }
+        .back-btn {
+            background-color: #F9E078;
+            color: #20223A;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+        .back-btn:hover {
+            background-color: #E0C860;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>拼图大师 - 背景音乐测试工具</h1>
+        
+        <div class="instruction">
+            <h3>如何为游戏添加背景音乐：</h3>
+            <ol>
+                <li>准备4个MP3格式的音乐文件，分别用于：</li>
+                <ul>
+                    <li><strong>main_theme.mp3</strong> - 主界面背景音乐（轻松愉快的音乐）</li>
+                    <li><strong>game_theme.mp3</strong> - 游戏界面背景音乐（稍微紧张但不影响思考的音乐）</li>
+                    <li><strong>ai_theme.mp3</strong> - AI生成界面背景音乐（神秘或科技感的音乐）</li>
+                    <li><strong>versus_theme.mp3</strong> - 对战界面背景音乐（节奏较快、有竞争感的音乐）</li>
+                </ul>
+                <li>将这些音乐文件放入 <strong>static/audio/</strong> 文件夹中</li>
+                <li>刷新游戏页面，背景音乐功能将自动生效</li>
+            </ol>
+        </div>
+        
+        <div class="tip">
+            <p><strong>提示：</strong></p>
+            <ul>
+                <li>请使用无版权或已获得授权的音乐文件</li>
+                <li>建议文件大小控制在5MB以内，以保证加载速度</li>
+                <li>游戏会自动记住您的静音设置</li>
+                <li>背景音乐需要用户交互后才能播放（点击页面或按键）</li>
+            </ul>
+        </div>
+        
+        <h3>音频格式测试：</h3>
+        <div class="audio-player">
+            <p>如果您想测试您的音频文件是否能在浏览器中正常播放，可以使用下面的播放器：</p>
+            <div class="file-drop-area" onclick="document.getElementById('fileInput').click()">
+                <p>点击这里上传音频文件进行测试</p>
+                <input type="file" id="fileInput" accept=".mp3">
+            </div>
+            <audio id="testPlayer" controls>
+                您的浏览器不支持音频播放
+            </audio>
+        </div>
+        
+        <button class="back-btn" onclick="window.location.href='/static/audio/README.txt'">查看详细说明</button>
+    </div>
+    
+    <script>
+        // 文件上传测试功能
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const audioPlayer = document.getElementById('testPlayer');
+                const objectUrl = URL.createObjectURL(file);
+                audioPlayer.src = objectUrl;
+                audioPlayer.play().catch(err => {
+                    console.log('播放失败，可能需要用户交互:', err);
+                });
+                
+                // 当不再需要时释放URL对象
+                audioPlayer.onended = function() {
+                    URL.revokeObjectURL(objectUrl);
+                };
+            }
+        });
+        
+        // 演示如何创建简单的音频文件（仅供参考）
+        function createSampleAudio() {
+            alert('要创建简单的测试音频文件，您可以使用在线音频生成工具，例如：\n- Audacity（免费音频编辑软件）\n- Online Tone Generator\n- 或搜索 "免费MP3音乐样本"');
+        }
+    </script>
+</body>
+</html>
