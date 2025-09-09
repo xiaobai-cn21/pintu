@@ -63,3 +63,33 @@ class game_saves(db.Model):
     current_steps = Column(Integer, default=0)
     puzzle_state = Column(Text)
     save_time = Column(DateTime, default=datetime.utcnow)
+
+class messages(db.Model):
+    __tablename__ = 'messages'
+    message_id = Column(Integer, primary_key=True, autoincrement=True)
+    sender_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    receiver_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    content = Column(String(500), nullable=False)
+    sent_at = Column(DateTime, default=datetime.utcnow)
+
+    sender = relationship('users', foreign_keys=[sender_id], backref='sent_messages', lazy=True)
+    receiver = relationship('users', foreign_keys=[receiver_id], backref='received_messages', lazy=True)
+
+
+class friend_requests(db.Model):
+    __tablename__ = 'friend_requests'
+    request_id = Column(Integer, primary_key=True, autoincrement=True)
+    sender_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    receiver_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    status = Column(Enum('pending', 'accepted', 'rejected'), default='pending')
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class friends(db.Model):
+    __tablename__ = 'friends'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    friend_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'friend_id', name='unique_friendship'),
+    )

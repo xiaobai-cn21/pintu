@@ -11,6 +11,7 @@ from views.pvp import pvp, register_socketio_events
 from flask_socketio import SocketIO
 from views.ranking import ranking
 from views.levels import levels
+from views.social import social
 
 def create_app():
     app = Flask(__name__)
@@ -29,6 +30,7 @@ def create_app():
     app.register_blueprint(pvp, url_prefix='/pvp')
     app.register_blueprint(ranking, url_prefix='/ranking')
     app.register_blueprint(levels, url_prefix='/levels')
+    app.register_blueprint(social, url_prefix='/social')
 
     @app.route('/')
     def main():
@@ -74,6 +76,14 @@ def create_app():
     @app.route('/versus')
     def versus_page():
         return render_template('versus.html')
+    
+    @app.route('/messages')
+    def messages_page():
+        return render_template('messages.html')
+    
+    @app.route('/search_friends')
+    def search_friend():
+        return render_template('search_friend.html')
     return app
 
 if __name__ == '__main__':
