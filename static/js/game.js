@@ -1,5 +1,12 @@
 // 游戏状态管理
 class PuzzleGame {
+    init({ img, size, shape }) {
+    this.originalImageUrl = img;
+    this.difficulty = parseInt(size);
+    if (shape) this.shape = shape;
+    this.setPuzzleBg();
+    this.startGame();
+}
     constructor() {
         this.pieces = [];
         this.difficulty = 4;

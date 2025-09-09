@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>拼图预览</title>
+    <title>拼图对战房间创建</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
     <style>
@@ -26,7 +26,7 @@
     <button class="btn btn-secondary back-btn" onclick="window.location.href='{{ url_for('main') }}'" style="padding: 8px 16px; font-size: 12px; margin-right: 16px;">
         <span class="chinese-text">返回</span>
     </button>
-    <span class="chinese-text" style="color: #F9E078; font-size: 18px;">创建拼图</span>
+    <span class="chinese-text" style="color: #F9E078; font-size: 18px;">创建对战拼图房间</span>
 </div>
 <div class="preview-main">
     <!-- 左侧：上传和配置 -->
@@ -77,18 +77,20 @@
                 <p style="font-size: 14px; color: #666;">预计难度：<span id="difficultyText">简单</span></p>
             </div>
             <div class="preview-btn-row">
-                <button id="playBtn" class="btn btn-primary" disabled>开始游戏</button>
+                <button id="playBtn" class="btn btn-primary" disabled>创建对战房间</button>
             </div>
         </div>
     </div>
 </div>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 <script>
     // 工具函数：获取URL参数
     function getQueryParam(name) {
         const url = new URL(window.location.href);
         return url.searchParams.get(name);
     }
-    const isPvp = getQueryParam('pvp') === '1';
+    // 只允许对战模式
+    const isPvp = true;
 
     const uploadBox = document.getElementById('uploadBox');
     const imageUpload = document.getElementById('imageUpload');
@@ -216,57 +218,42 @@
             size: difficultySelect.value,
             shape: shapeSelect.value
         };
-        if (isPvp) {
-            // 对战模式：发送到后端创建房间
-            let username = localStorage.getItem('pvp_username');
-            if (!username) {
-                username = prompt('请输入你的昵称') || ('玩家' + Math.floor(Math.random() * 10000));
-                localStorage.setItem('pvp_username', username);
-            }
-            try {
-                const res = await fetch('/pvp/create_room', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({username, puzzle: puzzleData})
+        let username = localStorage.getItem('pvp_username');
+        if (!username) {
+            username = prompt('请输入你的昵称') || ('玩家' + Math.floor(Math.random() * 10000));
+            localStorage.setItem('pvp_username', username);
+        }
+        try {
+            const res = await fetch('/pvp/create_room', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({username, puzzle: puzzleData})
+            });
+            const data = await res.json();
+            if (data.code === 200) {
+                // Show waiting UI
+                document.body.innerHTML = `
+                    <div style="text-align:center;margin-top:60px;">
+                        <h2>房间号: ${data.data.room_id}</h2>
+                        <p>等待其他玩家加入...</p>
+                        <img src="${imgData}" style="max-width:300px;"><br>
+                        <button onclick="window.location.href='/versus'">离开房间</button>
+                    </div>
+                `;
+                // Connect to socket and join room
+                const socket = io();
+                socket.emit('join_room', {room_id: data.data.room_id, username});
+                socket.on('start', function(ev) {
+                    window.location.href = `/online_game?room_id=${data.data.room_id}`;
                 });
-                const data = await res.json();
-                if (data.code === 200) {
-                    window.location.href = '/versus?room_id=' + data.room_id;
-                } else {
-                    alert('创建房间失败: ' + (data.msg || JSON.stringify(data)));
-                }
-            } catch (e) {
-                alert('网络错误，无法创建房间');
+            } else {
+                alert('创建房间失败: ' + (data.msg || JSON.stringify(data)));
             }
-        } else {
-            // 普通模式：本地游玩
-            localStorage.setItem('customImage', imgData);
-            localStorage.setItem('customSize', difficultySelect.value);
-            localStorage.setItem('customShape', shapeSelect.value);
-            window.location.href = '{{ url_for('game_page') }}';
+        } catch (e) {
+            alert('网络错误，无法创建房间');
         }
     });
 
-    window.addEventListener('DOMContentLoaded', function() {
-        const customImage = localStorage.getItem('customImage');
-        const customSize = localStorage.getItem('customSize');
-        const customShape = localStorage.getItem('customShape');
-        if (customImage && customSize) {
-            imgData = customImage;
-            previewImage.src = imgData;
-            previewImage.style.display = 'block';
-            gridCanvas.style.display = 'block';
-            previewTip.style.display = 'none';
-            difficultySelect.value = customSize;
-            if (customShape) { shapeSelect.value = customShape; currentShape = customShape; }
-            updateDifficultyText();
-            drawGrid();
-            playBtn.disabled = false;
-            localStorage.removeItem('customImage');
-            localStorage.removeItem('customSize');
-            localStorage.removeItem('customShape');
-        }
-    });
 </script>
 
 <!-- 帮助页面模态框 -->
@@ -293,22 +280,5 @@
         </div>
     </div>
 </div>
-<!-- 页面特定的背景音乐 -->
-<script>
-    // 等待音乐管理器加载完成
-    function initPageMusic() {
-        if (window.musicManager) {
-            // 拼图编辑器页面自动播放主界面音乐
-            window.musicManager.playScene('main');
-        } else {
-            // 如果音乐管理器尚未加载，稍后重试
-            setTimeout(initPageMusic, 100);
-        }
-    }
-    // 页面加载完成后直接初始化音乐，无需等待用户交互
-    document.addEventListener('DOMContentLoaded', function() {
-        initPageMusic();
-    });
-</script>
 </body>
 </html>

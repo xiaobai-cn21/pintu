@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Room with Image</title>
+</head>
+<body>
+    <h2>Create a New Room</h2>
+    <form id="createForm" enctype="multipart/form-data">
+        <input name="username" type="text" placeholder="Enter your username"><br>
+        <input name="image" type="file" accept="image/*"><br>
+        <button type="submit">Create Room</button>
+    </form>
+    <div id="status"></div>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+    let socket = null;
+    let myRoomId = null;
+    let myImage = null;
+    let myUsername = null;
+
+    document.getElementById('createForm').onsubmit = async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        myUsername = formData.get('username');
+        const res = await fetch('/pvp/create_room', {method: 'POST', body: formData});
+        const data = await res.json();
+        if (data.code === 200) {
+            myRoomId = data.data.room_id;
+            myImage = data.data.image;
+            document.body.innerHTML = `<h3>Room ID: ${myRoomId}</h3>
+                <p>Waiting for another player to join...</p>
+                <img src="/static/uploads/${myImage}" style="max-width:300px;"><br>
+                <button onclick="window.location.href='/pvp/versus'">Leave Room</button>`;
+            // 连接socket并加入房间
+            socket = io("http://localhost:5000");
+            socket.emit('join_room', {room_id: myRoomId, username: myUsername});
+            socket.on('start', function(data) {
+                // 跳转到photo.html并带参数
+                window.location.href = `/pvp/photo?room_id=${myRoomId}&image=${myImage}`;
+            });
+        } else {
+            document.getElementById('status').innerText = data.msg;
+        }
+    }
+</script>
+</body>
+</html>

@@ -84,7 +84,17 @@ def create_app():
     @app.route('/search_friends')
     def search_friend():
         return render_template('search_friend.html')
+    
+    @app.route('/online_game')
+    def online_game_page():
+        return render_template('online_game.html')
+    
+    @app.route('/online_editor')
+    def online_game_editor():
+        return render_template('online_editor.html')
     return app
+
+
 
 if __name__ == '__main__':
     app = create_app()

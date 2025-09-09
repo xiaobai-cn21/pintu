@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>房间照片</title>
+</head>
+<body>
+    <div style="text-align:center;margin-top:40px;">
+        <h2 id="roomTitle"></h2>
+        <img id="roomImg" src="" style="max-width:400px;display:block;margin:24px auto;">
+        <div>
+            <button id="challengeBtn" style="padding:12px 24px;font-size:16px;">开始挑战</button>
+            <button id="leaveBtn" style="padding:8px 16px;font-size:14px;">离开房间</button>
+        </div>
+    </div>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        // 获取参数
+        function getQuery(name) {
+            const url = new URL(window.location.href);
+            return url.searchParams.get(name);
+        }
+        const roomId = getQuery('room_id');
+        const image = getQuery('image');
+        document.getElementById('roomTitle').innerText = '你已加入房间: ' + roomId;
+        document.getElementById('roomImg').src = '/static/uploads/' + image;
+
+        // 你可以继续用socket.io处理挑战和离开房间
+        const socket = io("http://localhost:5000");
+        document.getElementById('challengeBtn').onclick = function() {
+            socket.emit('challenge', {room_id: roomId});
+        };
+        document.getElementById('leaveBtn').onclick = function() {
+            socket.emit('leave_room', {room_id: roomId, username: localStorage.getItem('username') || ''});
+            window.location.href = '/pvp/versus';
+        };
+        socket.on('lose', function() {
+            alert('你输了');
+        });
+        socket.on('win', function() {
+            alert('你赢了！');
+        });
+    </script>
+</body>
+</html>

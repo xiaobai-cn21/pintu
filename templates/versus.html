@@ -154,9 +154,8 @@
 
     // 创建房间
     document.getElementById('createBtn').onclick = function() {
-        const username = document.getElementById('username').value || '用户' + Math.floor(Math.random()*1000);
-        myUsername = username;
-        socket.emit('create_room', {username});
+    // 跳转到图片上传页面
+    window.location.href = '/online_editor';
     };
 
     // 加入房间
@@ -187,25 +186,29 @@
         myRoomId = data.data.room_id;
         document.getElementById('main').style.display = 'none';
         document.getElementById('room').style.display = 'block';
-        document.getElementById('roomInfo').innerText = '房间号: ' + myRoomId + '，请等待其他玩家加入...';
+        let imgHtml = '';
+        if (data.data.image) {
+            imgHtml = `<img src="/static/uploads/${data.data.image}" style="max-width:300px;display:block;margin:16px auto;">`;
+        }
+        document.getElementById('roomInfo').innerHTML = '房间号: ' + myRoomId + '，请等待其他玩家加入...<br>' + imgHtml;
         document.getElementById('challengeBtn').style.display = 'none';
         document.getElementById('result').innerText = '';
     });
 
     socket.on('start', function(data) {
         myRoomId = data.data.room_id;
-        document.getElementById('main').style.display = 'none';
-        document.getElementById('room').style.display = 'block';
-        document.getElementById('roomInfo').innerText = '你已加入房间: ' + myRoomId + '，可以开始挑战！';
-        document.getElementById('challengeBtn').style.display = 'inline-block';
-        document.getElementById('result').innerText = '';
-    });
-
+        // Redirect to the puzzle game page with room_id as a parameter
+        window.location.href = `/online_game?room_id=${myRoomId}`;
+    }); // <-- Add this line!
     socket.on('joined', function(data) {
         myRoomId = data.data.room_id;
         document.getElementById('main').style.display = 'none';
         document.getElementById('room').style.display = 'block';
-        document.getElementById('roomInfo').innerText = '你已加入房间: ' + myRoomId;
+        let imgHtml = '';
+        if (data.data.image) {
+            imgHtml = `<img src="/static/uploads/${data.data.image}" style="max-width:300px;display:block;margin:16px auto;">`;
+        }
+        document.getElementById('roomInfo').innerHTML = '你已加入房间: ' + myRoomId + '<br>' + imgHtml;
     });
 
     socket.on('left', function(data) {
@@ -236,24 +239,24 @@
         alert(data.msg || JSON.stringify(data));
     });
 </script>
-    <!-- 页面特定的背景音乐 -->
-    <script>
-        // 等待音乐管理器加载完成
-        function initPageMusic() {
-            if (window.musicManager) {
-                // 对战页面自动播放对战音乐
-                window.musicManager.playScene('versus');
-            } else {
-                // 如果音乐管理器尚未加载，稍后重试
-                setTimeout(initPageMusic, 100);
-            }
+<!-- 页面特定的背景音乐 -->
+<script>
+    // 等待音乐管理器加载完成
+    function initPageMusic() {
+        if (window.musicManager) {
+            // 对战页面自动播放对战音乐
+            window.musicManager.playScene('versus');
+        } else {
+            // 如果音乐管理器尚未加载，稍后重试
+            setTimeout(initPageMusic, 100);
         }
-        
-        // 页面加载完成后直接初始化音乐，无需等待用户交互
-        document.addEventListener('DOMContentLoaded', function() {
-            // 直接尝试播放音乐
-            initPageMusic();
-        });
-    </script>
+    }
+    
+    // 页面加载完成后直接初始化音乐，无需等待用户交互
+    document.addEventListener('DOMContentLoaded', function() {
+        // 直接尝试播放音乐
+        initPageMusic();
+    });
+</script>
 </body>
 </html>
