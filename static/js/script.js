@@ -656,9 +656,11 @@ function findPieceOnBoard(x, y) {
 // 修复拼图完成检测及提示功能
 function checkPuzzleCompletion() {
     const piecesOnBoard = puzzleBoard.querySelectorAll('.puzzle-piece');
-    const totalPieces = difficulty * difficulty;
 
-    // 检查是否所有拼图都已放置到棋盘上
+    const totalPieces = shape === 'triangle'
+        ? difficulty * difficulty * 2
+        : difficulty * difficulty;
+
     if (piecesOnBoard.length !== totalPieces) {
         return false;
     }
@@ -671,19 +673,15 @@ function checkPuzzleCompletion() {
         const correctX = parseInt(piece.dataset.correctX);
         const correctY = parseInt(piece.dataset.correctY);
 
-        // 检查位置是否正确
         if (pieceX !== correctX || pieceY !== correctY) {
             allCorrect = false;
         }
 
-        // 对于拼图形状，还要检查旋转和翻转是否正确
-        if (shape === 'jigsaw') {
+        if (shape === 'jigsaw' || shape === 'triangle') {
             const rotation = parseInt(piece.dataset.rotation) || 0;
-            const correctRotation = parseInt(piece.dataset.correctRotation) || 0;
             const isFlipped = piece.dataset.flipped === 'true';
-            const shouldBeFlipped = piece.dataset.shouldBeFlipped === 'true';
 
-            if (rotation !== correctRotation || isFlipped !== shouldBeFlipped) {
+            if (rotation !== 0 || isFlipped) {
                 allCorrect = false;
             }
         }
