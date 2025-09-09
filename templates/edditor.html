@@ -208,22 +208,22 @@
 
         window.addEventListener('DOMContentLoaded', function() {
             const customImage = localStorage.getItem('customImage');
-            const customSize = localStorage.getItem('customSize');
+            let customSize = localStorage.getItem('customSize');
             const customShape = localStorage.getItem('customShape');
-            if (customImage && customSize) {
+            if (customImage) {
                 imgData = customImage;
                 previewImage.src = imgData;
                 previewImage.style.display = 'block';
                 gridCanvas.style.display = 'block';
                 previewTip.style.display = 'none';
+                // 若未提供难度，默认 4x4
+                if (!customSize) { customSize = '4'; }
                 difficultySelect.value = customSize;
                 if (customShape) { shapeSelect.value = customShape; currentShape = customShape; }
                 updateDifficultyText();
                 drawGrid();
                 playBtn.disabled = false;
-                localStorage.removeItem('customImage');
-                localStorage.removeItem('customSize');
-                localStorage.removeItem('customShape');
+                // 不在此处清空，允许用户返回游戏后仍可复用；仅在进入游戏时由游戏页清空
             }
         });
     </script>
