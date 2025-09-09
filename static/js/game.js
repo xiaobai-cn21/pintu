@@ -28,9 +28,7 @@ class PuzzleGame {
         this.movesElement = document.getElementById('moves');
         this.gameComplete = document.getElementById('gameComplete');
         this.completeInfo = document.getElementById('completeInfo');
-        this.bestScoreInfo = document.getElementById('bestScoreInfo');
         this.playAgainBtn = document.getElementById('playAgainBtn');
-        this.backToMenuBtn = document.getElementById('backToMenuBtn');
         this.puzzleBg = document.getElementById('puzzleBg');
         this.toggleBgBtn = document.getElementById('toggleBgBtn');
     }
@@ -41,10 +39,6 @@ class PuzzleGame {
         this.playAgainBtn.addEventListener('click', () => {
             this.gameComplete.style.display = 'none';
             this.resetGame();
-        });
-        this.backToMenuBtn.addEventListener('click', () => {
-            this.gameComplete.style.display = 'none';
-            window.location.href = '/';
         });
         this.toggleBgBtn.addEventListener('click', () => this.toggleBg());
     }
@@ -595,10 +589,6 @@ class PuzzleGame {
             const remainingSeconds = this.seconds % 60;
             const timeString = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
             this.completeInfo.textContent = `你用了 ${timeString} 和 ${this.moves} 次移动完成了拼图！`;
-            
-            // 比较并保存最好成绩
-            this.compareAndSaveBestScore();
-            
             // 提交成绩到排行榜
             this.submitToRanking();
             setTimeout(() => {
@@ -648,56 +638,6 @@ const game = new PuzzleGame();
 // 初始化背景
 game.setPuzzleBg();
 
-    // 比较并保存最好成绩
-    compareAndSaveBestScore() {
-        try {
-            // 获取当前游戏的唯一标识（图片URL+难度）
-            const gameKey = `${this.originalImageUrl}_${this.difficulty}`;
-            
-            // 从localStorage获取最好成绩
-            const bestScores = JSON.parse(localStorage.getItem('puzzleBestScores') || '{}');
-            const currentScore = {
-                time: this.seconds,
-                moves: this.moves,
-                date: new Date().toISOString()
-            };
-            
-            let isNewBest = false;
-            let bestScoreInfo = '';
-            
-            // 如果没有历史成绩，或者当前成绩更好
-            if (!bestScores[gameKey] || 
-                this.seconds < bestScores[gameKey].time || 
-                (this.seconds === bestScores[gameKey].time && this.moves < bestScores[gameKey].moves)) {
-                
-                bestScores[gameKey] = currentScore;
-                localStorage.setItem('puzzleBestScores', JSON.stringify(bestScores));
-                isNewBest = true;
-                bestScoreInfo = '🎉 新的最好成绩！';
-            } else {
-                // 显示历史最好成绩
-                const best = bestScores[gameKey];
-                const bestMinutes = Math.floor(best.time / 60);
-                const bestSeconds = best.time % 60;
-                const bestTimeString = `${bestMinutes.toString().padStart(2, '0')}:${bestSeconds.toString().padStart(2, '0')}`;
-                bestScoreInfo = `最好成绩: ${bestTimeString} 和 ${best.moves} 次移动`;
-            }
-            
-            this.bestScoreInfo.textContent = bestScoreInfo;
-        } catch (e) {
-            console.error('保存最好成绩失败:', e);
-        }
-    }
-
-    // 导出游戏实例供外部使用
-}
-
-// 创建游戏实例
-const game = new PuzzleGame();
-
-// 导出游戏实例供外部使用
-window.puzzleGame = game;
-
 // 页面加载完成后的初始化
 window.addEventListener('DOMContentLoaded', function() {
     const customImage = localStorage.getItem('customImage');
@@ -713,3 +653,6 @@ window.addEventListener('DOMContentLoaded', function() {
         game.setPuzzleBg();
     }
 });
+
+// 导出游戏实例供外部使用
+window.puzzleGame = game;
