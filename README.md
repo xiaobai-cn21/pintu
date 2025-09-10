@@ -87,6 +87,30 @@ python download_fonts.py
 ### 数据库配置：
 确保 MySQL 服务运行，并在 `config.py` 中配置数据库连接。
 
+### 系统关卡导入（原关卡一次性导入）
+
+项目提供脚本 `scripts/seed_system_levels.py` 用于将“系统自带关卡”批量写入数据库：
+
+功能概述：
+- 将关卡写入 `puzzles` 表，并统一设置 `is_system_level=True`；
+- 为每条记录配置：`title`, `image_url`, `grid(3/4/5/6/8)`, `piece_shape(rect/triangle/irregular)`, `is_rotatable`, `is_flipable`, `type(nature/animal/building/cartoon/other)`；
+- 脚本按照与编辑器一致的规则，用上述配置自动计算难度 `difficulty`（`easy/medium/hard`），再落库；
+- 以 `title` 作为幂等键：已存在则更新，不存在则插入。
+
+使用方法：
+```bash
+python scripts/seed_system_levels.py
+```
+
+自定义：
+- 编辑脚本中的 `seed_levels` 列表即可增删改关卡；
+- 形状/网格/旋转/翻转会影响自动难度；如需定制规则，可修改函数 `compute_difficulty_by_settings`。
+
+前端显示：
+- 选择关卡页会请求 `GET /pic/levels/system` 渲染系统关卡；
+- 难度徽标：`easy=简单(绿)`、`medium=中等(橙)`、`hard=困难(红)`；
+- 无数据时显示“暂无系统关卡”并提供“去创建拼图”。
+
 ## 🎯 部署
 
 1. 确保服务器已安装 Python 3.8+
