@@ -34,15 +34,29 @@ class PuzzleGame {
         this.setPuzzleBg();
     }
         sendWinMessage() {
+        console.log("i won")
+        const token = localStorage.getItem('puzzleToken');
         const roomId = new URLSearchParams(window.location.search).get('room_id');
-        if (window.socket && roomId) {
-            window.socket.emit('pvp_win', {
-                room_id: roomId,
-                username: localStorage.getItem('pvp_username') || '玩家',
-                moves: this.moves,
-                time: this.seconds
+        fetch('/auth/me', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        })
+            .then(res => res.json())
+            .then(data => {
+                console.log("i woaaan", data.data.username)
+                if (data.data.username && window.socket && roomId) {
+                    window.socket.emit('pvp_win', {
+                        room_id: roomId,
+                        username: data.data.username,
+                        moves: this.moves,
+                        time: this.seconds
+                    });
+                } else {
+                    alert('获取用户名失败，请重新登录');
+                }
+            })
+            .catch(() => {
+                alert('获取用户名失败，请检查网络');
             });
-        }
     }
 
     initializeElements() {

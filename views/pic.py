@@ -45,16 +45,32 @@ def create_puzzle():
         puzzle_title = data.get('title')
         if (len(puzzle_title) < 4 or len(puzzle_title) > 20):
             return jsonify({"code": "404", "message": "拼图标题长度需在5~20个字符之间", "data": None})
-        
+        # 检查标题唯一性
+        if puzzles.query.filter_by(title=puzzle_title).first():
+            return jsonify({"code": "409", "message": "该关卡标题已存在，请更换标题", "data": None})
+
+        puzzle_type = data.get('type', 'other')
+        if puzzle_type not in ['nature', 'animal', 'building', 'cartoon', 'other']:
+            puzzle_type = 'other'
+
+
+        # 只有管理员能设置 is_system_level，普通用户强制为 False
+        is_admin = getattr(user, 'is_admin', False)
+        if is_admin:
+            is_system_level = bool(int(data.get('is_system_level', 0)))
+        else:
+            is_system_level = False
+
         puzzle = puzzles(
             creator_id=creator_id,
             title=puzzle_title,
             image_url=image_url,
+            type=puzzle_type,
             difficulty=data.get('difficulty'),
             piece_count=data.get('piece_count'),
             piece_shape=data.get('piece_shape'),
             is_rotatable=bool(int(data.get('is_rotatable', 0))),
-            is_system_level=bool(int(data.get('is_system_level', 0))),
+            is_system_level=is_system_level,
             created_at=datetime.now()
         )
         db.session.add(puzzle)
@@ -82,6 +98,7 @@ def update_puzzle(puzzle_id):
             puzzle.image_url = f'/static/uploads/{filename}'
 
         puzzle.title = data.get('title', puzzle.title)
+        puzzle.type = data.get('type', puzzle.type)
         puzzle.difficulty = data.get('difficulty', puzzle.difficulty)
         puzzle.piece_count = data.get('piece_count', puzzle.piece_count)
         puzzle.piece_shape = data.get('piece_shape', puzzle.piece_shape)
@@ -120,6 +137,7 @@ def get_puzzle_detail(puzzle_id):
                 "puzzle_id": puzzle.puzzle_id,
                 "title": puzzle.title,
                 "image_url": puzzle.image_url,
+                "type": puzzle.type,
                 "difficulty": puzzle.difficulty,
                 "piece_count": puzzle.piece_count,
                 "piece_shape": puzzle.piece_shape,
@@ -147,6 +165,7 @@ def get_puzzle_list():
                 "puzzle_id": puzzle.puzzle_id,
                 "title": puzzle.title,
                 "image_url": puzzle.image_url,
+                "type": puzzle.type,
                 "difficulty": puzzle.difficulty,
                 "piece_count": puzzle.piece_count,
                 "piece_shape": puzzle.piece_shape,

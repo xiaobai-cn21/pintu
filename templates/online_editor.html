@@ -236,6 +236,27 @@
         previewImage.src = imgData;
     }
 
+    // 统一用 /auth/me 获取用户名
+    async function fetchUsername() {
+        const token = localStorage.getItem('puzzleToken');
+        if (!token) {
+            alert('请先登录');
+            window.location.href = '/';
+            return null;
+        }
+        const res = await fetch('/auth/me', {
+            headers: { 'Authorization': 'Bearer ' + token }
+        });
+        const data = await res.json();
+        if (data.code === 200 && data.data && data.data.username) {
+            return data.data.username;
+        } else {
+            alert('登录信息失效，请重新登录');
+            window.location.href = '/';
+            return null;
+        }
+    }
+
     playBtn.addEventListener('click', async function() {
         if (!imgData) {
             alert('请先上传图片');
@@ -248,11 +269,8 @@
             randomRotation: randomRotationCheckbox.checked,
             randomFlip: randomFlipCheckbox.checked
         };
-        let username = localStorage.getItem('pvp_username');
-        if (!username) {
-            username = prompt('请输入你的昵称') || ('玩家' + Math.floor(Math.random() * 10000));
-            localStorage.setItem('pvp_username', username);
-        }
+        const username = await fetchUsername();
+        if (!username) return;
         try {
             const res = await fetch('/pvp/create_room', {
                 method: 'POST',
@@ -272,7 +290,20 @@
                 `;
                 // Connect to socket and join room
                 const socket = io();
-                socket.emit('join_room', {room_id: data.data.room_id, username});
+                // 再次用 /auth/me 获取用户名，保证和房间创建一致
+                let realUsername = username;
+                try {
+                    const token = localStorage.getItem('puzzleToken');
+                    if (token) {
+                        const res2 = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+                        const data2 = await res2.json();
+                        if (data2.code === 200 && data2.data && data2.data.username) {
+                            realUsername = data2.data.username;
+                        }
+                    }
+                } catch (e) {}
+                console.log("i am joining", username);
+                socket.emit('join_room', {room_id: data.data.room_id, username: realUsername});
                 socket.on('start', function(ev) {
                     window.location.href = `/online_game?room_id=${data.data.room_id}`;
                 });
