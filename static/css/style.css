@@ -661,3 +661,30 @@ body {
     outline: none;
     box-shadow: 0 0 0 2px rgba(249, 224, 120, 0.3);
 }
+/* 默认5列 */
+.share-list, #resultContent, #mySharesList {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 20px;
+}
+
+/* 屏幕宽度小于900px时显示3列 */
+@media (max-width: 900px) {
+  .share-list, #resultContent, #mySharesList {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+/* 屏幕宽度小于600px时显示1列 */
+@media (max-width: 600px) {
+  .share-list, #resultContent, #mySharesList {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 卡片悬停效果 */
+.share-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 6px 6px 0 #000000;
+  transition: all 0.2s ease;
+}

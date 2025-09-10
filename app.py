@@ -12,6 +12,7 @@ from flask_socketio import SocketIO
 from views.ranking import ranking
 from views.levels import levels
 from views.social import social
+from views.share import share_bp
 
 def create_app():
     app = Flask(__name__)
@@ -31,6 +32,7 @@ def create_app():
     app.register_blueprint(ranking, url_prefix='/ranking')
     app.register_blueprint(levels, url_prefix='/levels')
     app.register_blueprint(social, url_prefix='/social')
+    app.register_blueprint(share_bp,url_prefix='/share')
 
     @app.route('/')
     def main():

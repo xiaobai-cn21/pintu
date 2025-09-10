@@ -56,6 +56,7 @@ CREATE TABLE shares (
     user_id INT NOT NULL,
     puzzle_id INT NOT NULL,
     view_count INT DEFAULT 0,
+    share_code INT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (puzzle_id) REFERENCES puzzles(puzzle_id)
@@ -69,4 +70,15 @@ CREATE TABLE friends (
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (friend_id) REFERENCES users(user_id),
     UNIQUE KEY unique_friendship (user_id, friend_id)
+);
+
+CREATE TABLE puzzle_progress (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    puzzle_id INT NOT NULL,
+    progress_json TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_puzzle (user_id, puzzle_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (puzzle_id) REFERENCES puzzles(puzzle_id)
 );

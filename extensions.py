@@ -104,5 +104,17 @@ class shares(db.Model):
     share_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
     puzzle_id = Column(Integer, ForeignKey('puzzles.puzzle_id'), nullable=False)
+    share_code = Column(Integer)
     view_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class puzzle_progress(db.Model):
+    __tablename__ = 'puzzle_progress'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    puzzle_id = Column(Integer, ForeignKey('puzzles.puzzle_id'), nullable=False)
+    progress_json = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'puzzle_id', name='unique_user_puzzle'),
+    )

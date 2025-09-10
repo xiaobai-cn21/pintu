@@ -2,7 +2,7 @@
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
 import os
-from extensions import users, puzzles, db
+from extensions import users, puzzles, db, puzzle_progress
 from datetime import datetime
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
@@ -208,3 +208,41 @@ def get_system_levels():
         return jsonify({"code": 200, "message": "获取成功", "data": result})
     except Exception as e:
         return jsonify({"code": 500, "message": f"服务器内部错误: {str(e)}", "data": None})
+    
+
+@pic.route('/save_progress', methods=['POST'])
+@jwt_required()
+def save_progress():
+    data = request.json
+    user_id = get_jwt_identity()  # 从token获取
+    puzzle_id = data.get('puzzle_id', None)
+    progress_json = data.get('progress_json', None)
+
+    if not puzzle_id or not progress_json:
+        return jsonify({"code": 400, "message": "缺少 puzzle_id 或 progress_json", "data": None})
+
+    record = puzzle_progress.query.filter_by(user_id=user_id, puzzle_id=puzzle_id).first()
+    if record:
+        record.progress_json = progress_json
+    else:
+        record = puzzle_progress(user_id=user_id, puzzle_id=puzzle_id, progress_json=progress_json)
+        db.session.add(record)
+    db.session.commit()
+    return jsonify({"code": 200, "message": "保存成功", "data": None})
+
+@pic.route('/get_progress', methods=['GET'])
+@jwt_required()
+def get_progress():
+    user_id = get_jwt_identity()
+    puzzle_id = request.args.get('puzzle_id', type=int)
+    if not puzzle_id:
+        return jsonify({"code": 400, "message": "缺少 puzzle_id", "data": None})
+
+    record = puzzle_progress.query.filter_by(user_id=user_id, puzzle_id=puzzle_id).first()
+    if record:
+        print(f"Fetched record: id={record.id}, user_id={record.user_id}, puzzle_id={record.puzzle_id}")
+        print("progress_json:", record.progress_json)
+        return jsonify({"code": 200, "message": "获取成功", "data": record.progress_json})
+    else:
+        print("No record found for user_id:", user_id, "puzzle_id:", puzzle_id)
+        return jsonify({"code": 404, "message": "未找到进度", "data": None})
