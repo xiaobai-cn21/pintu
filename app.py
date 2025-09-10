@@ -21,15 +21,29 @@ def create_app():
         f"{Config.MYSQL_HOST}:{Config.MYSQL_PORT}/{Config.MYSQL_DB}"
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    # 添加数据库连接池配置
-    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
-        'pool_pre_ping': True,  # 在连接前检查连接是否有效
-        'pool_recycle': 300,    # 连接回收时间（秒）
-        'pool_timeout': 20,     # 获取连接的超时时间
-        'max_overflow': 0,      # 最大溢出连接数
-        'pool_size': 10         # 连接池大小
-    }
     app.config['JWT_SECRET_KEY'] = Config.SECRET_KEY
+    
+    # 设置正确的MIME类型，防止手机端误识别
+    @app.after_request
+    def after_request(response):
+        # 确保HTML文件有正确的MIME类型
+        if response.content_type == 'text/html':
+            response.headers['Content-Type'] = 'text/html; charset=utf-8'
+        # 确保CSS文件有正确的MIME类型
+        elif response.content_type == 'text/css':
+            response.headers['Content-Type'] = 'text/css; charset=utf-8'
+        # 确保JavaScript文件有正确的MIME类型
+        elif response.content_type == 'application/javascript':
+            response.headers['Content-Type'] = 'application/javascript; charset=utf-8'
+        # 确保JSON文件有正确的MIME类型
+        elif response.content_type == 'application/json':
+            response.headers['Content-Type'] = 'application/json; charset=utf-8'
+        # 防止配置文件被误识别
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-XSS-Protection'] = '1; mode=block'
+        return response
+    
     db.init_app(app)
     JWTManager(app)
 

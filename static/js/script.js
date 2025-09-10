@@ -169,11 +169,14 @@ function undo() {
 
 // 修改旋转函数，添加命令记录
 function rotatePiece(piece) {
+    console.log('rotatePiece 函数被调用:', piece);
     const currentRotation = parseInt(piece.dataset.rotation) || 0;
     let currentVisualRotation = parseInt(piece.dataset.visualRotation);
     if (isNaN(currentVisualRotation)) {
         currentVisualRotation = currentRotation;
     }
+
+    console.log('当前旋转角度:', currentRotation, '视觉旋转角度:', currentVisualRotation);
 
     const previousRect = { left: piece.style.left, top: piece.style.top };
     const command = new RotateCommand(piece, currentRotation, currentVisualRotation, previousRect);
@@ -183,8 +186,12 @@ function rotatePiece(piece) {
     piece.dataset.rotation = newRotation;
     piece.dataset.visualRotation = newVisualRotation;
 
+    console.log('新旋转角度:', newRotation, '新视觉旋转角度:', newVisualRotation);
+
     const isFlipped = piece.dataset.flipped === 'true';
     piece.style.transform = `rotate(${newVisualRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
+
+    console.log('应用变换:', piece.style.transform);
 
     if (piece.dataset.currentX !== undefined && piece.dataset.currentY !== undefined) {
         const gridX = parseInt(piece.dataset.currentX);
@@ -206,11 +213,14 @@ function rotatePiece(piece) {
 
 // 修改翻转函数，添加命令记录
 function flipPiece(piece) {
+    console.log('flipPiece 函数被调用:', piece);
     const isFlipped = piece.dataset.flipped === 'true';
     let visualRotation = parseInt(piece.dataset.visualRotation);
     if (isNaN(visualRotation)) {
         visualRotation = parseInt(piece.dataset.rotation) || 0;
     }
+
+    console.log('当前翻转状态:', isFlipped, '视觉旋转角度:', visualRotation);
 
     const previousRect = { left: piece.style.left, top: piece.style.top };
     const command = new FlipCommand(piece, isFlipped, visualRotation, previousRect);
@@ -218,7 +228,11 @@ function flipPiece(piece) {
     const newFlipped = !isFlipped;
     piece.dataset.flipped = newFlipped;
 
+    console.log('新翻转状态:', newFlipped);
+
     piece.style.transform = `rotate(${visualRotation}deg) scaleX(${newFlipped ? -1 : 1})`;
+
+    console.log('应用变换:', piece.style.transform);
 
     if (piece.dataset.currentX !== undefined && piece.dataset.currentY !== undefined) {
         const gridX = parseInt(piece.dataset.currentX);
@@ -269,23 +283,34 @@ function handleImageUpload(e) {
 
 // 设置背景
 function setPuzzleBg(onReadyCallback) {
+    console.log('开始设置拼图背景');
+    console.log('originalImageUrl:', originalImageUrl);
+    
     const img = new Image();
     img.onload = function() {
+        console.log('图片加载成功');
+        console.log('图片尺寸:', this.naturalWidth, 'x', this.naturalHeight);
+        
         const boardWidth = puzzleBoard.offsetWidth;
         const boardHeight = puzzleBoard.offsetHeight;
+        
+        console.log('拼图板尺寸:', boardWidth, 'x', boardHeight);
 
         const imageAspectRatio = this.naturalWidth / this.naturalHeight;
         const boardAspectRatio = boardWidth / boardHeight;
 
+        console.log('图片宽高比:', imageAspectRatio);
+        console.log('拼图板宽高比:', boardAspectRatio);
+
         // 新的 'cover' 计算逻辑
         if (imageAspectRatio > boardAspectRatio) {
-            // 图片比棋盘更“宽”，因此让图片高度适应棋盘高度，宽度会超出
+            // 图片比棋盘更"宽"，因此让图片高度适应棋盘高度，宽度会超出
             coveredHeight = boardHeight;
             coveredWidth = boardHeight * imageAspectRatio;
             offsetY = 0;
             offsetX = (boardWidth - coveredWidth) / 2; // X方向偏移量会是负数，使图片居中
         } else {
-            // 图片比棋盘更“高”，因此让图片宽度适应棋盘宽度，高度会超出
+            // 图片比棋盘更"高"，因此让图片宽度适应棋盘宽度，高度会超出
             coveredWidth = boardWidth;
             coveredHeight = boardWidth / imageAspectRatio;
             offsetX = 0;
@@ -314,6 +339,11 @@ function toggleBg() {
 
 // 开始游戏
 function startGame() {
+    console.log('开始游戏函数被调用');
+    console.log('originalImageUrl:', originalImageUrl);
+    console.log('difficulty:', difficulty);
+    console.log('shape:', shape);
+    
     gameStarted = true;
     moves = 0;
     seconds = 0;
@@ -323,9 +353,12 @@ function startGame() {
     timerInterval = setInterval(updateTimer, 1000);
 
     function checkAndLaunch() {
+        console.log('检查puzzleBoard尺寸:', puzzleBoard.offsetWidth, 'x', puzzleBoard.offsetHeight);
         if (puzzleBoard.offsetWidth === 0) {
+            console.log('puzzleBoard尺寸为0，等待下一帧');
             requestAnimationFrame(checkAndLaunch);
         } else {
+            console.log('puzzleBoard尺寸正常，开始设置背景和创建拼图块');
             setPuzzleBg(() => {
                 puzzleBg.style.opacity = bgVisible ? '0.25' : '0';
                 toggleBgBtn.textContent = bgVisible ? '隐藏背景' : '显示背景';
@@ -380,6 +413,11 @@ function resumeGame() {
 
 // 创建拼图块
 function createPuzzlePieces() {
+    console.log('开始创建拼图块');
+    console.log('puzzleBoard尺寸:', puzzleBoard.offsetWidth, 'x', puzzleBoard.offsetHeight);
+    console.log('difficulty:', difficulty);
+    console.log('shape:', shape);
+    
     puzzleBoard.innerHTML = '';
     piecesZone.innerHTML = '';
     if (svgDefs) svgDefs.innerHTML = '';
@@ -387,17 +425,24 @@ function createPuzzlePieces() {
 
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+    
+    console.log('拼图块尺寸:', pieceWidth, 'x', pieceHeight);
+    
     // 从 localStorage 获取随机选项
     const randomRotation = localStorage.getItem('randomRotation') === 'true';
     const randomFlip = localStorage.getItem('randomFlip') === 'true';
+    
+    console.log('随机选项 - rotation:', randomRotation, 'flip:', randomFlip);
 
     if (shape === 'square') {
+        console.log('创建方形拼图块');
         for (let y = 0; y < difficulty; y++) {
             for (let x = 0; x < difficulty; x++) {
                 createSquarePiece(x, y, pieceWidth, pieceHeight);
             }
         }
     } else if (shape === 'triangle') {
+        console.log('创建三角形拼图块');
         for (let y = 0; y < difficulty; y++) {
             for (let x = 0; x < difficulty; x++) {
                 if ((x + y) % 2 === 0) {
@@ -462,26 +507,35 @@ function shufflePieces() {
 }
 
 // 拖拽相关函数
-function dragStart(e) {
-    draggedPiece = this;
+function dragStart(e, clientX, clientY, piece) {
+    // 支持移动端参数
+    if (piece) {
+        draggedPiece = piece;
+    } else {
+        draggedPiece = this;
+    }
+    
+    // 支持移动端坐标
+    const x = clientX || e.clientX;
+    const y = clientY || e.clientY;
 
     const piecesOnBoard = puzzleBoard.querySelectorAll('.puzzle-piece');
     // 遍历它们
-    piecesOnBoard.forEach(piece => {
-        if (piece !== draggedPiece) {
-            piece.style.pointerEvents = 'none';
+    piecesOnBoard.forEach(p => {
+        if (p !== draggedPiece) {
+            p.style.pointerEvents = 'none';
         }
     });
 
-    customFollower = this.cloneNode(true);
+    customFollower = draggedPiece.cloneNode(true);
     customFollower.id = 'custom-follower';
     customFollower.style.position = 'fixed';
     customFollower.style.pointerEvents = 'none';
     customFollower.style.zIndex = '9999';
 
-    const rect = this.getBoundingClientRect();
-    customFollower.offsetX = e.clientX - rect.left;
-    customFollower.offsetY = e.clientY - rect.top;
+    const rect = draggedPiece.getBoundingClientRect();
+    customFollower.offsetX = x - rect.left;
+    customFollower.offsetY = y - rect.top;
 
     document.body.appendChild(customFollower);
     pieceDrag(e);
@@ -501,7 +555,10 @@ function dragStart(e) {
     e.dataTransfer.setData('text/plain', '');
 }
 
-function dragEnd() {
+function dragEnd(e, clientX, clientY, piece) {
+    // 支持移动端参数
+    const x = clientX || (e && e.clientX);
+    const y = clientY || (e && e.clientY);
 
     const hint = document.getElementById('drop-hint');
     if (hint) {
@@ -509,8 +566,8 @@ function dragEnd() {
     }
 
     const allPieces = document.querySelectorAll('.puzzle-piece');
-    allPieces.forEach(piece => {
-        piece.style.pointerEvents = 'auto';
+    allPieces.forEach(p => {
+        p.style.pointerEvents = 'auto';
     });
 
     // 移除事件监听器（火狐浏览器兼容）
@@ -520,6 +577,35 @@ function dragEnd() {
     if (draggedPiece) {
         draggedPiece.classList.remove('dragging');
         draggedPiece.style.visibility = 'visible';
+        
+        // 移动端拖拽结束处理
+        if (x !== undefined && y !== undefined) {
+            // 检查是否拖拽到拼图板上
+            const boardRect = puzzleBoard.getBoundingClientRect();
+            if (x >= boardRect.left && x <= boardRect.right && 
+                y >= boardRect.top && y <= boardRect.bottom) {
+                // 计算网格位置
+                const pieceWidth = boardRect.width / difficulty;
+                const pieceHeight = boardRect.height / difficulty;
+                const gridX = Math.floor((x - boardRect.left) / pieceWidth);
+                const gridY = Math.floor((y - boardRect.top) / pieceHeight);
+                
+                // 检查位置是否有效
+                if (gridX >= 0 && gridX < difficulty && gridY >= 0 && gridY < difficulty) {
+                    dropOnBoard(draggedPiece, gridX, gridY);
+                } else {
+                    // 拖拽到无效位置，返回原位置
+                    draggedPiece.style.position = '';
+                    draggedPiece.style.left = '';
+                    draggedPiece.style.top = '';
+                }
+            } else {
+                // 拖拽到拼图板外，返回原位置
+                draggedPiece.style.position = '';
+                draggedPiece.style.left = '';
+                draggedPiece.style.top = '';
+            }
+        }
     }
     if (customFollower) {
         document.body.removeChild(customFollower);
@@ -543,26 +629,33 @@ function handleDragOver(e) {
     }
 }
 // 拖拽到棋盘
-function dropOnBoard(e) {
-    e.preventDefault();
-    if (!draggedPiece) return;
+function dropOnBoard(piece, gridX, gridY) {
+    // 支持移动端参数
+    if (typeof piece === 'object' && piece.preventDefault) {
+        // 桌面端调用
+        piece.preventDefault();
+        if (!draggedPiece) return;
+        
+        const fromParent = draggedPiece.parentNode;
+        const fromRect = { position: draggedPiece.style.position, left: draggedPiece.style.left, top: draggedPiece.style.top, margin: draggedPiece.style.margin };
+        const fromX = draggedPiece.dataset.currentX;
+        const fromY = draggedPiece.dataset.currentY;
 
-    // --- 诊断会话开始 ---
-    console.group(`--- 拼图块放置诊断 @ ${new Date().toLocaleTimeString()} ---`);
+        const pieceWidth = puzzleBoard.offsetWidth / difficulty;
+        const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+        const boardRect = puzzleBoard.getBoundingClientRect();
 
-    const fromParent = draggedPiece.parentNode;
-    const fromRect = { position: draggedPiece.style.position, left: draggedPiece.style.left, top: draggedPiece.style.top, margin: draggedPiece.style.margin };
-    const fromX = draggedPiece.dataset.currentX;
-    const fromY = draggedPiece.dataset.currentY;
-
-    const pieceWidth = puzzleBoard.offsetWidth / difficulty;
-    const pieceHeight = puzzleBoard.offsetHeight / difficulty;
-    const boardRect = puzzleBoard.getBoundingClientRect();
-
-    let x = e.clientX - boardRect.left;
-    let y = e.clientY - boardRect.top;
-    let gridX = Math.floor(x / pieceWidth);
-    let gridY = Math.floor(y / pieceHeight);
+        let x = piece.clientX - boardRect.left;
+        let y = piece.clientY - boardRect.top;
+        let gridX = Math.floor(x / pieceWidth);
+        let gridY = Math.floor(y / pieceHeight);
+        
+        piece = draggedPiece;
+    } else {
+        // 移动端调用
+        if (!piece) return;
+        draggedPiece = piece;
+    }
     gridX = Math.max(0, Math.min(gridX, difficulty - 1));
     gridY = Math.max(0, Math.min(gridY, difficulty - 1));
 
@@ -865,13 +958,79 @@ function touchEnd(e) {
 }
 
 
+// 移动端检测
+function isMobile() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           window.innerWidth <= 768;
+}
+
+// 移动端触摸事件处理
+function initMobileSupport() {
+    if (!isMobile()) return;
+    
+    console.log('移动端触摸支持已启用');
+    
+    // 为所有拼图块添加移动端事件监听器
+    document.addEventListener('mobileDragStart', function(e) {
+        const piece = e.detail.element;
+        dragStart(e.detail.clientX, e.detail.clientY, piece);
+    });
+    
+    document.addEventListener('mobileDragMove', function(e) {
+        const piece = e.detail.element;
+        pieceDrag(e.detail.clientX, e.detail.clientY, piece);
+    });
+    
+    document.addEventListener('mobileDragEnd', function(e) {
+        const piece = e.detail.element;
+        dragEnd(e.detail.clientX, e.detail.clientY, piece);
+    });
+    
+    // 移动端旋转事件
+    document.addEventListener('mobileRotate', function(e) {
+        console.log('script.js 收到旋转事件:', e);
+        const piece = e.detail.element;
+        console.log('旋转拼图块:', piece);
+        rotatePiece(piece);
+    });
+    
+    // 移动端翻转事件
+    document.addEventListener('mobileFlip', function(e) {
+        console.log('script.js 收到翻转事件:', e);
+        const piece = e.detail.element;
+        console.log('翻转拼图块:', piece);
+        flipPiece(piece);
+    });
+    
+    // 移动端放置事件
+    document.addEventListener('mobileDropOnBoard', function(e) {
+        const piece = e.detail.element;
+        const gridX = e.detail.gridX;
+        const gridY = e.detail.gridY;
+        dropOnBoard(piece, gridX, gridY);
+    });
+}
+
 window.addEventListener('DOMContentLoaded', function() {
+    // 初始化移动端支持
+    initMobileSupport();
+    
+    console.log('游戏页面加载完成');
+    console.log('puzzleBoard元素:', puzzleBoard);
+    console.log('piecesZone元素:', piecesZone);
+    
     const customImage = localStorage.getItem('customImage');
     const customSize = localStorage.getItem('customSize');
     //获取形状
     const customShape = localStorage.getItem('customShape');
+    
+    console.log('localStorage数据:');
+    console.log('- customImage:', customImage);
+    console.log('- customSize:', customSize);
+    console.log('- customShape:', customShape);
 
     if (customImage && customSize) {
+        console.log('使用自定义图片和尺寸开始游戏');
         originalImageUrl = customImage;
         difficulty = parseInt(customSize);
         if (customShape) shape = customShape;
@@ -881,6 +1040,7 @@ window.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem('customSize');
         localStorage.removeItem('customShape'); // 清除
     } else if (customImage && !customSize) {
+        console.log('使用自定义图片，默认4x4开始游戏');
         // 仅有图片（来自 AI 页），默认 4x4 方形
         originalImageUrl = customImage;
         difficulty = 4;
@@ -893,15 +1053,42 @@ window.addEventListener('DOMContentLoaded', function() {
         // 禁用不需要的按钮
         if(resetBtn) resetBtn.disabled = true;
         if(toggleBgBtn) toggleBgBtn.disabled = true;
+        
+        // 添加测试按钮
+        const testBtn = document.createElement('button');
+        testBtn.textContent = '测试拼图（使用默认图片）';
+        testBtn.className = 'btn';
+        testBtn.style.marginTop = '20px';
+        testBtn.onclick = function() {
+            console.log('开始测试拼图');
+            originalImageUrl = '../static/images/background1.png';
+            difficulty = 4;
+            shape = 'square';
+            startGame();
+            testBtn.remove();
+        };
+        puzzleBoard.appendChild(testBtn);
     }
 });
 
 // 创建方形拼图块
 function createSquarePiece(x, y, width, height) {
+    console.log(`创建方形拼图块 (${x}, ${y})`);
+    
     const piece = document.createElement('div');
     piece.className = 'puzzle-piece square';
-    piece.style.width = `${width}px`;
-    piece.style.height = `${height}px`;
+    
+    // 移动端特殊处理：确保拼图块尺寸正确
+    if (isMobile()) {
+        console.log('移动端拼图块创建，尺寸:', width, 'x', height);
+        // 移动端使用固定像素值，避免CSS calc()冲突
+        piece.style.width = `${width}px`;
+        piece.style.height = `${height}px`;
+    } else {
+        piece.style.width = `${width}px`;
+        piece.style.height = `${height}px`;
+    }
+    
     piece.style.backgroundImage = `url(${originalImageUrl})`;
 
     // 使用新的全局变量来设置背景，确保比例正确
@@ -1206,15 +1393,19 @@ function extractLevelInfo() {
     }
 }
 
-function pieceDrag(e) {
+function pieceDrag(e, clientX, clientY, piece) {
     if (customFollower) {
+        // 支持移动端坐标
+        const x = clientX || e.clientX;
+        const y = clientY || e.clientY;
+        
         // e.clientX 和 e.clientY 在拖拽的最后一刻可能会变成0，需要过滤掉
-        if (e.clientX === 0 && e.clientY === 0) return;
+        if (x === 0 && y === 0) return;
 
         // 更新自定义跟随器的位置
         // 这里的 offsetX 和 offsetY 是在 dragStart 中设置的
-        customFollower.style.left = `${e.clientX - customFollower.offsetX}px`;
-        customFollower.style.top = `${e.clientY - customFollower.offsetY}px`;
+        customFollower.style.left = `${x - customFollower.offsetX}px`;
+        customFollower.style.top = `${y - customFollower.offsetY}px`;
     }
 }
 
