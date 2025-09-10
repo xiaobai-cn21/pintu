@@ -583,6 +583,7 @@ body {
     align-items:center;        /* 垂直居中 */
     position:absolute;         /* 绝对定位 */
     right:60px;                /* 距离右边60px（与padding保持一致） */
+    gap: 12px;                 /* 增加子元素间距 */
 }
 .pm-avatar-wrap{position:relative}
 .pm-avatar{width:36px;height:36px;border-radius:50%;cursor:pointer;border:2px solid #F9E078}
