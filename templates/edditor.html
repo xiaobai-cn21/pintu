@@ -68,7 +68,7 @@
                 </div>
                 <!-- 选择系统图片 / 管理员新增系统关卡 -->
                 <div class="preview-btn-row" style="margin-top: 12px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
-                    <button id="pickSystemImageBtn" class="btn btn-secondary" type="button">选择系统图片</button>
+                    <button id="pickSystemImageBtn" class="btn btn-secondary" type="button" onclick="openSystemImagePicker()">选择系统图片</button>
                 </div>
                 <!-- 管理员创建系统关卡的表单项（仅管理员显示提交按钮，但字段对所有人可见也不影响） -->
                 <div class="input-item">
@@ -164,15 +164,26 @@
     </div>
 </div>
     <script>
-        // 根据接口文档：GET /auth/is_admin 返回 { code, message, data: { isAdmin: true/false } }
+        // 根据接口文档：优先 /auth/is_admin，失败退回 /auth/me，再兜底 userId===1
         async function fetchIsAdmin() {
+            const token = localStorage.getItem('puzzleToken');
+            if (!token) return false;
             try {
-                const token = localStorage.getItem('puzzleToken');
-                if (!token) return false;
-                const r = await fetch('/auth/is_admin', { headers: { Authorization: `Bearer ${token}` } });
-                const j = await r.json();
-                return !!(j && j.code === 200 && j.data && j.data.isAdmin);
-            } catch (e) { return false; }
+                // 首选 /auth/is_admin
+                let r = await fetch('/auth/is_admin', { headers: { Authorization: `Bearer ${token}` } });
+                if (r && r.ok) {
+                    const j = await r.json();
+                    return !!(j && (j.code === 200 || j.code === '200') && j.data && j.data.isAdmin === true);
+                }
+                // 备选 /auth/me
+                r = await fetch('/auth/me', { headers: { Authorization: `Bearer ${token}` } });
+                if (r && r.ok) {
+                    const j = await r.json();
+                    return !!(j && (j.code === 200 || j.code === '200') && j.data && j.data.isAdmin === true);
+                }
+            } catch (_) {}
+            // UI 兜底（不影响后端权限校验）
+            return localStorage.getItem('puzzleUserId') === '1';
         }
 
         async function initEditorAdminUi() {
@@ -182,7 +193,9 @@
 
             const pickBtn = document.getElementById('pickSystemImageBtn');
             if (pickBtn) {
-                pickBtn.addEventListener('click', openSystemImagePicker);
+                // 捕获阶段绑定，避免被其他脚本拦截
+                pickBtn.removeEventListener('click', openSystemImagePicker, true);
+                pickBtn.addEventListener('click', openSystemImagePicker, { capture: true });
             }
 
             if (adminBtn) {
@@ -190,16 +203,32 @@
             }
         }
 
+        // 增加重试，避免刷新瞬间因鉴权/时序导致按钮未显示
+        async function initEditorAdminUiWithRetry(maxTry = 5, delayMs = 300) {
+            for (let i = 0; i < maxTry; i++) {
+                await initEditorAdminUi();
+                const btn = document.getElementById('adminAddSystemBtn');
+                if (btn && btn.style.display !== 'none') return;
+                await new Promise(r => setTimeout(r, delayMs));
+            }
+        }
+
         // 打开系统图片选择器：调用 /pic/levels/system
         async function openSystemImagePicker() {
+            console.log('openSystemImagePicker called');
             try {
                 const r = await fetch('/pic/levels/system');
                 const j = await r.json();
                 if (!(j && j.code === 200)) throw new Error('加载系统图片失败');
-                const list = j.data || [];
+                const list = Array.isArray(j.data) ? j.data : [];
                 ensureSystemImageModal();
                 const modal = document.getElementById('systemImageModal');
                 const grid = document.getElementById('systemImageGrid');
+                if (!list.length) {
+                    grid.innerHTML = '<div style="color:#B8BCC8; text-align:center; grid-column:1/-1;">暂无系统图片</div>';
+                    modal.style.display = 'flex';
+                    return;
+                }
                 grid.innerHTML = list.map(item => `
                     <div class="card" style="background:#20223A; padding:8px; cursor:pointer;">
                         <img src="${item.image_url}" alt="${item.title||''}" style="width:100%; height:100px; object-fit:cover; border-radius:4px;">
@@ -489,8 +518,8 @@
         });
 
         window.addEventListener('DOMContentLoaded', function() {
-            // 初始化管理员UI与“选择系统图片”按钮事件
-            initEditorAdminUi();
+            // 初始化管理员UI与“选择系统图片”按钮事件（带重试）
+            initEditorAdminUiWithRetry();
 
             const customImage = localStorage.getItem('customImage');
             const customSize = localStorage.getItem('customSize');
