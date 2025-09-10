@@ -1,3 +1,4 @@
+
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
 import os
@@ -70,6 +71,7 @@ def create_puzzle():
             piece_count=data.get('piece_count'),
             piece_shape=data.get('piece_shape'),
             is_rotatable=bool(int(data.get('is_rotatable', 0))),
+            is_flipable=bool(int(data.get('is_flipable', 0))) if data.get('is_flipable') is not None else False,
             is_system_level=is_system_level,
             created_at=datetime.now()
         )
@@ -102,13 +104,13 @@ def update_puzzle(puzzle_id):
         puzzle.difficulty = data.get('difficulty', puzzle.difficulty)
         puzzle.piece_count = data.get('piece_count', puzzle.piece_count)
         puzzle.piece_shape = data.get('piece_shape', puzzle.piece_shape)
-        puzzle.is_rotatable = bool(int(data.get('is_rotatable', puzzle.is_rotatable)))
-        puzzle.is_system_level = bool(int(data.get('is_system_level', puzzle.is_system_level)))
+        puzzle.is_rotatable = bool(int(data.get('is_rotatable', int(puzzle.is_rotatable))))
+        puzzle.is_flipable = bool(int(data.get('is_flipable', int(puzzle.is_flipable))))
+        puzzle.is_system_level = bool(int(data.get('is_system_level', int(puzzle.is_system_level))))
         db.session.commit()
         return jsonify({"code": "200", "message": "关卡更新成功", "data": None})
     except Exception as e:
         return jsonify({"code": "500", "message": f"服务器内部错误: {str(e)}", "data": None})
-
 
 @pic.route('/puzzles/<int:puzzle_id>', methods=['DELETE'])
 def delete_puzzle(puzzle_id):
@@ -142,6 +144,7 @@ def get_puzzle_detail(puzzle_id):
                 "piece_count": puzzle.piece_count,
                 "piece_shape": puzzle.piece_shape,
                 "is_rotatable": puzzle.is_rotatable,
+                "is_flipable": puzzle.is_flipable,
                 "is_system_level": puzzle.is_system_level,
                 "created_at": puzzle.created_at,
                 "creator": {
@@ -170,6 +173,7 @@ def get_puzzle_list():
                 "piece_count": puzzle.piece_count,
                 "piece_shape": puzzle.piece_shape,
                 "is_rotatable": puzzle.is_rotatable,
+                "is_flipable": puzzle.is_flipable,
                 "is_system_level": puzzle.is_system_level,
                 "created_at": puzzle.created_at
             })
@@ -180,3 +184,27 @@ def get_puzzle_list():
         })
     except Exception as e:
         return jsonify({"code": "500", "message": f"服务器内部错误: {str(e)}", "data": None})
+    
+# 获取所有 is_system_level 为 true 的关卡（包含 puzzles 的所有新属性）
+@pic.route('/levels/system', methods=['GET'])
+def get_system_levels():
+    try:
+        puzzles_list = puzzles.query.filter_by(is_system_level=True).order_by(puzzles.created_at.desc()).all()
+        result = []
+        for puzzle in puzzles_list:
+            result.append({
+                "puzzle_id": puzzle.puzzle_id,
+                "title": puzzle.title,
+                "image_url": puzzle.image_url,
+                "type": puzzle.type,
+                "difficulty": puzzle.difficulty,
+                "piece_count": puzzle.piece_count,
+                "piece_shape": puzzle.piece_shape,
+                "is_rotatable": puzzle.is_rotatable,
+                "is_flipable": puzzle.is_flipable,
+                "is_system_level": puzzle.is_system_level,
+                "created_at": puzzle.created_at
+            })
+        return jsonify({"code": 200, "message": "获取成功", "data": result})
+    except Exception as e:
+        return jsonify({"code": 500, "message": f"服务器内部错误: {str(e)}", "data": None})
