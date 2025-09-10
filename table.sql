@@ -48,6 +48,16 @@ CREATE TABLE friend_requests (
     FOREIGN KEY (receiver_id) REFERENCES users(user_id)
 );
 
+CREATE TABLE shares (
+    share_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    puzzle_id INT NOT NULL,
+    view_count INT DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (puzzle_id) REFERENCES puzzles(puzzle_id)
+);
+
 CREATE TABLE friends (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,

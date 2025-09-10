@@ -93,3 +93,13 @@ class friends(db.Model):
     __table_args__ = (
         db.UniqueConstraint('user_id', 'friend_id', name='unique_friendship'),
     )
+
+
+# 分享表
+class shares(db.Model):
+    __tablename__ = 'shares'
+    share_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    puzzle_id = Column(Integer, ForeignKey('puzzles.puzzle_id'), nullable=False)
+    view_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
