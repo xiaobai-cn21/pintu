@@ -486,6 +486,10 @@ function dragStart(e) {
     document.body.appendChild(customFollower);
     pieceDrag(e);
 
+    // 添加鼠标移动事件监听（火狐浏览器兼容）
+    document.addEventListener('dragover', handleDragOver);
+    document.addEventListener('drag', pieceDrag);
+
     const transparentPixel = new Image();
     transparentPixel.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     e.dataTransfer.setDragImage(transparentPixel, 0, 0);
@@ -509,6 +513,10 @@ function dragEnd() {
         piece.style.pointerEvents = 'auto';
     });
 
+    // 移除事件监听器（火狐浏览器兼容）
+    document.removeEventListener('dragover', handleDragOver);
+    document.removeEventListener('drag', pieceDrag);
+
     if (draggedPiece) {
         draggedPiece.classList.remove('dragging');
         draggedPiece.style.visibility = 'visible';
@@ -525,6 +533,14 @@ function dragEnd() {
 // 添加拖拽过程中的吸附提示
 function dragOver(e) {
     e.preventDefault();
+}
+
+// 火狐浏览器专用的拖拽处理函数
+function handleDragOver(e) {
+    e.preventDefault();
+    if (customFollower && draggedPiece) {
+        pieceDrag(e);
+    }
 }
 // 拖拽到棋盘
 function dropOnBoard(e) {

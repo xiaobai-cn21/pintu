@@ -15,6 +15,54 @@
     font-family: 'Press Start 2P', 'Zpix', monospace;
 }
 
+/* 移动端触摸优化 */
+@media (max-width: 768px) {
+    * {
+        touch-action: manipulation; /* 禁用双击缩放 */
+    }
+    
+    .btn, .pm-link, .pm-menu-item {
+        min-height: 44px; /* iOS 推荐最小触摸区域 */
+        min-width: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    /* 拼图块触摸优化 */
+    .puzzle-piece {
+        touch-action: none; /* 禁用默认触摸行为 */
+        user-select: none; /* 禁用文本选择 */
+    }
+    
+    /* 游戏页面移动端优化 */
+    .game-container {
+        padding: 10px;
+    }
+    
+    .puzzle-board {
+        width: 90vw;
+        height: 90vw;
+        max-width: 400px;
+        max-height: 400px;
+    }
+    
+    .pieces-zone {
+        width: 90vw;
+        max-width: 400px;
+        margin: 10px auto;
+    }
+    
+    .game-controls {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .game-info {
+        font-size: 12px;
+    }
+}
+
 /* 中文字体大小调整 */
 .chinese-text {
     font-size: 1.2em;
@@ -311,25 +359,19 @@ h1 {
     /* Elimina el gap extra */
 
 }
-  {
-        margin: 0;
-        padding: 0;
-        height: 100%;
-        overflow: hidden;
-        font-family: Arial, sans-serif;
-      }
-      .background-blur {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-image: url('../images/background2.png');
-        background-size: cover;
-        background-position: center;
-        z-index: -2; /* 置于最底层 */
-        opacity: 0.8; /* 降低背景透明度，减少视觉干扰 */
-      }
+/* 背景模糊效果 */
+.background-blur {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: url('../images/background2.png');
+    background-size: cover;
+    background-position: center;
+    z-index: -2; /* 置于最底层 */
+    opacity: 0.8; /* 降低背景透明度，减少视觉干扰 */
+}
       .background-blur::before {
         content: '';
         position: absolute;
