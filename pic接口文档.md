@@ -1,3 +1,23 @@
+### 判断当前用户是否为管理员
+**GET** `/auth/is_admin`
+
+**请求头：**
+- Authorization: Bearer <token>
+
+**返回：**
+```json
+{
+  "code": 200,
+  "message": "OK",
+  "data": {
+    "isAdmin": true // 或 false
+  }
+}
+```
+
+**说明：**
+- `isAdmin` 字段为布尔值，表示当前用户是否为管理员。
+- 需要登录（JWT鉴权）。
 # 拼图项目接口文档（自动生成，含 /pic/ 路由）
 
 ---
@@ -153,3 +173,5 @@
 ---
 
 （如需补充其它 /pic/ 路由接口，请告知）
+
+

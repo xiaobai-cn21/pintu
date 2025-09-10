@@ -213,7 +213,7 @@ async function getMyUsername() {
 window.socket.on('pvp_game_over', async function(data) {
     // data: { winner, loser }
     let myName = await getMyUsername();
-    const isWinner = data.winner === myName;
+    const isWinner = data.loser !=== myName;
     const opponentName = isWinner ? data.loser : data.winner;
     console.log(opponentName);
     // 获取本地步数变量

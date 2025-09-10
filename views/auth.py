@@ -63,6 +63,23 @@ def  login():
 def is_email(s):
     return re.match(r'[\w\.-]+@[\w\.-]+\w+$', s)
 
+
+@auth.route('/is_admin', methods=['GET'])
+@jwt_required()
+def is_admin():
+    try:
+        user_id = get_jwt_identity()
+        u = users.query.get(int(user_id))
+        if not u:
+            return jsonify({"code": 404, "message": "用户不存在", "data": None})
+        return jsonify({
+            "code": 200,
+            "message": "OK",
+            "data": {"isAdmin": bool(getattr(u, 'is_admin', False))}
+        })
+    except Exception as e:
+        return jsonify({"code": "500", "message": f"服务器内部错误: {str(e)}", "data": None})
+
 # 获取当前登录用户信息
 @auth.route('/me', methods=['GET'])
 @jwt_required()
