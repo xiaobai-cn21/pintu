@@ -29,18 +29,20 @@ def register_socketio_events(socketio):
     def handle_pvp_win(data):
         room_id = data.get('room_id')
         winner = data.get('username')
-        moves = data.get('moves')
-        time = data.get('time')
-        # 只允许第一个完成的人为胜者
-        if not hasattr(handle_pvp_win, 'winner_announced'):
-            handle_pvp_win.winner_announced = {}
-        if room_id not in handle_pvp_win.winner_announced:
-            handle_pvp_win.winner_announced[room_id] = True
-            emit('pvp_game_over', {
-                'winner': winner,
-                'moves': moves,
-                'time': time
-            }, room=room_id)
+        # 获取房间内所有用户
+        users = room_pool.get(room_id, {}).get('users', [])
+        if len(users) == 2:
+            loser = [u for u in users if u != winner][0]
+        else:
+            loser = ''
+        # 直接让前端实时同步步数，后端只负责广播用户名
+        print("winner is ")
+        print (winner)
+        print(loser)
+        emit('pvp_game_over', {
+            'winner': winner,
+            'loser': loser
+        }, room=room_id)
             
     @socketio.on('pvp_moves_update')
     def handle_pvp_moves_update(data):

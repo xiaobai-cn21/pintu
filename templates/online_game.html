@@ -147,11 +147,26 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Socket.IO 连接与对手步数/正确块数监听
-if (!window.socket) {
-    window.socket = io();
+async function joinRoomWithAuth() {
+    if (!window.socket) {
+        window.socket = io();
+    }
     const roomId = new URLSearchParams(window.location.search).get('room_id');
-    window.socket.emit('join_room', { room_id: roomId, username: localStorage.getItem('pvp_username') || '玩家' });
+    // 用 /auth/me 获取用户名
+    let username = '玩家';
+    const token = localStorage.getItem('puzzleToken');
+    if (token) {
+        try {
+            const res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            if (data.code === 200 && data.data && data.data.username) {
+                username = data.data.username;
+            }
+        } catch (e) {}
+    }
+    window.socket.emit('join_room', { room_id: roomId, username });
 }
+joinRoomWithAuth();
 window.socket.on('opponent_moves', function(data) {
     document.getElementById('opponentMoves').textContent = data.moves;
     document.getElementById('opponentCorrect').textContent = data.correct;
@@ -181,15 +196,50 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-window.socket.on('pvp_game_over', function(data) {
-    const myName = localStorage.getItem('pvp_username') || '玩家';
-    let msg = '';
-    if (data.winner === myName) {
-        msg = `🎉 你赢了！<br>用时: ${data.time} 秒<br>步数: ${data.moves}`;
+// 统一用 /auth/me 获取用户名，保证和后端一致
+async function getMyUsername() {
+    const token = localStorage.getItem('puzzleToken');
+    if (!token) return '玩家';
+    try {
+        const res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (data.code === 200 && data.data && data.data.username) {
+            return data.data.username;
+        }
+    } catch (e) {}
+    return '玩家';
+}
+
+window.socket.on('pvp_game_over', async function(data) {
+    // data: { winner, loser }
+    let myName = await getMyUsername();
+    const isWinner = data.winner === myName;
+    const opponentName = isWinner ? data.loser : data.winner;
+    console.log(opponentName);
+    // 获取本地步数变量
+    let myMoves = 0, opponentMoves = 0;
+    if (window.puzzleGame && typeof window.puzzleGame.moveCount === 'number') {
+        myMoves = window.puzzleGame.moveCount;
     } else {
-        msg = `😢 你输了！<br>对手: ${data.winner}<br>用时: ${data.time} 秒<br>步数: ${data.moves}`;
+        myMoves = window.moveCount || 0;
     }
-    // 弹窗
+    // 对手步数用页面实时变量
+    const oppMovesElem = document.getElementById('opponentMoves');
+    if (oppMovesElem) {
+        opponentMoves = parseInt(oppMovesElem.textContent) || 0;
+    }
+
+    let msg = '';
+    if (isWinner) {
+        msg = `🎉 你赢了！<br>
+        <span style="font-size:1rem;">你的步数: <b>${myMoves}</b></span><br>
+        <span style="font-size:1rem;">对手（${opponentName}）步数: <b>${opponentMoves}</b></span>`;
+    } else {
+        msg = `😢 你输了！<br>
+        <span style="font-size:1rem;">你的步数: <b>${myMoves}</b></span><br>
+        <span style="font-size:1rem;">对手（${opponentName}）步数: <b>${opponentMoves}</b></span>`;
+    }
+
     const winDiv = document.createElement('div');
     winDiv.style.position = 'fixed';
     winDiv.style.top = '50%';
@@ -202,11 +252,14 @@ window.socket.on('pvp_game_over', function(data) {
     winDiv.style.fontSize = '1.5rem';
     winDiv.style.zIndex = 9999;
     winDiv.innerHTML = `<div style="text-align:center;">${msg}</div>
-        <button style="margin-top:1.5rem;font-size:1rem;" onclick="location.reload()">再来一局</button>`;
+        <button id="exitRoomBtn" style="margin-top:1.5rem;font-size:1rem;">退出房间</button>`;
     document.body.appendChild(winDiv);
-    setTimeout(function() {
+
+    document.getElementById('exitRoomBtn').onclick = function() {
+        const roomId = new URLSearchParams(window.location.search).get('room_id');
+        window.socket.emit('leave_room', { room_id: roomId, username: myName });
         window.location.href = '/menu';
-    }, 2000); // 3 seconds
+    };
 });
 </script>
 </body>

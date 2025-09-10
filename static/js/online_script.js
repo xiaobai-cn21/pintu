@@ -1297,13 +1297,28 @@ function emitMyMoves() {
 
 
 function sendWinMessage() {
+    console.log("u won")
     const roomId = new URLSearchParams(window.location.search).get('room_id');
     if (window.socket && roomId) {
-        window.socket.emit('pvp_win', {
-            room_id: roomId,
-            username: localStorage.getItem('pvp_username') || '玩家',
-            moves: moves,
-            time: seconds
-        });
+        // 统一用 /auth/me 获取真实用户名
+        fetch('/auth/me')
+            .then(res => res.json())
+            .then(data => {
+                // 正确结构是 data.data.username
+                const username = data && data.data && data.data.username;
+                if (username) {
+                    window.socket.emit('pvp_win', {
+                        room_id: roomId,
+                        username: username,
+                        moves: moves,
+                        time: seconds
+                    });
+                } else {
+                    alert('获取用户名失败，请重新登录');
+                }
+            })
+            .catch(() => {
+                alert('获取用户名失败，请检查网络');
+            });
     }
 }
