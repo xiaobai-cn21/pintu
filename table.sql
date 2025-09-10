@@ -3,6 +3,7 @@ CREATE TABLE users (
     username VARCHAR(16) NOT NULL,
     email VARCHAR(50) NOT NULL,
     hash_password VARCHAR(256) NOT NULL,
+    is_admin BOOLEAN DEFAULT FALSE,
     created_at DATETIME NOT NULL,
     PRIMARY KEY (user_id)
 );
@@ -10,13 +11,15 @@ CREATE TABLE users (
 CREATE TABLE puzzles (
     puzzle_id INT PRIMARY KEY AUTO_INCREMENT ,
     creator_id INT,
-    title VARCHAR(20) NOT NULL ,
+    title VARCHAR(20) NOT NULL UNIQUE,
     image_url VARCHAR(255) NOT NULL ,
     difficulty ENUM('easy', 'medium', 'hard'),
     piece_count INT NOT NULL,
-    piece_shape ENUM('rect', 'irregular') NOT NULL,
+    piece_shape ENUM('rect', 'irregular', 'triangle') NOT NULL,
     is_rotatable BOOLEAN DEFAULT FALSE,
+    is_flipable BOOLEAN DEFAULT FALSE,
     is_system_level BOOLEAN DEFAULT FALSE ,
+    type ENUM('nature', 'animal', 'building', 'cartoon', 'other') DEFAULT 'other',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP ,
     FOREIGN KEY (creator_id) REFERENCES users(user_id)
 );

@@ -12,6 +12,7 @@ class users(db.Model):
     username = Column(String(50))
     email = Column(String(50))
     hash_password = Column(String(256))
+    is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime)
     puzzles = relationship('puzzles', backref='creator', lazy=True)
     records = relationship('records', backref='user', lazy=True)
@@ -26,9 +27,11 @@ class puzzles(db.Model):
     image_url = Column(String(255), nullable=False)
     difficulty = Column(Enum('easy', 'medium', 'hard'), nullable=True)
     piece_count = Column(Integer, nullable=False)
-    piece_shape = Column(Enum('rect', 'irregular'), nullable=False)
+    piece_shape = Column(Enum('rect', 'irregular', 'triangle'), nullable=False)
     is_rotatable = Column(Boolean, default=False)
+    is_flipable = Column(Boolean, default=False)
     is_system_level = Column(Boolean, default=False)
+    type = Column(Enum('nature', 'animal', 'building', 'cartoon', 'other'), default='other')
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class records(db.Model):
