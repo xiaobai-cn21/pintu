@@ -8,10 +8,10 @@
     <div class="pm-nav-right">
         <!-- 音乐控制按钮 -->
         <button id="musicToggle" class="pm-music-btn" title="切换背景音乐">
-            <i class="fa fa-music"></i>
+            <span id="musicIcon" aria-hidden="true">🎵</span>
         </button>
         <button id="inviteToggle" class="pm-invite-btn" title="挑战邀请" aria-label="挑战邀请">
-            <i class="fa fa-bell"></i>
+            <span aria-hidden="true">🔔</span>
             <span id="inviteBadge" class="pm-badge-dot" style="display:none;"></span>
         </button>
         <span id="pm-username-label" class="pm-username">未登录</span>
@@ -44,14 +44,6 @@
 
 .pm-music-btn:hover {
     transform: scale(1.1);
-}
-
-.pm-music-btn.muted i:before {
-    content: "\f026"; /* 静音图标 */
-}
-
-.pm-music-btn:not(.muted) i:before {
-    content: "\f001"; /* 播放图标 */
 }
 
 .pm-username {
@@ -87,21 +79,7 @@
 }
 </style>
 <script>
-// 确保 Font Awesome 可用（用于音乐/邀请图标）。若未加载则动态注入。
-try {
-  const hasFA = Array.from(document.styleSheets).some(s => (s.href||'').includes('font-awesome'));
-  if (!hasFA) {
-    const fa = document.createElement('link');
-    fa.rel = 'stylesheet';
-    fa.href = 'https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css';
-    document.head.appendChild(fa);
-  }
-} catch (e) {
-  const fa = document.createElement('link');
-  fa.rel = 'stylesheet';
-  fa.href = 'https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css';
-  document.head.appendChild(fa);
-}
+// Font Awesome 已替换为本地 Emoji，无需动态加载外部 CDN
 // 加载音乐管理模块
 const musicScript = document.createElement('script');
 musicScript.src = '/static/js/music.js';
@@ -216,20 +194,22 @@ function initMusicControl() {
   
   function setupMusicButton() {
     const musicToggle = document.getElementById('musicToggle');
+    const musicIcon = document.getElementById('musicIcon');
     if (musicToggle && window.musicManager) {
-      // 设置初始状态
-      if (window.musicManager.isMuted) {
-        musicToggle.classList.add('muted');
+      // 更新图标显示
+      function updateMusicIcon() {
+        if (musicIcon) {
+          musicIcon.textContent = window.musicManager.isMuted ? '🔇' : '🎵';
+        }
       }
+      
+      // 设置初始状态
+      updateMusicIcon();
       
       // 添加点击事件
       musicToggle.addEventListener('click', function() {
         const isMuted = window.musicManager.toggleMute();
-        if (isMuted) {
-          musicToggle.classList.add('muted');
-        } else {
-          musicToggle.classList.remove('muted');
-        }
+        updateMusicIcon();
       });
     }
   }

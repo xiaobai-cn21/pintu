@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>拼图预览</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
     <style>
         .preview-main { max-width: 900px; margin: 40px auto; display: flex; gap: 32px; flex-wrap: wrap; }
         .preview-left, .preview-right { flex: 1; min-width: 320px; }
@@ -189,7 +188,13 @@
         async function initEditorAdminUi() {
             const isAdmin = await fetchIsAdmin();
             const adminBtn = document.getElementById('adminAddSystemBtn');
-            if (adminBtn) adminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+            if (adminBtn) {
+                if (isAdmin) {
+                    adminBtn.style.setProperty('display', 'inline-flex', 'important');
+                } else {
+                    adminBtn.style.setProperty('display', 'none', 'important');
+                }
+            }
 
             const pickBtn = document.getElementById('pickSystemImageBtn');
             if (pickBtn) {
@@ -204,7 +209,7 @@
         }
 
         // 增加重试，避免刷新瞬间因鉴权/时序导致按钮未显示
-        async function initEditorAdminUiWithRetry(maxTry = 5, delayMs = 300) {
+        async function initEditorAdminUiWithRetry(maxTry = 20, delayMs = 500) {
             for (let i = 0; i < maxTry; i++) {
                 await initEditorAdminUi();
                 const btn = document.getElementById('adminAddSystemBtn');
@@ -506,6 +511,17 @@
 
 
         createPuzzleBtn.addEventListener('click', onCreatePuzzle);
+        // 页面加载完成后初始化管理员按钮（带重试）、并在可见时/鉴权就绪时再重试
+        document.addEventListener('DOMContentLoaded', function() {
+            initEditorAdminUiWithRetry();
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) initEditorAdminUiWithRetry();
+            });
+            window.addEventListener('authready', () => initEditorAdminUiWithRetry());
+            window.addEventListener('storage', (e) => {
+                if (e.key === 'puzzleToken' && e.newValue) initEditorAdminUiWithRetry();
+            });
+        });
 
         playBtn.addEventListener('click', function() {
             localStorage.setItem('customImage', imgData);
