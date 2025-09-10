@@ -84,7 +84,7 @@
         rotation: piece.dataset.rotation
     }));
 
-    // 测试用
+    // 读取上下文：token 与 puzzleId（用于进度保存/恢复）
     const token = localStorage.getItem('puzzleToken');
     const puzzle_id = localStorage.getItem('puzzleId') || 1; 
 
