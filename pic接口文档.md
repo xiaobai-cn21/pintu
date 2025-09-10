@@ -1,3 +1,24 @@
+### 获取当前登录用户信息
+**GET** `/auth/me`
+
+**请求头：**
+- Authorization: Bearer <token>
+
+**返回：**
+```json
+{
+  "code": 200,
+  "message": "OK",
+  "data": {
+    "userId": 1,
+    "username": "testuser"
+  }
+}
+```
+
+**说明：**
+- 返回当前登录用户的 userId 和用户名。
+- 需要登录（JWT鉴权）。
 ### 判断当前用户是否为管理员
 **GET** `/auth/is_admin`
 
