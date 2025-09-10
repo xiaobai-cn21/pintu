@@ -373,6 +373,8 @@ document.querySelectorAll('.filter-label').forEach(label => {
 // 页面加载时获取用户关卡记录
 document.addEventListener('DOMContentLoaded', function() {
     loadUserLevelRecords();
+    // 根据新接口文档：GET /auth/is_admin 控制“编辑”按钮显隐
+    setAdminVisibility();
 });
 
 // 加载用户关卡记录
@@ -398,6 +400,31 @@ function loadUserLevelRecords() {
     .catch(error => {
         console.error('加载关卡记录失败:', error);
     });
+}
+
+// 根据是否管理员，控制关卡卡片里的“编辑”按钮显示
+async function setAdminVisibility() {
+    try {
+        const token = localStorage.getItem('puzzleToken');
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+        const r = await fetch('/auth/is_admin', { headers });
+        const j = await r.json();
+        const isAdmin = !!(j && j.code === 200 && j.data && j.data.isAdmin);
+        const editButtons = document.querySelectorAll('.level-card .btn');
+        editButtons.forEach(btn => {
+            // 仅隐藏文本为“编辑”的按钮，避免误伤其它按钮
+            const text = (btn.textContent || '').trim();
+            if (text === '编辑') {
+                btn.style.display = isAdmin ? '' : 'none';
+            }
+        });
+    } catch (e) {
+        // 接口失败时默认隐藏编辑按钮
+        document.querySelectorAll('.level-card .btn').forEach(btn => {
+            const text = (btn.textContent || '').trim();
+            if (text === '编辑') btn.style.display = 'none';
+        });
+    }
 }
 
 // 更新关卡卡片显示

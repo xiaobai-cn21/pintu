@@ -66,6 +66,25 @@
                     </p>
                     <input type="file" id="imageUpload" accept="image/*" style="display:none;">
                 </div>
+                <!-- 选择系统图片 / 管理员新增系统关卡 -->
+                <div class="preview-btn-row" style="margin-top: 12px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                    <button id="pickSystemImageBtn" class="btn btn-secondary" type="button">选择系统图片</button>
+                </div>
+                <!-- 管理员创建系统关卡的表单项（仅管理员显示提交按钮，但字段对所有人可见也不影响） -->
+                <div class="input-item">
+                    <label>关卡标题</label>
+                    <input id="adminTitleInput" type="text" placeholder="请输入关卡标题（4-20个字符）" maxlength="20">
+                </div>
+                <div class="input-item">
+                    <label>类型</label>
+                    <select id="typeSelect">
+                        <option value="nature">自然风光</option>
+                        <option value="animal">动物</option>
+                        <option value="building">建筑</option>
+                        <option value="cartoon">卡通</option>
+                        <option value="other" selected>其他</option>
+                    </select>
+                </div>
             </div>
             <div class="preview-card">
                 <h3 style="font-size: 16px; margin-bottom: 16px;">拼图配置</h3>
@@ -112,19 +131,173 @@
                 <div style="margin-top: 16px; text-align: right;">
                     <p style="font-size: 14px; color: #666;">预计难度：<span id="difficultyText">简单</span></p>
                 </div>
-                <div class="preview-btn-row">
-                    <button id="playBtn" class="btn btn-primary" disabled>开始游戏</button>
+                <div class="preview-btn-row" style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+                    <button id="createPuzzleBtn" class="btn btn-primary" disabled>创建拼图</button>
+                    <button id="adminAddSystemBtn" class="btn btn-primary" type="button" style="display:none;">新增系统关卡</button>
                 </div>
             </div>
         </div>
     </div>
     <script>
+        // 根据接口文档：GET /auth/is_admin 返回 { code, message, data: { isAdmin: true/false } }
+        async function fetchIsAdmin() {
+            try {
+                const token = localStorage.getItem('puzzleToken');
+                if (!token) return false;
+                const r = await fetch('/auth/is_admin', { headers: { Authorization: `Bearer ${token}` } });
+                const j = await r.json();
+                return !!(j && j.code === 200 && j.data && j.data.isAdmin);
+            } catch (e) { return false; }
+        }
+
+        async function initEditorAdminUi() {
+            const isAdmin = await fetchIsAdmin();
+            const adminBtn = document.getElementById('adminAddSystemBtn');
+            if (adminBtn) adminBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+
+            const pickBtn = document.getElementById('pickSystemImageBtn');
+            if (pickBtn) {
+                pickBtn.addEventListener('click', openSystemImagePicker);
+            }
+
+            if (adminBtn) {
+                adminBtn.addEventListener('click', submitAdminSystemLevel);
+            }
+        }
+
+        // 打开系统图片选择器：调用 /pic/levels/system
+        async function openSystemImagePicker() {
+            try {
+                const r = await fetch('/pic/levels/system');
+                const j = await r.json();
+                if (!(j && j.code === 200)) throw new Error('加载系统图片失败');
+                const list = j.data || [];
+                ensureSystemImageModal();
+                const modal = document.getElementById('systemImageModal');
+                const grid = document.getElementById('systemImageGrid');
+                grid.innerHTML = list.map(item => `
+                    <div class="card" style="background:#20223A; padding:8px; cursor:pointer;">
+                        <img src="${item.image_url}" alt="${item.title||''}" style="width:100%; height:100px; object-fit:cover; border-radius:4px;">
+                        <div style="font-size:12px; color:#E5E7EB; margin-top:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.title||''}</div>
+                    </div>
+                `).join('');
+                modal.style.display = 'flex';
+                grid.querySelectorAll('div.card').forEach((card, idx) => {
+                    card.addEventListener('click', () => {
+                        const chosen = list[idx];
+                        if (chosen && chosen.image_url) {
+                            imgData = chosen.image_url;
+                            previewImage.src = imgData;
+                            previewImage.style.display = 'block';
+                            gridCanvas.style.display = 'block';
+                            previewTip.style.display = 'none';
+                            drawGrid();
+                            playBtn.disabled = false;
+                        }
+                        modal.style.display = 'none';
+                    });
+                });
+            } catch (e) {
+                alert('加载系统图片失败，请稍后重试');
+            }
+        }
+
+        function ensureSystemImageModal() {
+            if (document.getElementById('systemImageModal')) return;
+            const wrap = document.createElement('div');
+            wrap.id = 'systemImageModal';
+            wrap.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:2000;';
+            wrap.innerHTML = `
+                <div style="width:90%; max-width:720px; background:#20223A; border:1px solid #333; box-shadow:0 10px 30px rgba(0,0,0,0.5); padding:16px; border-radius:8px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div style="color:#F9E078; font-size:16px;">选择系统图片</div>
+                        <button id="systemImageClose" class="btn btn-secondary" type="button">关闭</button>
+                    </div>
+                    <div id="systemImageGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:12px;"></div>
+                </div>`;
+            document.body.appendChild(wrap);
+            document.getElementById('systemImageClose').addEventListener('click', () => {
+                wrap.style.display = 'none';
+            });
+        }
+
+        // 管理员提交系统关卡
+        async function submitAdminSystemLevel() {
+            try {
+                const token = localStorage.getItem('puzzleToken');
+                if (!token) { alert('请先登录'); return; }
+                const title = (document.getElementById('adminTitleInput').value||'').trim();
+                const type = document.getElementById('typeSelect').value;
+                const pieceCount = parseInt(difficultySelect.value, 10);
+                // 形状映射：square->rect, triangle->triangle, jigsaw->irregular
+                const shapeMap = { square: 'rect', triangle: 'triangle', jigsaw: 'irregular' };
+                const pieceShape = shapeMap[shapeSelect.value] || 'rect';
+                const isRotatable = document.getElementById('randomRotation').checked ? 1 : 0;
+                const isFlipable = document.getElementById('randomFlip').checked ? 1 : 0;
+
+                if (!title || title.length < 4 || title.length > 20) {
+                    alert('关卡标题长度需在4~20个字符之间');
+                    return;
+                }
+                if (!imgData) {
+                    alert('请先选择或上传图片');
+                    return;
+                }
+
+                // 将预览图片转为 Blob（若是本地上传得到的dataURL；若是系统图片URL，则直接拉取并转为Blob）
+                let imageBlob;
+                if (imgData.startsWith('data:')) {
+                    const res = await fetch(imgData);
+                    imageBlob = await res.blob();
+                } else {
+                    const res = await fetch(imgData, { mode: 'cors' });
+                    imageBlob = await res.blob();
+                }
+
+                const form = new FormData();
+                form.append('title', title);
+                form.append('image', imageBlob, 'system-level.png');
+                form.append('difficulty', pieceCount <= 4 ? 'easy' : (pieceCount <= 6 ? 'medium' : 'hard'));
+                form.append('piece_count', String(pieceCount));
+                form.append('piece_shape', pieceShape);
+                form.append('is_rotatable', String(isRotatable));
+                form.append('is_flipable', String(isFlipable));
+                form.append('is_system_level', '1');
+                form.append('type', type);
+
+                const r = await fetch('/pic/puzzles', {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${token}` },
+                    body: form
+                });
+                const j = await r.json();
+                if (j && (j.code === 200 || j.code === '200')) {
+                    alert('系统关卡创建成功');
+                    // 刷新系统图片数据源，便于“选择系统图片”立刻看到新图
+                    await prefetchSystemImages();
+                } else {
+                    alert(j?.message || '创建失败');
+                }
+            } catch (e) {
+                alert('提交失败，请稍后重试');
+            }
+        }
+
+        // 预拉系统图片数据，供“选择系统图片”立即使用
+        let cachedSystemImages = [];
+        async function prefetchSystemImages() {
+            try {
+                const r = await fetch('/pic/levels/system');
+                const j = await r.json();
+                if (j && j.code === 200) cachedSystemImages = j.data || [];
+            } catch(e) {}
+        }
         const uploadBox = document.getElementById('uploadBox');
         const imageUpload = document.getElementById('imageUpload');
         const previewImage = document.getElementById('previewImage');
         const gridCanvas = document.getElementById('gridCanvas');
         const difficultySelect = document.getElementById('difficultySelect');
-        const playBtn = document.getElementById('playBtn');
+        const createPuzzleBtn = document.getElementById('createPuzzleBtn');
         const previewTip = document.getElementById('previewTip');
         const difficultyText = document.getElementById('difficultyText');
         const shapeSelect = document.getElementById('shapeSelect');
@@ -162,7 +335,7 @@
                     gridCanvas.style.display = 'block';
                     previewTip.style.display = 'none';
                     drawGrid();
-                    playBtn.disabled = false;
+                    createPuzzleBtn.disabled = false;
                 };
                 reader.readAsDataURL(file);
             }
@@ -238,17 +411,12 @@
             previewImage.src = imgData;
         }
 
-        playBtn.addEventListener('click', function() {
-            localStorage.setItem('customImage', imgData);
-            localStorage.setItem('customSize', difficultySelect.value);
-            localStorage.setItem('customShape', shapeSelect.value);
-            // 存储新的选项状态
-            localStorage.setItem('randomRotation', randomRotationCheckbox.checked);
-            localStorage.setItem('randomFlip', randomFlipCheckbox.checked);
-            window.location.href = '{{ url_for('game_page') }}';
-        });
+        createPuzzleBtn.addEventListener('click', onCreatePuzzle);
 
         window.addEventListener('DOMContentLoaded', function() {
+            // 初始化管理员UI与“选择系统图片”按钮事件
+            initEditorAdminUi();
+
             const customImage = localStorage.getItem('customImage');
             const customSize = localStorage.getItem('customSize');
             const customShape = localStorage.getItem('customShape');
@@ -274,7 +442,7 @@
                 }
                 updateDifficultyText();
                 drawGrid();
-                playBtn.disabled = false;
+                createPuzzleBtn.disabled = false;
                 localStorage.removeItem('customImage');
                 localStorage.removeItem('customSize');
                 localStorage.removeItem('customShape');
@@ -282,6 +450,46 @@
                 localStorage.removeItem('randomFlip');
             }
         });
+
+        // 创建拼图：仅在前端保存到 localStorage，随后弹出“下一步”弹窗
+        function onCreatePuzzle(){
+            if (!imgData) { alert('请先上传或选择图片'); return; }
+            localStorage.setItem('customImage', imgData);
+            localStorage.setItem('customSize', difficultySelect.value);
+            localStorage.setItem('customShape', shapeSelect.value);
+            localStorage.setItem('randomRotation', randomRotationCheckbox.checked);
+            localStorage.setItem('randomFlip', randomFlipCheckbox.checked);
+            ensureNextStepModal();
+            document.getElementById('nextStepModal').style.display = 'flex';
+        }
+
+        // 创建完成后的下一步弹窗（开始游戏 / 去分享）
+        function ensureNextStepModal(){
+            if (document.getElementById('nextStepModal')) return;
+            const wrap = document.createElement('div');
+            wrap.id = 'nextStepModal';
+            wrap.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:2100;';
+            wrap.innerHTML = `
+                <div style="width:88%; max-width:520px; background:#20223A; border:1px solid #333; box-shadow:0 10px 30px rgba(0,0,0,0.5); padding:20px; border-radius:8px; text-align:center;">
+                    <div style="color:#F9E078; font-size:16px; margin-bottom:12px;">拼图已创建</div>
+                    <div style="color:#E5E7EB; font-size:13px; margin-bottom:18px;">接下来你想要？</div>
+                    <div style="display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+                        <button id="goPlayBtn" class="btn btn-primary">开始游戏</button>
+                        <button id="goShareBtn" class="btn btn-secondary">去分享</button>
+                        <button id="closeNextStepBtn" class="btn btn-secondary">关闭</button>
+                    </div>
+                </div>`;
+            document.body.appendChild(wrap);
+            document.getElementById('goPlayBtn').addEventListener('click', () => {
+                window.location.href = '{{ url_for('game_page') }}';
+            });
+            document.getElementById('goShareBtn').addEventListener('click', () => {
+                window.location.href = '{{ url_for('share_page') if url_for else '#' }}';
+            });
+            document.getElementById('closeNextStepBtn').addEventListener('click', () => {
+                wrap.style.display = 'none';
+            });
+        }
     </script>
 
 <!-- 帮助页面模态框 -->
