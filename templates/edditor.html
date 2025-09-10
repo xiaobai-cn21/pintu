@@ -38,6 +38,11 @@
             color: #E5E7EB;
             cursor: pointer;
         }
+        .share-code {
+            margin-top: 25px;
+            font-size: 18px;
+            font-weight: bold;
+        }
     </style>
     
 </head>
@@ -58,7 +63,7 @@
             <div class="preview-card">
                 <h3 style="font-size: 16px; margin-bottom: 16px;">上传图片</h3>
                 <div class="preview-upload-box" id="uploadBox">
-                    <i class="fa fa-cloud-upload" style="font-size: 32px; color: #165DFF; margin-bottom: 12px;"></i>
+                    <span style="font-size: 32px; color: #165DFF; margin-bottom: 12px;">📁</span>
                     <p style="font-size: 14px; color: #666;">
                         <div>点击或拖拽图片上传</div>
                         <div><span class="number-text">（JPG/PNG，</span>最大<span class="number-text">5MB）</span></div>
@@ -135,7 +140,6 @@
                     <button id="adminAddSystemBtn" class="btn btn-primary" type="button" style="display:none;">新增系统关卡</button>
 
                      
-                    <button id="shareBtn" class="btn btn-primary" disabled>保存到分享</button>
                 </div>
             </div>
         </div>
@@ -251,7 +255,7 @@
                             gridCanvas.style.display = 'block';
                             previewTip.style.display = 'none';
                             drawGrid();
-                            playBtn.disabled = false;
+                            createPuzzleBtn.disabled = false;
                         }
                         modal.style.display = 'none';
                     });
@@ -403,8 +407,8 @@
 
                     createPuzzleBtn.disabled = false;
 
-                    playBtn.disabled = false;
-                    shareBtn.disabled = false;
+                    createPuzzleBtn.disabled = false;
+                    createPuzzleBtn.disabled = false;
 
                 };
                 reader.readAsDataURL(file);
@@ -514,6 +518,41 @@
         // 页面加载完成后初始化管理员按钮（带重试）、并在可见时/鉴权就绪时再重试
         document.addEventListener('DOMContentLoaded', function() {
             initEditorAdminUiWithRetry();
+            
+            // 恢复之前的设置
+            const customImage = localStorage.getItem('customImage');
+            const customSize = localStorage.getItem('customSize');
+            const customShape = localStorage.getItem('customShape');
+            const storedRandomRotation = localStorage.getItem('randomRotation');
+            const storedRandomFlip = localStorage.getItem('randomFlip');
+
+            if (customImage && customSize) {
+                imgData = customImage;
+                previewImage.src = imgData;
+                previewImage.style.display = 'block';
+                gridCanvas.style.display = 'block';
+                previewTip.style.display = 'none';
+                difficultySelect.value = customSize;
+                if (customShape) { 
+                    shapeSelect.value = customShape; 
+                    currentShape = customShape; 
+                }
+                if (storedRandomRotation !== null) {
+                    randomRotationCheckbox.checked = storedRandomRotation === 'true';
+                }
+                if (storedRandomFlip !== null) {
+                    randomFlipCheckbox.checked = storedRandomFlip === 'true';
+                }
+                updateDifficultyText();
+                drawGrid();
+                createPuzzleBtn.disabled = false;
+                localStorage.removeItem('customImage');
+                localStorage.removeItem('customSize');
+                localStorage.removeItem('customShape');
+                localStorage.removeItem('randomRotation');
+                localStorage.removeItem('randomFlip');
+            }
+            
             document.addEventListener('visibilitychange', () => {
                 if (!document.hidden) initEditorAdminUiWithRetry();
             });
@@ -523,168 +562,7 @@
             });
         });
 
-        playBtn.addEventListener('click', function() {
-            localStorage.setItem('customImage', imgData);
-            localStorage.setItem('customSize', difficultySelect.value);
-            localStorage.setItem('customShape', shapeSelect.value);
-            // 存储新的选项状态
-            localStorage.setItem('randomRotation', randomRotationCheckbox.checked);
-            localStorage.setItem('randomFlip', randomFlipCheckbox.checked);
-            window.location.href = '{{ url_for('game_page') }}';
-        });
 
-        window.addEventListener('DOMContentLoaded', function() {
-            // 初始化管理员UI与“选择系统图片”按钮事件（带重试）
-            initEditorAdminUiWithRetry();
-
-            const customImage = localStorage.getItem('customImage');
-            const customSize = localStorage.getItem('customSize');
-            const customShape = localStorage.getItem('customShape');
-
-            // 获取新的选项状态
-            const storedRandomRotation = localStorage.getItem('randomRotation');
-            const storedRandomFlip = localStorage.getItem('randomFlip');
-            // 在现有脚本中添加以下代码
-            const shareBtn = document.getElementById('shareBtn');
-            const shareModal = document.getElementById('shareModal');
-            const puzzleTitleInput = document.getElementById('puzzleTitle');
-            const titleError = document.getElementById('titleError');
-            const confirmShareBtn = document.getElementById('confirmShareBtn');
-                // 点击分享按钮显示模态框
-            shareBtn.addEventListener('click', () => {
-            console.log('分享按钮被点击1'); // 新增日志
-            if (!imgData) return;
-            console.log('分享按钮被点击2'); // 新增日志
-            // 清空之前的输入和错误提示
-            puzzleTitleInput.value = '';
-            titleError.style.display = 'none';
-            shareModal.style.display = 'flex';
-            });
-         // 确认分享按钮点击事件
-confirmShareBtn.addEventListener('click', async () => {
-    const title = puzzleTitleInput.value.trim();
-
-    // 验证标题长度
-    if (title.length < 5 || title.length > 20) {
-        titleError.style.display = 'block';
-        return;
-    }
-    titleError.style.display = 'none';
-
-    try {
-        // 获取用户token（根据主界面的存储方式）
-        const token = localStorage.getItem('puzzleToken');
-        if (!token) {
-            alert('请先登录才能分享');
-            // 显示登录模态框（如果编辑器页面有）
-            // 或者跳转到主界面
-            window.location.href = '/'; // 跳转到主界面
-            return;
-        }
-
-        // 1. 创建关卡
-        const formData = new FormData();
-        formData.append('title', title);
-        formData.append('difficulty', difficultySelect.value);
-        formData.append('piece_count', difficultySelect.value * difficultySelect.value);
-        formData.append('piece_shape', shapeSelect.value);
-        formData.append('is_rotatable', randomRotationCheckbox.checked ? 1 : 0);
-        formData.append('is_system_level', 0);
-
-        // 将base64图片转换为Blob对象
-        const blob = await fetch(imgData).then(res => res.blob());
-        formData.append('image', blob, 'puzzle_image.png');
-
-        // 调用创建关卡接口
-        const createResponse = await fetch('/puzzles', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`
-            },
-            body: formData
-        });
-
-        // 处理可能的401未授权错误
-        if (createResponse.status === 401) {
-            localStorage.removeItem('puzzleToken');
-            localStorage.removeItem('userId');
-            alert('登录已过期，请重新登录');
-            window.location.href = '/'; // 跳转到主界面
-            return;
-        }
-
-        const createResult = await createResponse.json();
-
-        if (createResult.code !== '200') {
-            throw new Error(`创建关卡失败: ${createResult.message}`);
-        }
-
-        // 2. 创建分享记录
-        const puzzleId = createResult.data.puzzle_id;
-        const shareResponse = await fetch('/shares', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                puzzle_id: puzzleId
-            })
-        });
-
-        // 再次检查401错误
-        if (shareResponse.status === 401) {
-            localStorage.removeItem('puzzleToken');
-            localStorage.removeItem('userId');
-            alert('登录已过期，请重新登录');
-            window.location.href = '/'; // 跳转到主界面
-            return;
-        }
-
-        if (!shareResponse.ok) {
-            const shareResult = await shareResponse.json();
-            throw new Error(shareResult.error || '分享创建失败');
-        }
-
-        const shareData = await shareResponse.json();
-        alert(`分享成功！分享ID: ${shareData.share_id}`);
-        shareModal.style.display = 'none';
-
-    } catch (error) {
-        console.error('分享失败:', error);
-        alert(`分享失败: ${error.message}`);
-    }
-});
-            if (customImage && customSize) {
-                imgData = customImage;
-                previewImage.src = imgData;
-                previewImage.style.display = 'block';
-                gridCanvas.style.display = 'block';
-                previewTip.style.display = 'none';
-                difficultySelect.value = customSize;
-                if (customShape) { shapeSelect.value = customShape; currentShape = customShape; }
-                // 设置新的选项状态
-                if (storedRandomRotation !== null) {
-                    randomRotationCheckbox.checked = storedRandomRotation === 'true';
-                }
-                if (storedRandomFlip !== null) {
-                    randomFlipCheckbox.checked = storedRandomFlip === 'true';
-                }
-                updateDifficultyText();
-                drawGrid();
-
-                createPuzzleBtn.disabled = false;
-
-                playBtn.disabled = false;
-                shareBtn.disabled = false;
-
-                localStorage.removeItem('customImage');
-                localStorage.removeItem('customSize');
-                localStorage.removeItem('customShape');
-                localStorage.removeItem('randomRotation');
-                localStorage.removeItem('randomFlip');
-            }
-        });
 
         // 创建拼图：仅在前端保存到 localStorage，随后弹出“下一步”弹窗
         function onCreatePuzzle(){
@@ -726,13 +604,175 @@ confirmShareBtn.addEventListener('click', async () => {
                 window.location.href = '{{ url_for('game_page') }}';
             });
             document.getElementById('goShareBtn').addEventListener('click', () => {
-                window.location.href = '{{ url_for('share_page') if url_for else '#' }}';
+                wrap.style.display = 'none';
+                // 直接开始分享流程，不需要额外的输入框
+                handleShareSubmit();
             });
             document.getElementById('closeNextStepBtn').addEventListener('click', () => {
                 wrap.style.display = 'none';
             });
         }
+
+        // 分享功能
+        function handleShareSuccess(shareData) {
+            // 创建分享成功模态框
+            const modal = document.createElement('div');
+            modal.className = 'modal-mask';
+            modal.style.display = 'flex';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 400px;">
+                    <div class="modal-header">
+                        <span>分享成功！</span>
+                        <span class="modal-close" onclick="this.closest('.modal-mask').remove()">×</span>
+                    </div>
+                    <div class="modal-body" style="text-align: center;">
+                        <p>您的拼图已成功分享</p>
+                        <p> </p>
+                        <p class="share_code">分享码: <strong>${shareData.share_code}</strong></p>
+                        <div style="display: flex; justify-content: center; gap: 15px; margin-top: 20px;">
+                            <button id="viewShareBtn" class="btn btn-primary">
+                                去查看
+                            </button>
+                            <button id="continueGameBtn" class="btn btn-secondary">
+                                继续游戏
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+
+            document.getElementById('viewShareBtn').addEventListener('click', () => {
+                window.location.href = '/share?tab=myShares';
+                modal.remove();
+            });
+
+            document.getElementById('continueGameBtn').addEventListener('click', () => {
+                localStorage.setItem('customImage', imgData);
+                localStorage.setItem('customSize', difficultySelect.value);
+                localStorage.setItem('customShape', shapeSelect.value);
+                localStorage.setItem('randomRotation', randomRotationCheckbox.checked);
+                localStorage.setItem('randomFlip', randomFlipCheckbox.checked);
+                window.location.href = '{{ url_for('game_page') }}';
+                modal.remove();
+            });
+        }
+
+
+        // 分享提交处理函数
+        async function handleShareSubmit() {
+            // 获取关卡标题，优先使用管理员输入框的值
+            const adminTitle = document.getElementById('adminTitleInput').value.trim();
+            const title = adminTitle || '我的自定义拼图';
+
+            // 验证标题长度
+            if (title.length < 5 || title.length > 20) {
+                alert('关卡名称长度需在5~20个字符之间');
+                return;
+            }
+
+            try {
+                // 获取用户token
+                const token = localStorage.getItem('puzzleToken');
+                if (!token) {
+                    alert('请先登录才能分享');
+                    window.location.href = '/';
+                    return;
+                }
+
+                // 1. 创建关卡
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('difficulty', difficultyText.textContent === '简单' ? 'easy' : difficultyText.textContent === '中等' ? 'medium' : 'hard');
+                formData.append('piece_count', difficultySelect.value * difficultySelect.value);
+                // 形状映射：square->rect, triangle->triangle, jigsaw->irregular
+                const shapeMap = { square: 'rect', triangle: 'triangle', jigsaw: 'irregular' };
+                formData.append('piece_shape', shapeMap[shapeSelect.value]);
+                formData.append('is_rotatable', randomRotationCheckbox.checked ? 1 : 0);
+                formData.append('is_system_level', 0);
+
+                // 生成唯一文件名函数
+                function generateUniqueFileName() {
+                    const timestamp = new Date().getTime();
+                    const randomString = Math.random().toString(36).substring(2, 10);
+                    return `puzzle_${timestamp}_${randomString}.png`;
+                }
+
+                // 将base64图片转换为Blob对象
+                const blob = await fetch(imgData).then(res => res.blob());
+                const uniqueFileName = generateUniqueFileName();
+                formData.append('image', blob, uniqueFileName);
+
+                // 调用创建关卡接口
+                const createResponse = await fetch('/pic/puzzles', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: formData
+                });
+
+                // 处理可能的401未授权错误
+                if (createResponse.status === 401) {
+                    localStorage.removeItem('puzzleToken');
+                    localStorage.removeItem('userId');
+                    alert('登录已过期，请重新登录');
+                    window.location.href = '/';
+                    return;
+                }
+
+                const createResult = await createResponse.json();
+
+                if (createResult.code !== '200') {
+                    throw new Error(`创建关卡失败: ${createResult.message}`);
+                }
+
+                // 2. 创建分享记录
+                const puzzleId = createResult.data.puzzle_id;
+                console.log('puzzleId:', puzzleId, 'type:', typeof puzzleId);
+                const shareResponse = await fetch('/share/shares', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        puzzle_id: puzzleId,
+                    })
+                });
+
+                // 再次检查401错误
+                if (shareResponse.status === 401) {
+                    localStorage.removeItem('puzzleToken');
+                    localStorage.removeItem('userId');
+                    alert('登录已过期，请重新登录');
+                    window.location.href = '/';
+                    return;
+                }
+
+                // 处理所有非200响应
+                if (!shareResponse.ok) {
+                    const errorText = await shareResponse.text();
+                    throw new Error(`服务器错误: ${shareResponse.status} - ${errorText}`);
+                }
+
+                    // 处理成功响应
+                    const shareResult = await shareResponse.json();
+                    if (shareResult.code === '200') {
+                        handleShareSuccess(shareResult.data);
+                    } else {
+                        throw new Error(`分享失败: ${shareResult.message}`);
+                    }
+
+            } catch (error) {
+                console.error('分享失败:', error);
+                alert(`分享失败: ${error.message}`);
+            }
+        }
     </script>
+
+
 <!-- 帮助页面模态框 -->
 <div class="modal-mask" id="helpModal" style="display: none;">
     <div class="modal-content" style="max-width: 500px;">

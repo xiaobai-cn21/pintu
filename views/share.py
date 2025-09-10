@@ -1,49 +1,68 @@
 from flask import Blueprint, request, jsonify
 from extensions import db, shares, users, puzzles
 from datetime import datetime
+from flask_jwt_extended import jwt_required, get_jwt_identity
+import random
 
 # 创建蓝图
 share_bp = Blueprint('share', __name__)
 
 
 @share_bp.route('/shares', methods=['POST'])
+@jwt_required()
 def create_share():
     """创建分享记录"""
-    data = request.get_json()
-    user_id = data.get('user_id')
-    puzzle_id = data.get('puzzle_id')
+    try:
+        data = request.get_json()
+        user_id = get_jwt_identity()  # 从JWT token获取用户ID
+        puzzle_id = data.get('puzzle_id')
 
-    # 验证参数
-    if not all([user_id, puzzle_id]):
-        return jsonify({"error": "用户ID和拼图ID不能为空"}), 400
+        # 验证参数
+        if not puzzle_id:
+            return jsonify({"code": "400", "message": "拼图ID不能为空", "data": None}), 400
 
-    # 验证用户和拼图是否存在
-    user = users.query.get(user_id)
-    puzzle = puzzles.query.get(puzzle_id)
-    if not user:
-        return jsonify({"error": "用户不存在"}), 404
-    if not puzzle:
-        return jsonify({"error": "拼图不存在"}), 404
+        # 验证用户和拼图是否存在
+        user = users.query.get(user_id)
+        puzzle = puzzles.query.get(puzzle_id)
+        if not user:
+            return jsonify({"code": "404", "message": "用户不存在", "data": None}), 404
+        if not puzzle:
+            return jsonify({"code": "404", "message": "拼图不存在", "data": None}), 404
+        
         # 生成6位唯一数字分享码
         while True:
             share_code = ''.join(random.choices('0123456789', k=6))
             if not shares.query.filter_by(share_code=share_code).first():
                 break
-    # 创建分享记录
-    new_share = shares(
-        user_id=user_id,
-        puzzle_id=puzzle_id,
-        share_code=share_code,  # 添加分享码字段
-        view_count=0,
-        created_at=datetime.utcnow()
-    )
-    db.session.add(new_share)
-    db.session.commit()
+        
+        # 创建分享记录
+        new_share = shares(
+            user_id=user_id,
+            puzzle_id=puzzle_id,
+            share_code=share_code,
+            view_count=0,
+            created_at=datetime.utcnow()
+        )
+        db.session.add(new_share)
+        db.session.commit()
 
-    return jsonify({
-        "message": "分享成功",
-        "share_id": new_share.share_id
-    }), 201
+        return jsonify({
+            "code": "200",
+            "message": "分享成功",
+            "data": {
+                "share_code": share_code,
+                "share_id": new_share.share_id
+            }
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()  # 回滚事务
+        print(f"分享创建失败: {str(e)}")
+        return jsonify({
+            "code": "500", 
+            "message": f"服务器内部错误: {str(e)}", 
+            "data": None
+        }), 500
 
 
 @share_bp.route('/shares', methods=['GET'])
@@ -65,16 +84,19 @@ def get_shares():
 
     result = []
     for share in share_list:
-        result.append({
-            "id": share.share_id,
-            "share_code": share.share_code,
-            "title": puzzles.title,
-            "imageUrl": puzzles.image_url,
-            "creator": users.query.get(share.user_id).username,
-            "difficulty": puzzles.difficulty,
-            "size": f"{puzzles.piece_count}x{puzzles.piece_count}",
-            "puzzleId": puzzles.puzzle_id
-        })
+        puzzle = puzzles.query.get(share.puzzle_id)
+        creator = users.query.get(share.user_id)
+        if puzzle and creator:
+            result.append({
+                "id": share.share_id,
+                "share_code": share.share_code,
+                "title": puzzle.title,
+                "imageUrl": puzzle.image_url,
+                "creator": creator.username,
+                "difficulty": puzzle.difficulty,
+                "size": f"{puzzle.piece_count}x{puzzle.piece_count}",
+                "puzzleId": puzzle.puzzle_id
+            })
 
     return jsonify(result), 200
 

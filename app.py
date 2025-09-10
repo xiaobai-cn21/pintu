@@ -21,6 +21,14 @@ def create_app():
         f"{Config.MYSQL_HOST}:{Config.MYSQL_PORT}/{Config.MYSQL_DB}"
     )
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    # 添加数据库连接池配置
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        'pool_pre_ping': True,  # 在连接前检查连接是否有效
+        'pool_recycle': 300,    # 连接回收时间（秒）
+        'pool_timeout': 20,     # 获取连接的超时时间
+        'max_overflow': 0,      # 最大溢出连接数
+        'pool_size': 10         # 连接池大小
+    }
     app.config['JWT_SECRET_KEY'] = Config.SECRET_KEY
     db.init_app(app)
     JWTManager(app)
