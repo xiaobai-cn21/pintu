@@ -184,6 +184,11 @@ function selectLevel(id, image, difficulty) {
 
 // 进入游戏
 document.getElementById('enterGameBtn').addEventListener('click', () => {
+    // 记录当前关卡ID（用于保存/恢复进度接口）
+    if (selectedLevelId) {
+        localStorage.setItem('puzzleId', String(selectedLevelId));
+        localStorage.setItem('isSystemLevel', 'true');
+    }
     localStorage.setItem('customImage', selectedImage);
     localStorage.setItem('customSize', selectedDifficulty);
     window.location.href = '{{ url_for('game_page') }}';

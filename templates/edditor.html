@@ -300,6 +300,11 @@
                     alert('系统关卡创建成功');
                     // 刷新系统图片数据源，便于“选择系统图片”立刻看到新图
                     await prefetchSystemImages();
+                    // 写入新关卡ID，便于后续保存进度
+                    if (j.data && j.data.puzzle_id) {
+                        localStorage.setItem('puzzleId', String(j.data.puzzle_id));
+                        localStorage.setItem('isSystemLevel', 'true');
+                    }
                 } else {
                     alert(j?.message || '创建失败');
                 }
@@ -644,6 +649,13 @@ confirmShareBtn.addEventListener('click', async () => {
             localStorage.setItem('customShape', shapeSelect.value);
             localStorage.setItem('randomRotation', randomRotationCheckbox.checked);
             localStorage.setItem('randomFlip', randomFlipCheckbox.checked);
+            // 自定义关卡若需要保存进度，这里可以先创建关卡，拿到 puzzle_id。
+            // 如仅畅玩不存档，可生成一个本地ID，供后续使用（不会写数据库）。
+            if (!localStorage.getItem('puzzleId')) {
+                const localId = 'custom:' + Date.now();
+                localStorage.setItem('puzzleId', localId);
+                localStorage.setItem('isSystemLevel', 'false');
+            }
             ensureNextStepModal();
             document.getElementById('nextStepModal').style.display = 'flex';
         }
