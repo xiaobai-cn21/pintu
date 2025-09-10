@@ -1273,3 +1273,17 @@ function getEffectivePieceType(piece) {
 
     return effectiveType;
 }
+
+function saveBoardPieces() {
+    const piecesOnBoard = Array.from(document.querySelectorAll('#puzzleBoard .puzzle-piece'))
+        .map(piece => ({
+            correctX: piece.dataset.correctX,
+            correctY: piece.dataset.correctY,
+            currentX: piece.dataset.currentX,
+            currentY: piece.dataset.currentY,
+            rotation: piece.dataset.rotation,
+            flipped: piece.dataset.flipped,
+            type: piece.dataset.type || null
+        }));
+    localStorage.setItem('boardPieces', JSON.stringify(piecesOnBoard));
+}
