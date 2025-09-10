@@ -104,5 +104,6 @@ class shares(db.Model):
     share_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
     puzzle_id = Column(Integer, ForeignKey('puzzles.puzzle_id'), nullable=False)
+    share_code = Column(Integer)
     view_count = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)

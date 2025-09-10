@@ -92,33 +92,51 @@ class MoveCommand extends Command {
 
 // 旋转拼图块命令
 class RotateCommand extends Command {
-    constructor(piece, previousRotation) {
+    constructor(piece, previousRotation, previousVisualRotation, previousRect) {
         super();
         this.piece = piece;
         this.previousRotation = previousRotation;
-        this.newRotation = parseInt(piece.dataset.rotation) || 0;
+        this.previousVisualRotation = previousVisualRotation;
+        this.previousRect = previousRect; // 记录之前的位置信息
     }
 
     undo() {
+        // 恢复逻辑和视觉角度
         this.piece.dataset.rotation = this.previousRotation;
+        this.piece.dataset.visualRotation = this.previousVisualRotation;
+
+        // 恢复transform
         const isFlipped = this.piece.dataset.flipped === 'true';
-        this.piece.style.transform = `rotate(${this.previousRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
+        this.piece.style.transform = `rotate(${this.previousVisualRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
+
+        // 【关键】如果之前有位置信息，则一并恢复
+        if (this.previousRect) {
+            this.piece.style.left = this.previousRect.left;
+            this.piece.style.top = this.previousRect.top;
+        }
     }
 }
 
 // 翻转拼图块命令
 class FlipCommand extends Command {
-    constructor(piece, previousFlipped) {
+    constructor(piece, previousFlipped, visualRotation, previousRect) {
         super();
         this.piece = piece;
         this.previousFlipped = previousFlipped;
-        this.newFlipped = piece.dataset.flipped === 'true';
+        this.visualRotation = visualRotation;
+        this.previousRect = previousRect; // 记录之前的位置信息
     }
 
     undo() {
         this.piece.dataset.flipped = this.previousFlipped;
-        const currentRotation = parseInt(this.piece.dataset.rotation) || 0;
-        this.piece.style.transform = `rotate(${currentRotation}deg) scaleX(${this.previousFlipped ? -1 : 1})`;
+
+        // 恢复transform
+        this.piece.style.transform = `rotate(${this.visualRotation}deg) scaleX(${this.previousFlipped ? -1 : 1})`;
+
+        if (this.previousRect) {
+            this.piece.style.left = this.previousRect.left;
+            this.piece.style.top = this.previousRect.top;
+        }
     }
 }
 
@@ -152,40 +170,74 @@ function undo() {
 // 修改旋转函数，添加命令记录
 function rotatePiece(piece) {
     const currentRotation = parseInt(piece.dataset.rotation) || 0;
-    // 记录当前旋转状态作为撤销依据
-    const command = new RotateCommand(piece, currentRotation);
+    let currentVisualRotation = parseInt(piece.dataset.visualRotation);
+    if (isNaN(currentVisualRotation)) {
+        currentVisualRotation = currentRotation;
+    }
+
+    const previousRect = { left: piece.style.left, top: piece.style.top };
+    const command = new RotateCommand(piece, currentRotation, currentVisualRotation, previousRect);
 
     const newRotation = (currentRotation + 90) % 360;
+    const newVisualRotation = currentVisualRotation + 90;
     piece.dataset.rotation = newRotation;
+    piece.dataset.visualRotation = newVisualRotation;
+
     const isFlipped = piece.dataset.flipped === 'true';
-    piece.style.transform = `rotate(${newRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
+    piece.style.transform = `rotate(${newVisualRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
 
-    // 推入命令栈
+    if (piece.dataset.currentX !== undefined && piece.dataset.currentY !== undefined) {
+        const gridX = parseInt(piece.dataset.currentX);
+        const gridY = parseInt(piece.dataset.currentY);
+        const newPos = calculatePieceFinalPosition(piece, gridX, gridY);
+        if (newPos) {
+            piece.style.left = newPos.finalLeft;
+            piece.style.top = newPos.finalTop;
+        }
+    }
+
     pushCommand(command);
-
-    // 更新移动次数
     moves++;
     movesElement.textContent = `移动次数: ${moves}`;
+
+    // 【关键修复】操作结束后，延迟一小段时间再检查是否完成
+    setTimeout(checkPuzzleCompletion, 50);
 }
 
 // 修改翻转函数，添加命令记录
 function flipPiece(piece) {
     const isFlipped = piece.dataset.flipped === 'true';
-    // 记录当前翻转状态作为撤销依据
-    const command = new FlipCommand(piece, isFlipped);
+    let visualRotation = parseInt(piece.dataset.visualRotation);
+    if (isNaN(visualRotation)) {
+        visualRotation = parseInt(piece.dataset.rotation) || 0;
+    }
+
+    const previousRect = { left: piece.style.left, top: piece.style.top };
+    const command = new FlipCommand(piece, isFlipped, visualRotation, previousRect);
 
     const newFlipped = !isFlipped;
     piece.dataset.flipped = newFlipped;
-    const currentRotation = parseInt(piece.dataset.rotation) || 0;
-    piece.style.transform = `rotate(${currentRotation}deg) scaleX(${newFlipped ? -1 : 1})`;
 
-    // 推入命令栈
+    piece.style.transform = `rotate(${visualRotation}deg) scaleX(${newFlipped ? -1 : 1})`;
+
+    if (piece.dataset.currentX !== undefined && piece.dataset.currentY !== undefined) {
+        const gridX = parseInt(piece.dataset.currentX);
+        const gridY = parseInt(piece.dataset.currentY);
+        const newPos = calculatePieceFinalPosition(piece, gridX, gridY);
+        if (newPos) {
+            piece.style.left = newPos.finalLeft;
+            piece.style.top = newPos.finalTop;
+        }
+    }
+
     pushCommand(command);
-
-    // 更新移动次数
     moves++;
     movesElement.textContent = `移动次数: ${moves}`;
+
+    // 【关键修复】操作结束后，延迟一小段时间再检查是否完成
+    setTimeout(checkPuzzleCompletion, 50);
 }
+
 // 修复鼠标按下事件处理
 function handleDragStart(e) {
     draggedPiece = this;
@@ -517,6 +569,7 @@ function dropOnBoard(e) {
     console.log(`[3. 目标格检查] 目标格中发现 ${piecesInTargetCell.length} 个【其他】拼图块。`);
 
     if (shape === 'triangle') {
+        // --- 三角形逻辑 (保持不变) ---
         if (piecesInTargetCell.length === 0) {
             console.log('[4. 判断] 目标格为空。判定：【可以放置】');
             canPlace = true;
@@ -552,8 +605,15 @@ function dropOnBoard(e) {
              console.log('[4. 判断] 目标格已满。判定：【不可放置】');
         }
     } else {
-        // (方形和异形的逻辑... 暂时忽略，因为问题出在三角形)
-        canPlace = true; // 简化处理
+        // --- 【关键修复】方形和 Jigsaw 块的逻辑 ---
+        // 只有当目标格子为空时，才允许放置
+        if (piecesInTargetCell.length === 0) {
+            console.log('[4. 判断] 目标格为空。判定：【可以放置】');
+            canPlace = true;
+        } else {
+            console.log(`[4. 判断] 目标格已有 ${piecesInTargetCell.length} 个块。判定：【不可放置】`);
+            // canPlace 默认为 false，无需显式设置
+        }
     }
 
     console.log(`[5. 最终决定] 是否可以放置: ${canPlace}`);
@@ -660,17 +720,18 @@ function checkPuzzleCompletion() {
         const correctX = parseInt(piece.dataset.correctX);
         const correctY = parseInt(piece.dataset.correctY);
 
+        // 1. 检查位置是否正确
         if (pieceX !== correctX || pieceY !== correctY) {
             allCorrect = false;
         }
 
-        if (shape === 'jigsaw' || shape === 'triangle') {
-            const rotation = parseInt(piece.dataset.rotation) || 0;
-            const isFlipped = piece.dataset.flipped === 'true';
+        // 2. 【关键修复】对所有类型的拼图块都检查旋转和翻转
+        //    (移除了外层的 if (shape === ...) 判断)
+        const rotation = parseInt(piece.dataset.rotation) || 0;
+        const isFlipped = piece.dataset.flipped === 'true';
 
-            if (rotation !== 0 || isFlipped) {
-                allCorrect = false;
-            }
+        if (rotation !== 0 || isFlipped) {
+            allCorrect = false;
         }
     });
 
@@ -891,17 +952,8 @@ function createJigsawPiece(x, y, width, height, edges) {
 
     const tabSize = width * JIGSAW_TAB_RATIO;
 
-    // div 的尺寸需要比基础尺寸大，以容纳凸出的部分
-    const hasLeftTab = edges.left !== 'flat';
-    const hasRightTab = edges.right !== 'flat';
-    const hasTopTab = edges.top !== 'flat';
-    const hasBottomTab = edges.bottom !== 'flat';
-
     const divWidth = width + (edges.left === 'tab' ? tabSize : 0) + (edges.right === 'tab' ? tabSize : 0);
     const divHeight = height + (edges.top === 'tab' ? tabSize : 0) + (edges.bottom === 'tab' ? tabSize : 0);
-    const offsetXForDiv = (edges.left === 'tab' ? tabSize : 0);
-    const offsetYForDiv = (edges.top === 'tab' ? tabSize : 0);
-
 
     piece.style.width = `${divWidth}px`;
     piece.style.height = `${divHeight}px`;
@@ -923,10 +975,16 @@ function createJigsawPiece(x, y, width, height, edges) {
     piece.style.backgroundImage = `url(${originalImageUrl})`;
     piece.style.backgroundSize = `${coveredWidth}px ${coveredHeight}px`;
 
-    const bgPosX = -(x * width) + offsetX + offsetXForDiv; // <--- 减号改加号
-    const bgPosY = -(y * height) + offsetY + offsetYForDiv; // <--- 减号改加号
+    const offsetXForBg = (edges.left === 'tab' ? tabSize : 0);
+    const offsetYForBg = (edges.top === 'tab' ? tabSize : 0);
+    const bgPosX = -(x * width) + offsetX + offsetXForBg;
+    const bgPosY = -(y * height) + offsetY + offsetYForBg;
     piece.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
 
+    // 【核心修正】: 计算并设置正确的旋转中心点（核心正方形的中心）
+    const coreCenterX = offsetXForBg + width / 2;
+    const coreCenterY = offsetYForBg + height / 2;
+    piece.style.transformOrigin = `${coreCenterX}px ${coreCenterY}px`;
 
     piece.dataset.correctX = x;
     piece.dataset.correctY = y;
@@ -1021,44 +1079,6 @@ function setupPieceEvents(piece) {
         flipPiece(this);
     });
     piece.addEventListener('drag', pieceDrag);
-}
-
-// 旋转拼图块
-function rotatePiece(piece) {
-    const currentRotation = parseInt(piece.dataset.rotation) || 0;
-    // 记录当前旋转状态作为撤销依据
-    const command = new RotateCommand(piece, currentRotation);
-
-    const newRotation = (currentRotation + 90) % 360;
-    piece.dataset.rotation = newRotation;
-    const isFlipped = piece.dataset.flipped === 'true';
-    piece.style.transform = `rotate(${newRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
-
-    // 推入命令栈
-    pushCommand(command);
-
-    // 更新移动次数
-    moves++;
-    movesElement.textContent = `移动次数: ${moves}`;
-}
-
-// 翻转拼图块
-function flipPiece(piece) {
-    const isFlipped = piece.dataset.flipped === 'true';
-    // 记录当前翻转状态作为撤销依据
-    const command = new FlipCommand(piece, isFlipped);
-
-    const newFlipped = !isFlipped;
-    piece.dataset.flipped = newFlipped;
-    const currentRotation = parseInt(piece.dataset.rotation) || 0;
-    piece.style.transform = `rotate(${currentRotation}deg) scaleX(${newFlipped ? -1 : 1})`;
-
-    // 推入命令栈
-    pushCommand(command);
-
-    // 更新移动次数
-    moves++;
-    movesElement.textContent = `移动次数: ${moves}`;
 }
 
 // 确定三角形位置
@@ -1186,53 +1206,44 @@ function pieceDrag(e) {
 function calculatePieceFinalPosition(piece, gridX, gridY) {
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
-    let finalLeft, finalTop;
+    const tabSize = pieceWidth * JIGSAW_TAB_RATIO;
+
+    let finalLeft;
+    let finalTop;
 
     if (shape === 'jigsaw') {
-        const rotation = parseInt(piece.dataset.rotation) || 0;
-        const isFlipped = piece.dataset.flipped === 'true';
-        const tabSize = pieceWidth * JIGSAW_TAB_RATIO;
+        // 1. 目标：将拼图块的旋转中心，对齐到网格的中心。
 
-        let edges = {
-            top: piece.dataset.edgeTop, right: piece.dataset.edgeRight,
-            bottom: piece.dataset.edgeBottom, left: piece.dataset.edgeLeft
-        };
-        if (isFlipped) { [edges.left, edges.right] = [edges.right, edges.left]; }
-        const rotationSteps = rotation / 90;
-        for (let i = 0; i < rotationSteps; i++) {
-            const tempTop = edges.top; edges.top = edges.left; edges.left = edges.bottom;
-            edges.bottom = edges.right; edges.right = tempTop;
-        }
+        // 2. 计算网格中心的绝对坐标
+        const gridCenterX = gridX * pieceWidth + pieceWidth / 2;
+        const gridCenterY = gridY * pieceHeight + pieceHeight / 2;
 
-        const offsetXForDiv = (edges.left === 'tab' ? tabSize : 0);
-        const offsetYForDiv = (edges.top === 'tab' ? tabSize : 0);
+        // 3. 计算旋转中心在拼图块div内部的坐标
+        //    (这必须与 createJigsawPiece 中设置的 transformOrigin 完全一致)
+        const dx = (piece.dataset.edgeLeft === 'tab' ? tabSize : 0);
+        const dy = (piece.dataset.edgeTop === 'tab' ? tabSize : 0);
+        const pivotInDivX = dx + pieceWidth / 2;
+        const pivotInDivY = dy + pieceHeight / 2;
 
-        let calculatedLeft = gridX * pieceWidth - offsetXForDiv;
-        let calculatedTop = gridY * pieceHeight - offsetYForDiv;
+        // 4. 计算div的left和top，使得两个中心点重合
+        finalLeft = gridCenterX - pivotInDivX;
+        finalTop = gridCenterY - pivotInDivY;
 
-        if (rotation === 90 || rotation === 270) {
-            const divWidth = parseFloat(piece.style.width);
-            const divHeight = parseFloat(piece.style.height);
-            calculatedLeft += (divWidth - divHeight) / 2;
-            calculatedTop += (divHeight - divWidth) / 2;
-        }
-        finalLeft = `${calculatedLeft}px`;
-        finalTop = `${calculatedTop}px`;
-
-    } else if (shape === 'square') {
-        finalLeft = `${gridX * pieceWidth}px`;
-        finalTop = `${gridY * pieceHeight}px`;
-
-    } else if (shape === 'triangle') {
-        finalLeft = `${gridX * pieceWidth}px`;
-        finalTop = `${gridY * pieceHeight}px`;
+    } else { // 对于 'square' 和 'triangle'，它们的旋转中心就是几何中心
+        finalLeft = gridX * pieceWidth;
+        finalTop = gridY * pieceHeight;
     }
 
     if (finalLeft !== undefined && finalTop !== undefined) {
-        return { finalLeft, finalTop };
+        return {
+            finalLeft: `${finalLeft}px`,
+            finalTop: `${finalTop}px`
+        };
     }
+
     return null;
 }
+
 // 兼容 game.html 对 window.puzzleGame 的依赖（用于帮助弹窗暂停/恢复）
 try {
     window.puzzleGame = {
