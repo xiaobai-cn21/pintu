@@ -15,7 +15,10 @@
         <button id="toggleBgBtn" class="btn">隐藏背景</button>
         <button id="undoBtn" class="btn">撤销</button>
         <button id="restartBtn" class="btn">重新开始</button>
+        <button id="saveBtn" class="btn">保存进度</button>
+        <button id="restoreBtn" class="btn">恢复进度</button>
     </div>
+    
     <div class="game-info">
         <div id="timer">时间: 00:00</div>
         <div id="moves">移动次数: 0</div>
@@ -65,6 +68,47 @@
     </svg>
 <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const restoreBtn = document.getElementById('restoreBtn');
+        if (restoreBtn) {
+            restoreBtn.addEventListener('click', restoreProgressFromDB);
+        }
+    });
+    document.getElementById('saveBtn').addEventListener('click', async function() {
+    // 假设你有这些变量
+    const piecesOnBoard = Array.from(document.querySelectorAll('#puzzleBoard .puzzle-piece')).map(piece => ({
+        correctX: piece.dataset.correctX,
+        correctY: piece.dataset.correctY,
+        currentX: piece.dataset.currentX,
+        currentY: piece.dataset.currentY,
+        rotation: piece.dataset.rotation
+    }));
+
+    // 测试用
+    const token = localStorage.getItem('puzzleToken');
+    const puzzle_id = localStorage.getItem('puzzleId') || 1; 
+
+    if (!token) {
+        alert('请先登录！');
+        return;
+    }
+    // 发起保存请求
+    const res = await fetch('/pic/save_progress', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+            puzzle_id,
+            progress_json: JSON.stringify(piecesOnBoard)
+        })
+    });
+
+    const data = await res.json();
+    alert('进度已保存！');
+    console.log('保存结果', data);
+});
 // 游戏暂停/继续功能
 let gamePaused = false;
 let gameInstance = null;

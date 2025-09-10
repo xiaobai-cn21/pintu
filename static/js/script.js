@@ -1298,3 +1298,58 @@ function saveBoardPieces() {
         }));
     localStorage.setItem('boardPieces', JSON.stringify(piecesOnBoard));
 }
+
+async function restoreProgressFromDB() {
+    // For demo, use user_id=1, puzzle_id=1. Replace with real values if needed.
+    const token = localStorage.getItem('puzzleToken');
+    const puzzle_id = localStorage.getItem('puzzleId') || 1;
+    const res = await fetch(`/pic/get_progress?puzzle_id=${puzzle_id}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    });
+    
+    if (!res.ok) {
+        alert('Failed to fetch progress from server');
+        return;
+    }
+    const data = await res.json();
+    if (!data.progress_json) {
+        alert('No progress found in database');
+        return;
+    }
+    const piecesOnBoard = JSON.parse(data.progress_json);
+    console.log(piecesOnBoard)
+    // Remove all pieces from board and zone
+    puzzleBoard.innerHTML = '';
+    piecesZone.innerHTML = '';
+    pieces.forEach(piece => {
+        piece.style.position = 'static';
+        delete piece.dataset.currentX;
+        delete piece.dataset.currentY;
+        piecesZone.appendChild(piece);
+    });
+
+    // Place pieces on board according to saved state
+    piecesOnBoard.forEach(saved => {
+        const piece = pieces.find(p =>
+            p.dataset.correctX == saved.correctX &&
+            p.dataset.correctY == saved.correctY &&
+            (p.dataset.type || null) == (saved.type || null)
+        );
+        if (piece) {
+            piece.dataset.currentX = saved.currentX;
+            piece.dataset.currentY = saved.currentY;
+            piece.dataset.rotation = saved.rotation;
+            piece.dataset.flipped = saved.flipped;
+            piece.style.transform = `rotate(${saved.rotation}deg) scaleX(${saved.flipped === 'true' ? -1 : 1})`;
+            piece.style.position = 'absolute';
+            const pieceWidth = puzzleBoard.offsetWidth / difficulty;
+            const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+            piece.style.left = `${saved.currentX * pieceWidth}px`;
+            piece.style.top = `${saved.currentY * pieceHeight}px`;
+            puzzleBoard.appendChild(piece);
+        }
+    });
+    alert('Progress restored!');
+}
