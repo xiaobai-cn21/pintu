@@ -117,8 +117,15 @@
 
 ---
 
-### 6. 获取系统关卡（is_system_level=true）  
-**GET** `/pic/levels/system`  
+
+---
+
+### 6. 获取系统关卡（仅 is_system_level=true 的关卡，含所有新属性）
+**GET** `/pic/levels/system`
+
+**说明**：
+返回所有 is_system_level=true 的关卡，包含 puzzles 表的所有新属性（如 is_flipable、type 等）。
+
 **返回**：
 ```json
 {
