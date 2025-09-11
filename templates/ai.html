@@ -76,10 +76,23 @@
       order: 1; /* 生成结果在生成区域内最上面 */
     }
     
+    .mobile-device .ai-chat {
+      flex: none;
+      height: auto;
+      order: 3; /* 对话框在生成区域内下方 */
+      min-height: 150px;
+    }
+    
     .mobile-device .ai-chat-box {
       height: 150px;
       min-height: 150px;
       max-height: 150px;
+    }
+    
+    .mobile-device #useImageBtn {
+      order: 2; /* 按钮在生成结果和对话框之间 */
+      margin-top: 8px;
+      margin-bottom: 8px;
     }
     
     .mobile-device .ai-tags {
@@ -100,6 +113,11 @@
     .mobile-device .container {
       margin: 10px auto !important;
       padding: 0 10px;
+    }
+    
+    .mobile-device #makePuzzleBtn {
+      height: 40px;
+      font-size: 14px;
     }
   </style>
   <div class="ai-layout">
@@ -158,6 +176,11 @@
         <div id="aiPlaceholder" style="color:#F9E078; opacity:.7;">生成结果将显示在这里</div>
       </div>
       
+      <!-- 使用图片按钮 -->
+      <div id="useImageBtn" class="card" style="display:none; padding:12px;">
+        <button id="makePuzzleBtn" class="btn btn-primary" style="width:100%;">使用这个图片制作拼图</button>
+      </div>
+      
       <!-- 对话框 -->
       <div class="card ai-chat">
         <div id="chatBox" class="ai-chat-box"></div>
@@ -211,7 +234,10 @@ const aiPlaceholder=document.getElementById('aiPlaceholder');
 const chatBox=document.getElementById('chatBox');
 const promptTags=document.getElementById('promptTags');
 const sizeTags=document.getElementById('sizeTags');
+const useImageBtn=document.getElementById('useImageBtn');
+const makePuzzleBtn=document.getElementById('makePuzzleBtn');
 let selectedSize="1024x1024"; // 默认选中第一个尺寸
+let currentImageUrl = ""; // 存储当前生成的图片URL
 
 function appendMsg(who,text){
   const row=document.createElement('div');
@@ -274,10 +300,14 @@ genBtn.addEventListener('click', async ()=>{
         const [w,h]=selectedSize.split('x');
         url += `?width=${encodeURIComponent(w)}&height=${encodeURIComponent(h)}`;
       }
+      // 保存图片URL用于制作拼图
+      currentImageUrl = url;
       aiImg.src=url;
       aiResult.style.display='flex';
       aiImg.style.display='block';
       if(aiPlaceholder) aiPlaceholder.style.display='none';
+      // 显示使用图片按钮
+      useImageBtn.style.display='block';
       appendMsg('AI', '已生成图片，见上方预览');
       aiTip.textContent='';
     }else{
@@ -285,6 +315,25 @@ genBtn.addEventListener('click', async ()=>{
       appendMsg('AI', '生成失败');
     }
   }catch(e){ aiTip.textContent='网络错误'; }
+});
+
+// 使用图片制作拼图按钮点击事件
+makePuzzleBtn.addEventListener('click', ()=>{
+  if(!currentImageUrl){
+    aiTip.textContent='请先生成图片';
+    return;
+  }
+  
+  // 将图片URL保存到localStorage，供编辑器页面使用
+  // 使用编辑器页面期望的键名和默认设置
+  localStorage.setItem('customImage', currentImageUrl);
+  localStorage.setItem('customSize', '16'); // 默认16块拼图
+  localStorage.setItem('customShape', 'rect'); // 默认矩形
+  localStorage.setItem('randomRotation', 'false'); // 默认不随机旋转
+  localStorage.setItem('randomFlip', 'false'); // 默认不随机翻转
+  
+  // 跳转到编辑器页面
+  window.location.href = '/editor';
 });
 </script>
 
