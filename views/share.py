@@ -64,6 +64,52 @@ def create_share():
             "data": None
         }), 500
 
+@share_bp.route('/shares/search', methods=['GET'])
+def search_share_by_code():
+    """通过分享码搜索分享记录"""
+    share_code = request.args.get('code')
+
+    # 验证必需参数
+    if not share_code:
+        return jsonify({"error": "缺少分享码参数"}), 400
+
+    # 验证分享码格式
+    if len(share_code) != 6 or not share_code.isdigit():
+        return jsonify({"error": "分享码必须是6位数字"}), 400
+
+    share_code_int=int(share_code)
+    # 查询分享记录
+    share_record = shares.query.filter_by(share_code=share_code_int).first()
+    if not share_record:
+        return jsonify({"error": "未找到对应的分享记录"}), 404
+
+    # 增加浏览量
+    share_record.view_count += 1
+    db.session.commit()
+
+    # 获取关联的拼图和用户信息
+    puzzle = puzzles.query.get(share_record.puzzle_id)
+    creator = users.query.get(share_record.user_id)
+
+    if not puzzle or not creator:
+        return jsonify({"error": "关联的拼图或用户不存在"}), 404
+
+    # 返回与发现分享相同格式的数据
+    result = {
+        "id": share_record.share_id,
+        "share_code": share_record.share_code,
+        "title": puzzle.title,
+        "imageUrl": puzzle.image_url,
+        "creator": creator.username,
+        "difficulty": puzzle.difficulty,
+        "size": f"{puzzle.piece_count}x{puzzle.piece_count}",
+        "puzzleId": puzzle.puzzle_id,
+        "view_count": share_record.view_count,
+        "created_at": share_record.created_at.isoformat() if share_record.created_at else None
+    }
+
+    return jsonify({"data": [result]}), 200
+
 
 @share_bp.route('/shares', methods=['GET'])
 def get_shares():
