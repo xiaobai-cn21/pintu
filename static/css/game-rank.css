@@ -631,7 +631,7 @@ h1 {
     /* 第一行：品牌名称 */
     .pm-brand {
         position: absolute;
-        top: 20px; /* 10px + 2px英文数字符号微调 */
+        top: 15px; /* 调整位置避免与右侧图标重叠 */
         left: 20px;
         font-size: 10px;
         margin-right: 0;
@@ -687,7 +687,7 @@ h1 {
     
     .pm-brand {
         font-size: 9px;
-        top: 18px; /* 8px + 2px英文数字符号微调 */
+        top: 12px; /* 调整位置避免与右侧图标重叠 */
         left: 15px;
     }
     
@@ -729,7 +729,7 @@ h1 {
     
     .pm-brand {
         font-size: 8px;
-        top: 10px; /* 6px + 2px英文数字符号微调 */
+        top: 8px; /* 调整位置避免与右侧图标重叠 */
         left: 10px;
     }
     

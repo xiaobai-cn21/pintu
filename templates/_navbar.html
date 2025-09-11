@@ -150,6 +150,21 @@ document.body.appendChild(clickSoundScript);
       const help = document.getElementById('helpModal');
       if(help){ 
         help.style.display='flex'; 
+        
+        // 根据设备类型显示相应的帮助内容
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        const desktopHelp = document.getElementById('desktop-help');
+        const mobileHelp = document.getElementById('mobile-help');
+        
+        if (desktopHelp && mobileHelp) {
+          if (isMobile) {
+            desktopHelp.style.display = 'none';
+            mobileHelp.style.display = 'block';
+          } else {
+            desktopHelp.style.display = 'block';
+            mobileHelp.style.display = 'none';
+          }
+        }
       }
     });
   }

@@ -428,7 +428,7 @@ body {
     /* 第一行：品牌名称 */
     .pm-brand {
         position: absolute;
-        top: 20px; /* 10px + 2px英文数字符号微调 */
+        top: 15px; /* 调整位置避免与右侧图标重叠 */
         left: 20px;
         font-size: 10px;
         margin-right: 0;
@@ -443,6 +443,8 @@ body {
         display: flex;
         align-items: center;
         z-index: 10;
+        gap: 8px;
+        font-size: 10px;
     }
     
     /* 第二行：导航链接容器 */
@@ -478,13 +480,15 @@ body {
     
     .pm-brand {
         font-size: 9px;
-        top: 18px; /* 8px + 2px英文数字符号微调 */
+        top: 12px; /* 调整位置避免与右侧图标重叠 */
         left: 15px;
     }
     
     .pm-nav-right {
         top: 8px;
         right: 15px;
+        gap: 6px;
+        font-size: 9px;
     }
     
     .pm-nav-links-row {
@@ -519,13 +523,15 @@ body {
     
     .pm-brand {
         font-size: 8px;
-        top: 10px; /* 6px + 2px英文数字符号微调 */
+        top: 8px; /* 调整位置避免与右侧图标重叠 */
         left: 10px;
     }
     
     .pm-nav-right {
         top: 6px;
         right: 10px;
+        gap: 4px;
+        font-size: 8px;
     }
     
     .pm-nav-links-row {

@@ -2,9 +2,17 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="format-detection" content="email=no">
+    <meta name="format-detection" content="address=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#20223A">
     <title>AI 生成图片</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
 </head>
 <body>
 {% include '_navbar.html' %}
@@ -27,9 +35,75 @@
     .size-tag{font-size:10px;font-family:'Press Start 2P', monospace}
     .number-text{font-family:'Press Start 2P', monospace}
     .symbol-text{font-family:'Press Start 2P', monospace}
+    
+    /* 移动端样式 - 纵向排列 */
+    .mobile-device .ai-layout {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: auto;
+      min-height: 100vh;
+    }
+    
+    .mobile-device .ai-left {
+      flex: none;
+      height: auto;
+      order: 1; /* 标签框在最上面 */
+      max-height: 300px;
+      overflow-y: auto;
+    }
+    
+    .mobile-device .ai-right {
+      flex: none;
+      height: auto;
+      order: 3; /* 生成区域在最后 */
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    
+    .mobile-device .ai-chat {
+      flex: none;
+      height: auto;
+      order: 2; /* 对话框在生成区域内下方 */
+      min-height: 200px;
+    }
+    
+    .mobile-device .ai-result {
+      flex: none;
+      height: 300px;
+      min-height: 300px;
+      order: 1; /* 生成结果在生成区域内最上面 */
+    }
+    
+    .mobile-device .ai-chat-box {
+      height: 150px;
+      min-height: 150px;
+      max-height: 150px;
+    }
+    
+    .mobile-device .ai-tags {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+    
+    .mobile-device .tag-btn {
+      height: 32px;
+      font-size: 12px;
+    }
+    
+    .mobile-device .ai-tag-title {
+      font-size: 12px;
+      margin: 4px 0 6px;
+    }
+    
+    .mobile-device .container {
+      margin: 10px auto !important;
+      padding: 0 10px;
+    }
   </style>
   <div class="ai-layout">
-    <!-- 左侧：预置 Prompt 标签 -->
+    <!-- 标签框 -->
     <aside class="card ai-left">
       <h3 style="margin-bottom:12px;">常用标签</h3>
       <div id="promptTags">
@@ -76,15 +150,15 @@
       </div>
     </aside>
 
-    <!-- 右侧：上图下对话输入 -->
+    <!-- 生成区域 -->
     <section class="ai-right">
       <!-- 生成结果展示 -->
       <div id="aiResult" class="card ai-result">
         <img id="aiImg" src="" alt="AI图片" style="display:none;">
         <div id="aiPlaceholder" style="color:#F9E078; opacity:.7;">生成结果将显示在这里</div>
       </div>
-
-      <!-- 对话+输入区 -->
+      
+      <!-- 对话框 -->
       <div class="card ai-chat">
         <div id="chatBox" class="ai-chat-box"></div>
         <div class="ai-chat-input">
@@ -96,6 +170,37 @@
     </section>
   </div>
 </div>
+
+<script>
+// 移动端设备检测
+(function() {
+    'use strict';
+    
+    function isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+               window.innerWidth <= 768;
+    }
+    
+    function addMobileClass() {
+        if (isMobile()) {
+            document.body.classList.add('mobile-device');
+        }
+    }
+    
+    // 页面加载完成后初始化
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', addMobileClass);
+    } else {
+        addMobileClass();
+    }
+    
+    // 窗口大小改变时重新检测
+    window.addEventListener('resize', function() {
+        setTimeout(addMobileClass, 100);
+    });
+})();
+</script>
+
 <script>
 const genBtn=document.getElementById('genBtn');
 const aiPrompt=document.getElementById('aiPrompt');
@@ -191,16 +296,36 @@ genBtn.addEventListener('click', async ()=>{
             <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
         </div>
         <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
-            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
-            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
-            <p>- 单击选中的图块，顺时针旋转90度</p>
-            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
-            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
-            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
-            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
-            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
-            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
-            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+            <!-- 桌面端操作指南 -->
+            <div id="desktop-help" style="display: none;">
+                <p><strong style="color: #F9E078;">1. AI生成拼图</strong></p>
+                <p>- 输入描述文字，AI将生成相应的拼图图片</p>
+                <p>- 支持中文和英文描述，描述越详细效果越好</p>
+                <p>- 生成后可设置拼图块数、形状等参数</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+                <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+                <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+                <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+                <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+            </div>
+            
+            <!-- 移动端操作指南 -->
+            <div id="mobile-help" style="display: none;">
+                <p><strong style="color: #F9E078;">📱 AI生成拼图指南</strong></p>
+                <p><strong style="color: #F9E078;">1. AI生成拼图</strong></p>
+                <p>- 输入描述文字，AI将生成相应的拼图图片</p>
+                <p>- 支持中文和英文描述，描述越详细效果越好</p>
+                <p>- 生成后可设置拼图块数、形状等参数</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 拼图操作</strong></p>
+                <p>- 长按拼图块开始拖拽到棋盘</p>
+                <p>- 双击旋转拼图块，三击翻转拼图块</p>
+                <p>- 单击选中拼图块显示选中效果</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 游戏控制</strong></p>
+                <p>- 点击"撤销"可还原上一步操作</p>
+                <p>- 点击"保存进度"保存当前游戏状态</p>
+                <p>- 点击"恢复进度"恢复之前保存的游戏</p>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
@@ -226,7 +351,7 @@ genBtn.addEventListener('click', async ()=>{
             initPageMusic();
         });
     </script>
-</body>
+    </body>
 </html>
 
 

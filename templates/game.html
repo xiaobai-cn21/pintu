@@ -2,9 +2,17 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="format-detection" content="email=no">
+    <meta name="format-detection" content="address=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#20223A">
     <title>拼图游戏</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/game-rank.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
 </head>
 <body>
 {% include '_navbar.html' %}
@@ -47,16 +55,40 @@
             <span class="modal-close" onclick="closeHelpModal()">×</span>
         </div>
         <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
-            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
-            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
-            <p>- 单击选中的图块，顺时针旋转90度</p>
-            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
-            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
-            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
-            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
-            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
-            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
-            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+            <!-- 桌面端操作指南 -->
+            <div id="desktop-help" style="display: none;">
+                <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+                <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+                <p>- 单击选中的图块，顺时针旋转90度</p>
+                <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+                <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+                <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+                <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+                <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+            </div>
+            
+            <!-- 移动端操作指南 -->
+            <div id="mobile-help" style="display: none;">
+                <p><strong style="color: #F9E078;">📱 移动端操作指南</strong></p>
+                <p><strong style="color: #F9E078;">1. 拼图块操作</strong></p>
+                <p>- <strong>长按拖拽</strong>：长按拼图块开始拖拽到棋盘</p>
+                <p>- <strong>单击选中</strong>：单击拼图块显示选中效果</p>
+                <p>- <strong>双击旋转</strong>：双击拼图块顺时针旋转90度</p>
+                <p>- <strong>三击翻转</strong>：三击拼图块水平翻转</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 拼图块栏</strong></p>
+                <p>- 所有拼图块以多行形式显示，无需滚动</p>
+                <p>- 拼图块自动居中对齐，间距适中</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 游戏控制</strong></p>
+                <p>- 点击"撤销"可还原上一步操作</p>
+                <p>- 点击"保存进度"保存当前游戏状态</p>
+                <p>- 点击"恢复进度"恢复之前保存的游戏</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">4. 游戏技巧</strong></p>
+                <p>- 先拼边框，再拼内部细节</p>
+                <p>- 利用颜色和图案特征快速定位</p>
+                <p>- 可以随时保存进度，下次继续</p>
+            </div>
         </div>
         <div class="modal-footer">
             <button class="btn btn-primary" onclick="closeHelpModal()">我知道了</button>
@@ -128,6 +160,19 @@ function openHelpModal() {
     const helpModal = document.getElementById('helpModal');
     if (helpModal) {
         helpModal.style.display = 'flex';
+        
+        // 根据设备类型显示相应的帮助内容
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+        const desktopHelp = document.getElementById('desktop-help');
+        const mobileHelp = document.getElementById('mobile-help');
+        
+        if (isMobile) {
+            desktopHelp.style.display = 'none';
+            mobileHelp.style.display = 'block';
+        } else {
+            desktopHelp.style.display = 'block';
+            mobileHelp.style.display = 'none';
+        }
         
         // 暂停游戏
         if (gameInstance && gameInstance.gameStarted && !gamePaused) {
@@ -203,5 +248,8 @@ document.addEventListener('DOMContentLoaded', function() {
             initPageMusic();
         });
     </script>
+    
+    <!-- 移动端支持脚本 -->
+    <script src="{{ url_for('static', filename='js/mobile-support.js') }}"></script>
 </body>
 </html>
