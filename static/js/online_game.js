@@ -8,7 +8,7 @@ class PuzzleGame {
         if (typeof randomRotation !== 'undefined') {
             localStorage.setItem('randomRotation', randomRotation);
         }
-        if (typeof random randomFlip !== 'undefined') {
+        if (typeof randomFlip !== 'undefined') {
             localStorage.setItem('randomFlip', randomFlip);
         }
         this.setPuzzleBg();
@@ -33,8 +33,7 @@ class PuzzleGame {
         this.bindEvents();
         this.setPuzzleBg();
     }
-    
-    sendWinMessage() {
+        sendWinMessage() {
         console.log("i won")
         const token = localStorage.getItem('puzzleToken');
         const roomId = new URLSearchParams(window.location.search).get('room_id');
@@ -94,24 +93,6 @@ class PuzzleGame {
         this.bgVisible = !this.bgVisible;
         this.puzzleBg.style.opacity = this.bgVisible ? '0.25' : '0';
         this.toggleBgBtn.textContent = this.bgVisible ? '隐藏背景' : '显示背景';
-    }
-    
-    // 从当前 customImage/customSize 推导关卡信息
-    extractLevelInfo() {
-        try {
-            const imageUrl = this.originalImageUrl;
-            const diff = this.difficulty;
-            if (!imageUrl || !diff) return null;
-            // 关卡命名策略：图片文件名 + 难度
-            const urlObj = new URL(imageUrl, window.location.origin);
-            const pathname = urlObj.pathname || '';
-            const fileName = pathname.split('/').pop() || 'custom';
-            const levelId = `online-${fileName}-${diff}`;
-            const levelName = fileName.replace(/\.[a-zA-Z0-9]+$/, '');
-            return { levelId, levelName, imageUrl, difficulty: diff };
-        } catch (e) {
-            return null;
-        }
     }
 
     // 开始游戏
@@ -665,49 +646,18 @@ class PuzzleGame {
     submitToRanking() {
         try {
             const userId = localStorage.getItem('userId');
-            const token = localStorage.getItem('puzzleToken');
-            const levelInfo = this.extractLevelInfo ? this.extractLevelInfo() : null;
-            const levelId = levelInfo ? levelInfo.levelId : 'online-game';
-            if (userId && token) {
+            if (userId) {
                 fetch('/ranking/record', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer `+localStorage.getItem('puzzleToken')
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
                         user_id: Number(userId), 
-                        level_id: levelId,
                         step_count: this.moves, 
                         time_used: this.seconds 
                     })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.json().then(err => {
-                            // 检测token过期错误
-                            if (err.msg && err.msg.includes('Token has expired')) {
-                                localStorage.removeItem('puzzleToken');
-                                localStorage.removeItem('userId');
-                                alert('登录已过期，请重新登录');
-                                window.location.href = '/';
-                                throw new Error('登录已过期');
-                            }
-                            throw new Error(`后端错误：${err.msg || '未知错误'}`);
-                        });
-                    }
-                    return response.json();
-                })
-                .then(result => {
-                    console.log('成绩提交成功:', result);
-                })
-                .catch(error => {
-                    if (error.message !== '登录已过期') {
-                        console.error('提交排行榜成绩失败:', error.message);
-                    }
+                }).catch(error => {
+                    console.error('提交排行榜成绩失败:', error);
                 });
-            } else {
-                console.warn('未登录或Token缺失，无法提交成绩');
             }
         } catch (e) {
             console.error('提交成绩失败:', e);
