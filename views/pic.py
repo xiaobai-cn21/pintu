@@ -294,7 +294,7 @@ def get_my_progress():
             "total_steps": getattr(record, 'total_steps', 0),
             "updated_at": record.updated_at.isoformat() if hasattr(record, 'updated_at') and record.updated_at else "",
             "status": "completed" if getattr(record, 'is_completed', False) else "playing",
-            "difficulty_text": f"{puzzle.piece_count}×{puzzle.piece_count}",
+            "difficulty_text": f"{int(puzzle.piece_count**0.5)}×{int(puzzle.piece_count**0.5)}",
             "status_text": "已完成" if getattr(record, 'is_completed', False) else "进行中"
         })
     return jsonify({
