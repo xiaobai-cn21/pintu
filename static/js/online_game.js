@@ -8,7 +8,7 @@ class PuzzleGame {
         if (typeof randomRotation !== 'undefined') {
             localStorage.setItem('randomRotation', randomRotation);
         }
-        if (typeof randomFlip !== 'undefined') {
+        if (typeof random randomFlip !== 'undefined') {
             localStorage.setItem('randomFlip', randomFlip);
         }
         this.setPuzzleBg();
@@ -33,7 +33,8 @@ class PuzzleGame {
         this.bindEvents();
         this.setPuzzleBg();
     }
-        sendWinMessage() {
+    
+    sendWinMessage() {
         console.log("i won")
         const token = localStorage.getItem('puzzleToken');
         const roomId = new URLSearchParams(window.location.search).get('room_id');

@@ -15,7 +15,7 @@ class users(db.Model):
     is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime)
     puzzles = relationship('puzzles', backref='creator', lazy=True)
-    records = relationship('rank_records', backref='user', lazy=True)
+    records = relationship('rank_records', backref='user', lazy=True)  # 已更新为rank_records
     level_records = relationship('level_records', backref='user', lazy=True)
     game_saves = relationship('game_saves', backref='user', lazy=True)
 
@@ -34,11 +34,11 @@ class puzzles(db.Model):
     type = Column(Enum('nature', 'animal', 'building', 'cartoon', 'other'), default='other')
     created_at = Column(DateTime, default=datetime.utcnow)
 
-class rank_records(db.Model):
+class rank_records(db.Model):  # 已替换原records表
     __tablename__ = 'rank_records'
-    record_id =Column(Integer, primary_key=True, autoincrement=True)
+    record_id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey('users.user_id'))
-    level_id = Column(Integer, ForeignKey('puzzles.puzzle_id'))
+    level_id = Column(Integer, ForeignKey('puzzles.puzzle_id'))  # 新增外键关联puzzles表
     step_count = Column(Integer, nullable=False)
     time_used = Column(Integer, nullable=False)
 
@@ -116,6 +116,8 @@ class puzzle_progress(db.Model):
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
     puzzle_id = Column(Integer, ForeignKey('puzzles.puzzle_id'), nullable=False)
     progress_json = Column(Text, nullable=False)
+    used_time = Column(Integer, default=0)  # 保留已用时字段
+    total_steps = Column(Integer, default=0)  # 保留总步数字段
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     __table_args__ = (
         db.UniqueConstraint('user_id', 'puzzle_id', name='unique_user_puzzle'),

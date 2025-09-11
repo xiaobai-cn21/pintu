@@ -33,7 +33,8 @@ class PuzzleGame {
         this.bindEvents();
         this.setPuzzleBg();
     }
-        sendWinMessage() {
+    
+    sendWinMessage() {
         const roomId = new URLSearchParams(window.location.search).get('room_id');
         if (window.socket && roomId) {
             window.socket.emit('pvp_win', {
@@ -45,7 +46,7 @@ class PuzzleGame {
         }
     }
 
-        async saveProgressToDB() {
+    async saveProgressToDB() {
         const piecesOnBoard = Array.from(this.puzzleBoard.querySelectorAll('.puzzle-piece')).map(piece => ({
             correctX: piece.dataset.correctX,
             correctY: piece.dataset.correctY,
@@ -127,6 +128,7 @@ class PuzzleGame {
         this.toggleBgBtn.textContent = this.bgVisible ? '隐藏背景' : '显示背景';
         this.createPuzzlePieces();
     }
+    
     async restoreProgressFromDB() {
         const userId = localStorage.getItem('userId');
         const puzzleId = localStorage.getItem('puzzleId');
@@ -157,6 +159,7 @@ class PuzzleGame {
             }
         });
     }
+    
     // 重置游戏
     resetGame() {
         this.gameStarted = false;
@@ -689,55 +692,55 @@ class PuzzleGame {
 
     // 提交成绩到排行榜
     submitToRanking() {
-    try {
-        const userId = localStorage.getItem('userId');
-        const token = localStorage.getItem('puzzleToken');
-        if (!userId || !token) {
-            console.warn('未登录或Token缺失，无法提交成绩');
-            return;
-        }
+        try {
+            const userId = localStorage.getItem('userId');
+            const token = localStorage.getItem('puzzleToken');
+            if (!userId || !token) {
+                console.warn('未登录或Token缺失，无法提交成绩');
+                return;
+            }
 
-        fetch('/ranking/record', {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer `+localStorage.getItem('puzzleToken') 
-            },
-            body: JSON.stringify({ 
-                user_id: Number(userId), 
-                level_id: Number(this.levelId),
-                step_count: this.moves, 
-                time_used: this.seconds 
+            fetch('/ranking/record', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer `+localStorage.getItem('puzzleToken') 
+                },
+                body: JSON.stringify({ 
+                    user_id: Number(userId), 
+                    level_id: Number(this.levelId),
+                    step_count: this.moves, 
+                    time_used: this.seconds 
+                })
             })
-        })
-        .then(response => {
-            if (!response.ok) {
-                return response.json().then(err => {
-                    // 检测token过期错误
-                    if (err.msg && err.msg.includes('Token has expired')) {
-                        localStorage.removeItem('puzzleToken');
-                        localStorage.removeItem('userId');
-                        alert('登录已过期，请重新登录');
-                        window.location.href = '/';
-                        throw new Error('登录已过期');
-                    }
-                    throw new Error(`后端错误：${err.msg || '未知错误'}`);
-                });
-            }
-            return response.json();
-        })
-        .then(result => {
-            console.log('成绩提交成功:', result);
-        })
-        .catch(error => {
-            if (error.message !== '登录已过期') {
-                console.error('提交排行榜成绩失败:', error.message);
-            }
-        });
-    } catch (e) {
-        console.error('提交成绩失败:', e);
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(err => {
+                        // 检测token过期错误
+                        if (err.msg && err.msg.includes('Token has expired')) {
+                            localStorage.removeItem('puzzleToken');
+                            localStorage.removeItem('userId');
+                            alert('登录已过期，请重新登录');
+                            window.location.href = '/';
+                            throw new Error('登录已过期');
+                        }
+                        throw new Error(`后端错误：${err.msg || '未知错误'}`);
+                    });
+                }
+                return response.json();
+            })
+            .then(result => {
+                console.log('成绩提交成功:', result);
+            })
+            .catch(error => {
+                if (error.message !== '登录已过期') {
+                    console.error('提交排行榜成绩失败:', error.message);
+                }
+            });
+        } catch (e) {
+            console.error('提交成绩失败:', e);
+        }
     }
-}
 
     // 获取游戏统计信息
     getStats() {
@@ -749,42 +752,3 @@ class PuzzleGame {
         };
     }
 }
-
-// 创建游戏实例
-const game = new PuzzleGame();
-
-// 初始化背景
-game.setPuzzleBg();
-
-// 页面加载完成后的初始化
-window.addEventListener('DOMContentLoaded', function() {
-    const customImage = localStorage.getItem('customImage');
-    const customSize = localStorage.getItem('customSize');
-    if (customImage && customSize) {
-        game.originalImageUrl = customImage;
-        game.difficulty = parseInt(customSize);
-        game.setPuzzleBg();
-        game.startGame();
-        localStorage.removeItem('customImage');
-        localStorage.removeItem('customSize');
-    } else {
-        game.setPuzzleBg();
-    }
-});
-
-// 导出游戏实例供外部使用
-window.puzzleGame = game;
-
-document.addEventListener('DOMContentLoaded', function() {
-    const restoreBtn = document.getElementById('restoreBtn');
-    if (restoreBtn) {
-        restoreBtn.addEventListener('click', async function() {
-            if (window.puzzleGame && typeof window.puzzleGame.restoreProgressFromDB === 'function') {
-                await window.puzzleGame.restoreProgressFromDB();
-                alert('进度已恢复！');
-            } else {
-                alert('游戏未初始化或方法不存在');
-            }
-        });
-    }
-});
