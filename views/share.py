@@ -70,6 +70,7 @@ def get_shares():
     """获取分享列表（支持筛选）"""
     # 支持按用户ID或拼图ID筛选
     user_id = request.args.get('user_id')
+    print(user_id)
     puzzle_id = request.args.get('puzzle_id')
 
     query = shares.query
