@@ -1,6 +1,6 @@
 import eventlet
 eventlet.monkey_patch()
-from flask import Flask,render_template, send_file
+from flask import Flask, render_template, send_file, request
 from config import Config
 from extensions import db
 from flask_jwt_extended import JWTManager
@@ -40,7 +40,7 @@ def create_app():
     app.register_blueprint(ranking, url_prefix='/ranking')
     app.register_blueprint(levels, url_prefix='/levels')
     app.register_blueprint(social, url_prefix='/social')
-    app.register_blueprint(share_bp,url_prefix='/share')
+    app.register_blueprint(share_bp, url_prefix='/share')
 
     @app.route('/')
     def main():
@@ -95,7 +95,16 @@ def create_app():
     def versus_page():
         return render_template('versus.html')
 
-    
+    @app.route('/level_rank')
+    def level_rank_page():
+        level_id = request.args.get('levelId', '1')
+        return render_template('level_rank.html', levelId=level_id)
+
+    @app.route('/test_level_rank')
+    def test_level_rank_page():
+        return render_template('test_level_rank.html')
+
+
     @app.route('/online_game')
     def online_game_page():
         return render_template('online_game.html')
@@ -114,7 +123,7 @@ if __name__ == '__main__':
     with app.app_context():
         db.create_all()
     from views.pvp import register_socketio_events
-    socketio = SocketIO(app, async_mode='eventlet',cors_allowed_origins="*")  # 这里创建并绑定 app
+    socketio = SocketIO(app, async_mode='eventlet', cors_allowed_origins="*")  # 这里创建并绑定 app
     print("async_mode:", socketio.async_mode)
     register_socketio_events(socketio)
     socketio.run(app, debug=True, host='0.0.0.0', port=5000, use_reloader=False)
