@@ -5,13 +5,10 @@ const startBtn = document.getElementById('startBtn');
 const resetBtn = document.getElementById('resetBtn');
 //const difficultySelect = document.getElementById('difficultySelect');
 const timerElement = document.getElementById('timer');
-const movesElement = document.getElementById('moves');
 const gameComplete = document.getElementById('gameComplete');
 const completeInfo = document.getElementById('completeInfo');
 // 添加撤销按钮事件监听（在现有事件监听区域）
 undoBtn.addEventListener('click', undo);
-// restartBtn 不存在于 online_game.html 中，注释掉
-// restartBtn.addEventListener('click', resetGame);
 const playAgainBtn = document.getElementById('playAgainBtn');
 const puzzleBg = document.getElementById('puzzleBg');
 const toggleBgBtn = document.getElementById('toggleBgBtn');
