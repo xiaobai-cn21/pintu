@@ -50,7 +50,7 @@ def  login():
                     "message": "登录成功", 
                     "data": {
                         "token" : acces_token,
-                        "expireAt" : 1200, 
+                        "expireAt" : 12000, 
                         "userId": user.user_id
                         }
                 })
