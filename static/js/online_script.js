@@ -183,7 +183,9 @@ function flipPiece(piece) {
     // 更新移动次数
     moves++;
     movesElement.textContent = `移动次数: ${moves}`;
-    emitMyMoves()
+    
+    // 多人游戏同步（关键功能保留）
+    emitMyMoves();
 }
 // 修复鼠标按下事件处理
 function handleDragStart(e) {
@@ -1094,27 +1096,73 @@ function findTrianglePieceOnBoard(x, y, position) {
     }
     return false;
 }
- // 提交成绩到排行榜
+ // 提交成绩到排行榜extract
 function submitToRanking() {
-        try {
-            const userId = localStorage.getItem('userId');
-            if (userId) {
-                fetch('/ranking/record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: Number(userId),
-                        step_count: moves,
-                        time_used: seconds
-                    })
-                }).catch(error => {
-                    console.error('提交排行榜成绩失败:', error);
-                });
+    try {
+        const userId = localStorage.getItem('userId');
+        const token = localStorage.getItem('puzzleToken');
+        
+        if (userId) {
+            // 提取关卡信息（兼容自定义关卡）
+            const levelInfo = extractLevelInfo ? extractLevelInfo() : null;
+            const levelId = levelInfo ? levelInfo.levelId : 'default-level';
+            
+            // 构建请求参数
+            const requestData = {
+                user_id: Number(userId),
+                step_count: moves,
+                time_used: seconds
+            };
+            
+            // 仅在有有效关卡信息时添加level_id
+            if (levelId) {
+                requestData.level_id = levelId;
             }
-        } catch (e) {
-            console.error('提交成绩失败:', e);
+            
+            // 构建请求配置
+            const requestConfig = {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(requestData)
+            };
+            
+            // 添加认证信息（如果有token）
+            if (token) {
+                requestConfig.headers['Authorization'] = `Bearer ${token}`;
+            }
+            
+            fetch('/ranking/record', requestConfig)
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => {
+                            // 处理token过期
+                            if (err.msg && err.msg.includes('Token has expired')) {
+                                localStorage.removeItem('puzzleToken');
+                                localStorage.removeItem('userId');
+                                alert('登录已过期，请重新登录');
+                                window.location.href = '/';
+                                throw new Error('登录已过期');
+                            }
+                            throw new Error(`提交失败: ${err.msg || '未知错误'}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(result => {
+                    console.log('成绩提交成功:', result);
+                })
+                .catch(error => {
+                    if (error.message !== '登录已过期') {
+                        console.error('提交排行榜成绩失败:', error.message);
+                    }
+                });
         }
+    } catch (e) {
+        console.error('提交成绩失败:', e);
     }
+}
 // 放回备选区
 function returnToZone(piece, incrementMoves = true) {
     piece.style.position = 'static';
@@ -1229,6 +1277,7 @@ function calculatePieceFinalPosition(piece, gridX, gridY) {
             calculatedLeft += (divWidth - divHeight) / 2;
             calculatedTop += (divHeight - divWidth) / 2;
         }
+
         finalLeft = `${calculatedLeft}px`;
         finalTop = `${calculatedTop}px`;
 
@@ -1255,7 +1304,6 @@ function calculatePieceFinalPosition(piece, gridX, gridY) {
 //     };
 // } catch (e) {}
 
-
 function countCorrectPieces() {
     let correct = 0;
     const allPieces = document.querySelectorAll('#puzzleBoard .puzzle-piece');
@@ -1266,7 +1314,7 @@ function countCorrectPieces() {
         const correctY = parseInt(piece.dataset.correctY);
         const rotation = parseInt(piece.dataset.rotation) || 0;
         const flipped = piece.dataset.flipped === 'true';
-        // Only count as correct if position matches and no rotation/flip
+        // 只有位置匹配且无旋转/翻转才算正确
         if (
             currentX === correctX &&
             currentY === correctY &&

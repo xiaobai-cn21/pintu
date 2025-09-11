@@ -1120,25 +1120,94 @@ function findTrianglePieceOnBoard(x, y, position) {
 }
  // 提交成绩到排行榜
 function submitToRanking() {
-        try {
-            const userId = localStorage.getItem('userId');
-            if (userId) {
-                fetch('/ranking/record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: Number(userId),
-                        step_count: moves,
-                        time_used: seconds
-                    })
-                }).catch(error => {
-                    console.error('提交排行榜成绩失败:', error);
+    try {
+        const userId = localStorage.getItem('userId');
+        const token = localStorage.getItem('puzzleToken');
+        const levelInfo = extractLevelInfo();
+        
+        // 1. 先判断关卡信息是否存在
+        if (!levelInfo) {
+            console.warn('无法获取关卡信息，无法提交成绩');
+            alert('无法识别当前关卡，请选择系统关卡后重试');
+            return;
+        }
+
+        // 2. 提取并校验纯数字关卡ID
+        let levelId = null;
+        if (levelInfo.levelId) {
+            levelId = Number(levelInfo.levelId);
+            // 校验：必须是正整数（排除NaN、0、负数、小数）
+            if (!Number.isInteger(levelId) || levelId <= 0) {
+                levelId = null; // 标记为无效ID
+            }
+        }
+
+        // 3. 无效ID拦截
+        if (!levelId) {
+            console.warn('无效的关卡ID，仅系统关卡（纯数字ID）支持提交成绩', '原始ID:', levelInfo.levelId);
+            alert('当前关卡ID无效（仅系统关卡支持提交），请重新选择关卡');
+            return;
+        }
+
+        // 4. 后续身份与成绩校验（原有逻辑保留）
+        if (!userId || !token) {
+            console.warn('未登录或Token缺失，无法提交成绩');
+            alert('请先登录再提交成绩');
+            return;
+        }
+
+        const stepCount = typeof moves === 'number' ? moves : 0;
+        const timeUsed = typeof seconds === 'number' ? seconds : 0;
+        if (stepCount <= 0 || timeUsed <= 0) {
+            console.warn('无效的成绩数据，步数和时长必须为正整数', '步数:', stepCount, '时长:', timeUsed);
+            alert('成绩数据无效，请完成关卡后再提交');
+            return;
+        }
+
+        // 5. 提交请求（原有逻辑保留）
+        fetch('/ranking/record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                user_id: Number(userId),
+                level_id: levelId, // 已确保为纯数字正整数
+                step_count: stepCount,
+                time_used: timeUsed
+            })
+        }).then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    if (err.msg && (err.msg.includes('Token has expired') || err.msg.includes('用户身份无效'))) {
+                        localStorage.removeItem('puzzleToken');
+                        localStorage.removeItem('userId');
+                        localStorage.removeItem('username');
+                        alert('登录已过期，请重新登录');
+                        window.location.href = '/login';
+                        throw new Error('登录已过期');
+                    }
+                    throw new Error(`提交失败：${err.msg || '未知错误'}`);
                 });
             }
-        } catch (e) {
-            console.error('提交成绩失败:', e);
-        }
+            return response.json();
+        }).then(result => {
+            console.log('成绩提交成功:', result);
+            alert(result.msg || '成绩提交成功！');
+        }).catch(error => {
+            if (error.message !== '登录已过期') {
+                console.error('提交排行榜成绩失败:', error.message);
+                alert(`成绩提交失败：${error.message}`);
+            }
+        });
+
+    } catch (e) {
+        console.error('提交成绩失败:', e);
+        alert('提交成绩时发生错误，请刷新页面重试');
     }
+}
+
 // 放回备选区
 function returnToZone(piece, incrementMoves = true) {
     piece.style.position = 'static';
@@ -1165,45 +1234,193 @@ function returnToZone(piece, incrementMoves = true) {
 function submitLevelRecord() {
     try {
         const token = localStorage.getItem('puzzleToken');
-        if (!token) return Promise.resolve();
+        if (!token) {
+            console.warn('Token缺失，无法提交关卡成绩');
+            return Promise.resolve();
+        }
 
         const info = extractLevelInfo();
-        if (!info) return Promise.resolve();
+        if (!info) {
+            console.warn('无法获取关卡信息，无法提交成绩');
+            return Promise.resolve();
+        }
+
+        // 验证关卡ID有效性
+        const levelId = Number(info.levelId);
+        if (!Number.isInteger(levelId) || levelId <= 0) {
+            console.warn('无效的关卡ID，仅系统关卡支持提交成绩', '关卡ID:', info.levelId);
+            return Promise.resolve();
+        }
+
+        // 验证成绩数据
+        const stepCount = typeof moves === 'number' ? moves : 0;
+        const timeUsed = typeof seconds === 'number' ? seconds : 0;
+        if (stepCount <= 0 || timeUsed <= 0) {
+            console.warn('无效的关卡成绩数据', '步数:', stepCount, '时长:', timeUsed);
+            return Promise.resolve();
+        }
 
         return fetch('/levels/record', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                level_id: info.levelId,
-                level_name: info.levelName,
-                image_url: info.imageUrl,
-                difficulty: info.difficulty,
-                time_used: seconds,
-                step_count: moves
+                level_id: levelId,
+                level_name: info.levelName || '',
+                image_url: info.imageUrl || '',
+                difficulty: info.difficulty || '',
+                time_used: timeUsed,
+                step_count: stepCount
             })
-        }).then(r => r.json()).catch(() => {});
-    } catch (e) { return Promise.resolve(); }
+        }).then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    // 处理Token过期
+                    if (err.msg && (err.msg.includes('Token has expired') || err.msg.includes('用户身份无效'))) {
+                        localStorage.removeItem('puzzleToken');
+                        localStorage.removeItem('userId');
+                        localStorage.removeItem('username');
+                        alert('登录已过期，请重新登录');
+                        window.location.href = '/login';
+                        throw new Error('登录已过期');
+                    }
+                    throw new Error(`提交失败：${err.msg || '未知错误'}`);
+                });
+            }
+            return response.json();
+        }).then(result => {
+            console.log('关卡成绩提交成功:', result);
+        }).catch(error => {
+            if (error.message !== '登录已过期') {
+                console.error('提交关卡成绩失败:', error.message);
+            }
+        });
+    } catch (e) {
+        console.error('提交关卡成绩异常:', e);
+        return Promise.resolve();
+    }
 }
 
-// 从当前 customImage/customSize 推导关卡信息
+
+// 提取关卡信息，严格适配后端level_id（正整数）要求
 function extractLevelInfo() {
     try {
-        const imageUrl = originalImageUrl;
-        const diff = difficulty;
-        if (!imageUrl || !diff) return null;
-        // 关卡命名策略：图片文件名 + 难度
-        const urlObj = new URL(imageUrl, window.location.origin);
-        const pathname = urlObj.pathname || '';
-        const fileName = pathname.split('/').pop() || 'custom';
-        const levelId = `${fileName}-${diff}`;
-        const levelName = fileName.replace(/\.[a-zA-Z0-9]+$/, '');
-        return { levelId, levelName, imageUrl, difficulty: diff };
+        // 1. 定义核心工具函数：校验是否为"纯数字正整数"（适配后端level_id要求）
+        const isPurePositiveInt = (value) => {
+            if (typeof value === 'undefined' || value === null || value === '') return false;
+            const num = Number(value);
+            // 必须满足：是整数 + 大于0 + 排除NaN/Infinity（避免非法值）
+            return Number.isInteger(num) && num > 0 && !isNaN(num) && isFinite(num);
+        };
+
+        // 2. 最高优先级：直接使用界面已定义的全局关卡ID（window.currentLevelId）
+        // 界面中已通过DOMContentLoaded事件将关卡ID存储到window.currentLevelId，优先复用
+        if (window.currentLevelId && isPurePositiveInt(window.currentLevelId)) {
+            const levelNum = Number(window.currentLevelId);
+            return {
+                levelId: String(levelNum), // 统一为纯数字字符串（便于后续转Number提交）
+                levelName: `系统关卡${levelNum}`, // 与界面系统关卡命名逻辑一致
+                imageUrl: `/static/images/system-level${levelNum}.png`, // 标准化图片路径
+                difficulty: getDifficultyByLevel(levelNum), // 复用难度判断逻辑
+                type: 'system', // 全局变量对应的是系统关卡（界面逻辑）
+                isValidForRanking: true, // 系统关卡支持排行榜提交
+                source: 'window.currentLevelId' // 标记来源，便于调试
+            };
+        }
+
+        // 3. 第二优先级：从localStorage获取puzzleId（界面存档功能使用的关键ID）
+        // 界面中"保存进度"功能依赖localStorage.puzzleId，与关卡ID强关联，直接复用
+        const localStoragePuzzleId = localStorage.getItem('puzzleId');
+        if (localStoragePuzzleId && isPurePositiveInt(localStoragePuzzleId)) {
+            const levelNum = Number(localStoragePuzzleId);
+            return {
+                levelId: String(levelNum),
+                levelName: `系统关卡${levelNum}`,
+                imageUrl: `/static/images/system-level${levelNum}.png`,
+                difficulty: getDifficultyByLevel(levelNum),
+                type: 'system',
+                isValidForRanking: true,
+                source: 'localStorage.puzzleId'
+            };
+        }
+
+        // 4. 第三优先级：从URL参数获取（兼容界面中"从URL传参进入关卡"的场景）
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLevelId = urlParams.get('levelId'); // 界面中已明确使用levelId作为URL参数名
+        if (urlLevelId && isPurePositiveInt(urlLevelId)) {
+            const levelNum = Number(urlLevelId);
+            // 同步更新到window.currentLevelId和localStorage.puzzleId，保持界面数据一致
+            window.currentLevelId = String(levelNum);
+            localStorage.setItem('puzzleId', String(levelNum));
+            return {
+                levelId: String(levelNum),
+                levelName: `系统关卡${levelNum}`,
+                imageUrl: `/static/images/system-level${levelNum}.png`,
+                difficulty: getDifficultyByLevel(levelNum),
+                type: 'system',
+                isValidForRanking: true,
+                source: 'URL.levelId'
+            };
+        }
+
+        // 5. 处理非系统关卡（存档/自定义，界面中通过currentArchive/currentCustomLevel区分）
+        const archiveId = localStorage.getItem('currentArchive');
+        const customLevelId = localStorage.getItem('currentCustomLevel');
+        if (archiveId || customLevelId) {
+            const effectiveId = archiveId || customLevelId;
+            // 非系统关卡不支持排行榜提交，明确标记isValidForRanking: false
+            return {
+                levelId: effectiveId, // 非数字ID（如"archive-123"，与界面存档逻辑一致）
+                levelName: archiveId ? `存档关卡(${effectiveId})` : `自定义关卡(${effectiveId})`,
+                imageUrl: `/static/images/${effectiveId || 'custom-default.png'}`, // 适配界面图片路径
+                difficulty: 4, // 界面中自定义关卡难度默认标记为4
+                type: archiveId ? 'archive' : 'custom',
+                isValidForRanking: false,
+                source: archiveId ? 'localStorage.currentArchive' : 'localStorage.currentCustomLevel'
+            };
+        }
+
+        // 6. 降级方案：无任何有效信息时，使用界面默认值（与存档功能默认puzzleId=1一致）
+        console.warn('未找到有效关卡信息，使用界面默认系统关卡（ID:1）');
+        const defaultLevelNum = 1;
+        // 同步默认值到全局变量和localStorage，确保后续功能（如存档）正常使用
+        window.currentLevelId = String(defaultLevelNum);
+        localStorage.setItem('puzzleId', String(defaultLevelNum));
+        return {
+            levelId: String(defaultLevelNum),
+            levelName: '系统关卡1（默认）',
+            imageUrl: '/static/images/system-level1.png',
+            difficulty: '简单',
+            type: 'system',
+            isValidForRanking: true,
+            source: 'default'
+        };
+
     } catch (e) {
-        return null;
+        console.error('提取关卡信息异常（界面逻辑兼容失败）:', e);
+        // 异常场景下强制返回有效系统关卡，避免界面功能阻塞
+        const emergencyLevelNum = 1;
+        window.currentLevelId = String(emergencyLevelNum);
+        localStorage.setItem('puzzleId', String(emergencyLevelNum));
+        return {
+            levelId: String(emergencyLevelNum),
+            levelName: '应急默认关卡（系统关卡1）',
+            imageUrl: '/static/images/system-level1.png',
+            difficulty: '简单',
+            type: 'system',
+            isValidForRanking: true,
+            source: 'emergency'
+        };
     }
+}
+
+// 辅助函数：根据关卡ID判断难度（与界面系统关卡难度逻辑一致，可复用）
+function getDifficultyByLevel(levelNum) {
+    if (levelNum <= 3) return '简单';
+    if (levelNum <= 6) return '中等';
+    return '困难'; // 关卡ID>6时为困难，符合常规游戏难度梯度
 }
 
 function pieceDrag(e) {
@@ -1316,6 +1533,7 @@ function saveBoardPieces() {
 }
 
 async function restoreProgressFromDB() {
+    // For demo, use user_id=1, puzzle_id=1. Replace with real values if needed.
     const token = localStorage.getItem('puzzleToken');
     const puzzle_id = localStorage.getItem('puzzleId') || 1;
     const res = await fetch(`/pic/get_progress?puzzle_id=${puzzle_id}`, {
@@ -1323,29 +1541,18 @@ async function restoreProgressFromDB() {
             'Authorization': 'Bearer ' + token
         }
     });
+    
     if (!res.ok) {
         alert('Failed to fetch progress from server');
         return;
     }
     const data = await res.json();
-    if (!data.data || !data.data.progress_json) {
+    if (!data.progress_json) {
         alert('No progress found in database');
         return;
     }
-    const piecesOnBoard = JSON.parse(data.data.progress_json);
-
-    // --- 恢复用时和步数 ---
-    if ('used_time' in data.data) {
-        seconds = data.data.used_time;
-        const minutes = Math.floor(seconds / 60);
-        const remainingSeconds = seconds % 60;
-        if (timerElement) timerElement.textContent = `时间: ${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
-    }
-    if ('total_steps' in data.data) {
-        moves = data.data.total_steps;
-        if (movesElement) movesElement.textContent = `移动次数: ${moves}`;
-    }
-
+    const piecesOnBoard = JSON.parse(data.progress_json);
+    console.log(piecesOnBoard)
     // Remove all pieces from board and zone
     puzzleBoard.innerHTML = '';
     piecesZone.innerHTML = '';
@@ -1355,6 +1562,7 @@ async function restoreProgressFromDB() {
         delete piece.dataset.currentY;
         piecesZone.appendChild(piece);
     });
+
     // Place pieces on board according to saved state
     piecesOnBoard.forEach(saved => {
         const piece = pieces.find(p =>

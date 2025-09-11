@@ -30,7 +30,6 @@
     <div class="game-info">
         <div id="timer">时间: 00:00</div>
         <div id="moves">移动次数: 0</div>
-
     </div>
     <div class="puzzle-container">
         <div class="puzzle-board-wrapper"> <!-- 新增一个 wrapper -->
@@ -206,6 +205,16 @@ function closeHelpModal() {
 
 // 重写导航栏的帮助按钮点击事件（仅限game页面）
 document.addEventListener('DOMContentLoaded', function() {
+    // 从URL获取关卡ID，与level_rank界面保持一致
+    const urlParams = new URLSearchParams(window.location.search);
+    // 优先从URL获取，URL没有则从localStorage获取，都没有则用默认1
+    const levelId = urlParams.get('levelId') || localStorage.getItem('selectedLevelForRanking') || '1';
+    // 可选：获取后清除localStorage中的备份（避免下次误用旧值）
+    localStorage.removeItem('selectedLevelForRanking');
+    
+    // 存储当前关卡ID到全局变量，供其他脚本使用
+    window.currentLevelId = levelId;
+    
     const helpLink = document.getElementById('pm-help-link');
     if (helpLink) {
         // 移除原有的事件监听器
