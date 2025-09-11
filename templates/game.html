@@ -107,40 +107,47 @@
         }
     });
     document.getElementById('saveBtn').addEventListener('click', async function() {
-    // 假设你有这些变量
-    const piecesOnBoard = Array.from(document.querySelectorAll('#puzzleBoard .puzzle-piece')).map(piece => ({
-        correctX: piece.dataset.correctX,
-        correctY: piece.dataset.correctY,
-        currentX: piece.dataset.currentX,
-        currentY: piece.dataset.currentY,
-        rotation: piece.dataset.rotation
-    }));
+        // 假设你有这些变量
+        const piecesOnBoard = Array.from(document.querySelectorAll('#puzzleBoard .puzzle-piece')).map(piece => ({
+            correctX: piece.dataset.correctX,
+            correctY: piece.dataset.correctY,
+            currentX: piece.dataset.currentX,
+            currentY: piece.dataset.currentY,
+            rotation: piece.dataset.rotation
+        }));
 
-    // 读取上下文：token 与 puzzleId（用于进度保存/恢复）
-    const token = localStorage.getItem('puzzleToken');
-    const puzzle_id = localStorage.getItem('puzzleId') || 1; 
+        // 读取上下文：token 与 puzzleId（用于进度保存/恢复）
+        const token = localStorage.getItem('puzzleToken');
+        const puzzle_id = localStorage.getItem('puzzleId') || 1; 
 
-    if (!token) {
-        alert('请先登录！');
-        return;
-    }
-    // 发起保存请求
-    const res = await fetch('/pic/save_progress', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + token
-        },
-        body: JSON.stringify({
-            puzzle_id,
-            progress_json: JSON.stringify(piecesOnBoard)
-        })
+        // 获取已用时和已总步数
+        const used_time = typeof seconds !== 'undefined' ? seconds : 0;
+        const total_steps = typeof moves !== 'undefined' ? moves : 0;
+        console.log(used_time);
+        console.log(total_steps);
+        if (!token) {
+            alert('请先登录！');
+            return;
+        }
+        // 发起保存请求
+        const res = await fetch('/pic/save_progress', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + token
+            },
+            body: JSON.stringify({
+                puzzle_id,
+                progress_json: JSON.stringify(piecesOnBoard),
+                used_time,
+                total_steps
+            })
+        });
+
+        const data = await res.json();
+        alert('进度已保存！');
+        console.log('保存结果', data);
     });
-
-    const data = await res.json();
-    alert('进度已保存！');
-    console.log('保存结果', data);
-});
 // 游戏暂停/继续功能
 let gamePaused = false;
 let gameInstance = null;
@@ -198,6 +205,16 @@ function closeHelpModal() {
 
 // 重写导航栏的帮助按钮点击事件（仅限game页面）
 document.addEventListener('DOMContentLoaded', function() {
+    // 从URL获取关卡ID，与level_rank界面保持一致
+    const urlParams = new URLSearchParams(window.location.search);
+    // 优先从URL获取，URL没有则从localStorage获取，都没有则用默认1
+    const levelId = urlParams.get('levelId') || localStorage.getItem('selectedLevelForRanking') || '1';
+    // 可选：获取后清除localStorage中的备份（避免下次误用旧值）
+    localStorage.removeItem('selectedLevelForRanking');
+    
+    // 存储当前关卡ID到全局变量，供其他脚本使用
+    window.currentLevelId = levelId;
+    
     const helpLink = document.getElementById('pm-help-link');
     if (helpLink) {
         // 移除原有的事件监听器
@@ -247,6 +264,19 @@ document.addEventListener('DOMContentLoaded', function() {
             // 直接尝试播放音乐
             initPageMusic();
         });
+
+        document.addEventListener('DOMContentLoaded', function() {
+    if (localStorage.getItem('fromMyPuzzle') === '1') {
+        localStorage.removeItem('fromMyPuzzle'); // 用完即删，避免影响下次
+        if (typeof restoreProgressFromDB === 'function') {
+            restoreProgressFromDB();
+        } else {
+            setTimeout(() => {
+                if (typeof restoreProgressFromDB === 'function') restoreProgressFromDB();
+            }, 300);
+        }
+    }
+});
     </script>
     
     <!-- 移动端支持脚本 -->

@@ -224,6 +224,8 @@ def save_progress():
     user_id = get_jwt_identity()  # 从token获取
     puzzle_id = data.get('puzzle_id', None)
     progress_json = data.get('progress_json', None)
+    used_time = data.get('used_time', 0)
+    total_steps = data.get('total_steps', 0)
 
     if not puzzle_id or not progress_json:
         return jsonify({"code": 400, "message": "缺少 puzzle_id 或 progress_json", "data": None})
@@ -231,8 +233,16 @@ def save_progress():
     record = puzzle_progress.query.filter_by(user_id=user_id, puzzle_id=puzzle_id).first()
     if record:
         record.progress_json = progress_json
+        record.used_time = used_time
+        record.total_steps = total_steps
     else:
-        record = puzzle_progress(user_id=user_id, puzzle_id=puzzle_id, progress_json=progress_json)
+        record = puzzle_progress(
+            user_id=user_id,
+            puzzle_id=puzzle_id,
+            progress_json=progress_json,
+            used_time=used_time,
+            total_steps=total_steps
+        )
         db.session.add(record)
     db.session.commit()
     return jsonify({"code": 200, "message": "保存成功", "data": None})
@@ -249,7 +259,73 @@ def get_progress():
     if record:
         print(f"Fetched record: id={record.id}, user_id={record.user_id}, puzzle_id={record.puzzle_id}")
         print("progress_json:", record.progress_json)
-        return jsonify({"code": 200, "message": "获取成功", "data": record.progress_json})
+        # 返回所有需要的数据
+        return jsonify({
+            "code": 200,
+            "message": "获取成功",
+            "data": {
+                "progress_json": record.progress_json,
+                "used_time": getattr(record, 'used_time', 0),
+                "total_steps": getattr(record, 'total_steps', 0)
+            }
+        })
     else:
         print("No record found for user_id:", user_id, "puzzle_id:", puzzle_id)
         return jsonify({"code": 404, "message": "未找到进度", "data": None})
+
+@pic.route('/get_my_progress', methods=['GET'])
+@jwt_required()
+def get_my_progress():
+    user_id = get_jwt_identity()
+    # 查询该用户所有存档
+    records = puzzle_progress.query.filter_by(user_id=user_id).all()
+    result = []
+    for record in records:
+        puzzle = puzzles.query.get(record.puzzle_id)
+        if not puzzle:
+            continue
+        result.append({
+            "puzzle_id": puzzle.puzzle_id,
+            "title": puzzle.title,
+            "image_url": puzzle.image_url,
+            "difficulty": puzzle.difficulty,
+            "piece_count": puzzle.piece_count,
+            "used_time": getattr(record, 'used_time', 0),
+            "total_steps": getattr(record, 'total_steps', 0),
+            "updated_at": record.updated_at.isoformat() if hasattr(record, 'updated_at') and record.updated_at else "",
+            "status": "completed" if getattr(record, 'is_completed', False) else "playing",
+            "difficulty_text": f"{puzzle.piece_count}×{puzzle.piece_count}",
+            "status_text": "已完成" if getattr(record, 'is_completed', False) else "进行中"
+        })
+    return jsonify({
+        "code": 200,
+        "message": "获取成功",
+        "data": result
+    })
+
+
+@pic.route('/delete_all_progress', methods=['DELETE'])
+@jwt_required()
+def delete_all_progress():
+    user_id = get_jwt_identity()
+    records = puzzle_progress.query.filter_by(user_id=user_id).all()
+    if not records:
+        return jsonify({"code": 404, "message": "未找到存档", "data": None})
+    for record in records:
+        db.session.delete(record)
+    db.session.commit()
+    return jsonify({"code": 200, "message": "全部存档已删除", "data": None})
+
+@pic.route('/delete_progress', methods=['DELETE'])
+@jwt_required()
+def delete_progress():
+    user_id = get_jwt_identity()
+    puzzle_id = request.args.get('puzzle_id', type=int)
+    if not puzzle_id:
+        return jsonify({"code": 400, "message": "缺少 puzzle_id", "data": None})
+    record = puzzle_progress.query.filter_by(user_id=user_id, puzzle_id=puzzle_id).first()
+    if not record:
+        return jsonify({"code": 404, "message": "未找到存档", "data": None})
+    db.session.delete(record)
+    db.session.commit()
+    return jsonify({"code": 200, "message": "删除成功", "data": None})

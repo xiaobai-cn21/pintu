@@ -13,6 +13,7 @@
     <title>拼图大师 - 选择关卡</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css">
 </head>
 <body>
 {% include '_navbar.html' %}
@@ -53,10 +54,13 @@
 
     <div class="level-list" id="levelList" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; margin-bottom: 80px;"></div>
 
-    <!-- 固定底部进入游戏按钮 -->
+    <!-- 固定底部按钮区域 -->
     <div id="fixedGameBtn" style="position: fixed; bottom: 0; left: 0; right: 0; background-color: #20223A; border-top: 2px solid #F9E078; padding: 15px; text-align: center; z-index: 1000; display: none;">
-        <button id="enterGameBtn" class="btn btn-primary" style="padding: 12px 40px; font-size: 14px;" disabled>
+        <button id="enterGameBtn" class="btn btn-primary" style="padding: 12px 40px; font-size: 14px; margin-right: 20px;" disabled>
             <span class="chinese-text">进入游戏</span>
+        </button>
+        <button id="levelRankingBtn" class="btn btn-secondary" style="padding: 12px 40px; font-size: 14px;" disabled>
+            <span class="chinese-text">本关排名</span>
         </button>
     </div>
 </div>
@@ -71,17 +75,16 @@
         <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
             <!-- 桌面端操作指南 -->
             <div id="desktop-help" style="display: none;">
-                <p><strong style="color: #F9E078;">1. 选择关卡</strong></p>
-                <p>- 浏览不同风格的拼图：自然风光、动物、建筑、卡通</p>
-                <p>- 选择适合的难度：简单、中等、困难、极难</p>
-                <p>- 点击关卡卡片查看预览图</p>
-                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 筛选功能</strong></p>
-                <p>- 使用风格筛选快速找到喜欢的图片类型</p>
-                <p>- 使用难度筛选选择合适的挑战级别</p>
-                <p>- 点击"全部"可以清除筛选条件</p>
-                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 开始游戏</strong></p>
-                <p>- 选择关卡后点击"进入游戏"按钮</p>
-                <p>- 系统会自动加载选定的拼图</p>
+                <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+                <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+                <p>- 单击选中的图块，顺时针旋转90度</p>
+                <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+                <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+                <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+                <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+                <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
             </div>
             
             <!-- 移动端操作指南 -->
@@ -254,7 +257,22 @@ function selectLevel(id, image, difficulty) {
     event.currentTarget.style.border = '2px solid #F9E078';
     document.getElementById('fixedGameBtn').style.display = 'block';
     document.getElementById('enterGameBtn').disabled = false;
+    document.getElementById('levelRankingBtn').disabled = false;
 }
+
+// 查看关卡排名
+document.getElementById('levelRankingBtn').addEventListener('click', () => {
+    if (!selectedLevelId) { // 防错：确保已选择关卡
+        alert('请先选择一个关卡');
+        return;
+    }
+    console.log('选择的关卡ID:', selectedLevelId);
+    // 1. 保留localStorage备份（可选，用于排名界面二次验证）
+    localStorage.setItem('selectedLevelForRanking', selectedLevelId);
+    // 2. 关键：在URL中携带levelId参数（排名界面将通过这个参数获取当前关卡）
+    const rankUrl = '{{ url_for('level_rank_page') }}?levelId=' + selectedLevelId;
+    window.location.href = rankUrl; // 跳转带参数的排名页面
+});
 
 // 进入游戏
 document.getElementById('enterGameBtn').addEventListener('click', () => {
@@ -269,9 +287,15 @@ document.getElementById('enterGameBtn').addEventListener('click', () => {
 });
 
 // 页面加载
- document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
     loadSystemLevels();
     loadUserLevelRecords();
+    // 根据设备类型显示对应的帮助内容
+    if (isMobile()) {
+        document.getElementById('mobile-help').style.display = 'block';
+    } else {
+        document.getElementById('desktop-help').style.display = 'block';
+    }
 });
 
 // 加载用户关卡记录（保持原有逻辑以展示最佳成绩等）
@@ -303,19 +327,19 @@ function updateLevelCards(records) {
     });
 }
 </script>
-    <!-- 页面特定的背景音乐 -->
-    <script>
-        function initPageMusic() {
-            if (window.musicManager) {
-                window.musicManager.playScene('main');
-            } else {
-                setTimeout(initPageMusic, 100);
-            }
+<!-- 页面特定的背景音乐 -->
+<script>
+    function initPageMusic() {
+        if (window.musicManager) {
+            window.musicManager.playScene('main');
+        } else {
+            setTimeout(initPageMusic, 100);
         }
-        document.addEventListener('DOMContentLoaded', function() {
-            initPageMusic();
-        });
-    </script>
+    }
+    document.addEventListener('DOMContentLoaded', function() {
+        initPageMusic();
+    });
+</script>
 
 <script>
 // 移动端设备检测和类添加
