@@ -139,15 +139,31 @@ function gameStart(puzzleId) {
     })
     .then(responseData => {
         const puzzleData = responseData.data;
-        const difficulty = puzzleData.piece_count;
-        // 从接口返回数据中提取所需参数
-        localStorage.setItem('customImage', puzzleData.image_url);
-        localStorage.setItem('customSize',  puzzleData.piece_count );
-        localStorage.setItem('customShape', puzzleData.piece_shape);
-        localStorage.setItem('randomRotation', puzzleData.is_rotatable);
-        localStorage.setItem('randomFlip', puzzleData.is_flipable);
-        // 存储拼图ID用于后续进度保存
-        localStorage.setItem('currentPuzzleId', puzzleId);
+       // 1. 获取总块数
+    const pieceCount = puzzleData.piece_count;
+    // 2. 计算平方根并取整（得到行列数）
+    const difficulty = Math.floor(Math.sqrt(pieceCount));
+    //piece_shape ENUM('rect', 'irregular', 'triangle') NOT NULL,
+    pieceShape = puzzleData.piece_shape;
+    if( pieceShape =='rect'){
+    pieceShape = 'square';
+    }
+    else if(pieceShape =='irregular'){
+    pieceShape = 'jigsaw';
+    }
+    // 存储参数到localStorage（注意customSize用计算后的difficulty）
+    localStorage.setItem('customImage', puzzleData.image_url);
+    //localStorage.setItem('customSize', difficulty); // 行列数（如3、4）
+    localStorage.setItem('customShape',pieceShape );
+    //localStorage.setItem('randomRotation', puzzleData.is_rotatable);
+    //localStorage.setItem('randomFlip', puzzleData.is_flipable);
+    localStorage.setItem('currentPuzzleId', puzzleId);
+    // 打印验证参数
+    console.log('存储的游戏参数:', {
+        image: puzzleData.image_url,
+        size: difficulty, // 行列数
+        shape: puzzleData.piece_shape
+    });
         // 跳转到游戏页面（确保URL正确，根据实际路由调整）
         window.location.href = '/game'; // 替换为实际游戏页面路径
     })
