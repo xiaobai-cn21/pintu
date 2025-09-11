@@ -10,7 +10,8 @@ const gameComplete = document.getElementById('gameComplete');
 const completeInfo = document.getElementById('completeInfo');
 // 添加撤销按钮事件监听（在现有事件监听区域）
 undoBtn.addEventListener('click', undo);
-restartBtn.addEventListener('click', resetGame);
+// restartBtn 不存在于 online_game.html 中，注释掉
+// restartBtn.addEventListener('click', resetGame);
 const playAgainBtn = document.getElementById('playAgainBtn');
 const puzzleBg = document.getElementById('puzzleBg');
 const toggleBgBtn = document.getElementById('toggleBgBtn');
