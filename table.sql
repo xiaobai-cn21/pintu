@@ -77,6 +77,8 @@ CREATE TABLE puzzle_progress (
     user_id INT NOT NULL,
     puzzle_id INT NOT NULL,
     progress_json TEXT NOT NULL,
+    used_time INT DEFAULT 0,
+    total_steps INT DEFAULT 0,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_user_puzzle (user_id, puzzle_id),
     FOREIGN KEY (user_id) REFERENCES users(user_id),

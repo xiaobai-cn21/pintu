@@ -114,6 +114,8 @@ class puzzle_progress(db.Model):
     user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
     puzzle_id = Column(Integer, ForeignKey('puzzles.puzzle_id'), nullable=False)
     progress_json = Column(Text, nullable=False)
+    used_time = Column(Integer, default=0)  # 已用时（秒）
+    total_steps = Column(Integer, default=0)  # 已总步数
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     __table_args__ = (
         db.UniqueConstraint('user_id', 'puzzle_id', name='unique_user_puzzle'),

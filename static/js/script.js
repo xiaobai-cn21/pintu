@@ -1316,7 +1316,6 @@ function saveBoardPieces() {
 }
 
 async function restoreProgressFromDB() {
-    // For demo, use user_id=1, puzzle_id=1. Replace with real values if needed.
     const token = localStorage.getItem('puzzleToken');
     const puzzle_id = localStorage.getItem('puzzleId') || 1;
     const res = await fetch(`/pic/get_progress?puzzle_id=${puzzle_id}`, {
@@ -1324,18 +1323,29 @@ async function restoreProgressFromDB() {
             'Authorization': 'Bearer ' + token
         }
     });
-    
     if (!res.ok) {
         alert('Failed to fetch progress from server');
         return;
     }
     const data = await res.json();
-    if (!data.data) {
+    if (!data.data || !data.data.progress_json) {
         alert('No progress found in database');
         return;
     }
-    const piecesOnBoard = JSON.parse(data.data);
-    console.log(piecesOnBoard)
+    const piecesOnBoard = JSON.parse(data.data.progress_json);
+
+    // --- 恢复用时和步数 ---
+    if ('used_time' in data.data) {
+        seconds = data.data.used_time;
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        if (timerElement) timerElement.textContent = `时间: ${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+    if ('total_steps' in data.data) {
+        moves = data.data.total_steps;
+        if (movesElement) movesElement.textContent = `移动次数: ${moves}`;
+    }
+
     // Remove all pieces from board and zone
     puzzleBoard.innerHTML = '';
     piecesZone.innerHTML = '';
@@ -1345,7 +1355,6 @@ async function restoreProgressFromDB() {
         delete piece.dataset.currentY;
         piecesZone.appendChild(piece);
     });
-
     // Place pieces on board according to saved state
     piecesOnBoard.forEach(saved => {
         const piece = pieces.find(p =>
