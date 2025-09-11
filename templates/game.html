@@ -2,9 +2,17 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="format-detection" content="email=no">
+    <meta name="format-detection" content="address=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#20223A">
     <title>拼图游戏</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/game-rank.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mobile.css') }}">
 </head>
 <body>
 {% include '_navbar.html' %}
@@ -203,5 +211,8 @@ document.addEventListener('DOMContentLoaded', function() {
             initPageMusic();
         });
     </script>
+    
+    <!-- 移动端支持脚本 -->
+    <script src="{{ url_for('static', filename='js/mobile-support.js') }}"></script>
 </body>
 </html>
