@@ -8,6 +8,7 @@ import re
 auth = Blueprint('auth', __name__)
 
 
+
 @auth.route('/signin', methods=['GET', 'POST'])
 def signin():
     try:
@@ -43,12 +44,12 @@ def  login():
             ).first()
 
             if user and check_password_hash(user.hash_password, password):
-                acces_token = create_access_token(identity=str(user.user_id))
+                access_token = create_access_token(identity=str(user.user_id))
                 return jsonify({
                     "code": 200, 
                     "message": "登录成功", 
                     "data": {
-                        "token" : acces_token,
+                        "token" : access_token,
                         "expireAt" : 1200, 
                         "userId": user.user_id
                         }
@@ -61,6 +62,23 @@ def  login():
 
 def is_email(s):
     return re.match(r'[\w\.-]+@[\w\.-]+\w+$', s)
+
+
+@auth.route('/is_admin', methods=['GET'])
+@jwt_required()
+def is_admin():
+    try:
+        user_id = get_jwt_identity()
+        u = users.query.get(int(user_id))
+        if not u:
+            return jsonify({"code": 404, "message": "用户不存在", "data": None})
+        return jsonify({
+            "code": 200,
+            "message": "OK",
+            "data": {"isAdmin": bool(getattr(u, 'is_admin', False))}
+        })
+    except Exception as e:
+        return jsonify({"code": "500", "message": f"服务器内部错误: {str(e)}", "data": None})
 
 # 获取当前登录用户信息
 @auth.route('/me', methods=['GET'])

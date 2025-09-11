@@ -92,33 +92,51 @@ class MoveCommand extends Command {
 
 // 旋转拼图块命令
 class RotateCommand extends Command {
-    constructor(piece, previousRotation) {
+    constructor(piece, previousRotation, previousVisualRotation, previousRect) {
         super();
         this.piece = piece;
         this.previousRotation = previousRotation;
-        this.newRotation = parseInt(piece.dataset.rotation) || 0;
+        this.previousVisualRotation = previousVisualRotation;
+        this.previousRect = previousRect; // 记录之前的位置信息
     }
 
     undo() {
+        // 恢复逻辑和视觉角度
         this.piece.dataset.rotation = this.previousRotation;
+        this.piece.dataset.visualRotation = this.previousVisualRotation;
+
+        // 恢复transform
         const isFlipped = this.piece.dataset.flipped === 'true';
-        this.piece.style.transform = `rotate(${this.previousRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
+        this.piece.style.transform = `rotate(${this.previousVisualRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
+
+        // 【关键】如果之前有位置信息，则一并恢复
+        if (this.previousRect) {
+            this.piece.style.left = this.previousRect.left;
+            this.piece.style.top = this.previousRect.top;
+        }
     }
 }
 
 // 翻转拼图块命令
 class FlipCommand extends Command {
-    constructor(piece, previousFlipped) {
+    constructor(piece, previousFlipped, visualRotation, previousRect) {
         super();
         this.piece = piece;
         this.previousFlipped = previousFlipped;
-        this.newFlipped = piece.dataset.flipped === 'true';
+        this.visualRotation = visualRotation;
+        this.previousRect = previousRect; // 记录之前的位置信息
     }
 
     undo() {
         this.piece.dataset.flipped = this.previousFlipped;
-        const currentRotation = parseInt(this.piece.dataset.rotation) || 0;
-        this.piece.style.transform = `rotate(${currentRotation}deg) scaleX(${this.previousFlipped ? -1 : 1})`;
+
+        // 恢复transform
+        this.piece.style.transform = `rotate(${this.visualRotation}deg) scaleX(${this.previousFlipped ? -1 : 1})`;
+
+        if (this.previousRect) {
+            this.piece.style.left = this.previousRect.left;
+            this.piece.style.top = this.previousRect.top;
+        }
     }
 }
 
@@ -152,40 +170,74 @@ function undo() {
 // 修改旋转函数，添加命令记录
 function rotatePiece(piece) {
     const currentRotation = parseInt(piece.dataset.rotation) || 0;
-    // 记录当前旋转状态作为撤销依据
-    const command = new RotateCommand(piece, currentRotation);
+    let currentVisualRotation = parseInt(piece.dataset.visualRotation);
+    if (isNaN(currentVisualRotation)) {
+        currentVisualRotation = currentRotation;
+    }
+
+    const previousRect = { left: piece.style.left, top: piece.style.top };
+    const command = new RotateCommand(piece, currentRotation, currentVisualRotation, previousRect);
 
     const newRotation = (currentRotation + 90) % 360;
+    const newVisualRotation = currentVisualRotation + 90;
     piece.dataset.rotation = newRotation;
+    piece.dataset.visualRotation = newVisualRotation;
+
     const isFlipped = piece.dataset.flipped === 'true';
-    piece.style.transform = `rotate(${newRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
+    piece.style.transform = `rotate(${newVisualRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
 
-    // 推入命令栈
+    if (piece.dataset.currentX !== undefined && piece.dataset.currentY !== undefined) {
+        const gridX = parseInt(piece.dataset.currentX);
+        const gridY = parseInt(piece.dataset.currentY);
+        const newPos = calculatePieceFinalPosition(piece, gridX, gridY);
+        if (newPos) {
+            piece.style.left = newPos.finalLeft;
+            piece.style.top = newPos.finalTop;
+        }
+    }
+
     pushCommand(command);
-
-    // 更新移动次数
     moves++;
     movesElement.textContent = `移动次数: ${moves}`;
+
+    // 【关键修复】操作结束后，延迟一小段时间再检查是否完成
+    setTimeout(checkPuzzleCompletion, 50);
 }
 
 // 修改翻转函数，添加命令记录
 function flipPiece(piece) {
     const isFlipped = piece.dataset.flipped === 'true';
-    // 记录当前翻转状态作为撤销依据
-    const command = new FlipCommand(piece, isFlipped);
+    let visualRotation = parseInt(piece.dataset.visualRotation);
+    if (isNaN(visualRotation)) {
+        visualRotation = parseInt(piece.dataset.rotation) || 0;
+    }
+
+    const previousRect = { left: piece.style.left, top: piece.style.top };
+    const command = new FlipCommand(piece, isFlipped, visualRotation, previousRect);
 
     const newFlipped = !isFlipped;
     piece.dataset.flipped = newFlipped;
-    const currentRotation = parseInt(piece.dataset.rotation) || 0;
-    piece.style.transform = `rotate(${currentRotation}deg) scaleX(${newFlipped ? -1 : 1})`;
 
-    // 推入命令栈
+    piece.style.transform = `rotate(${visualRotation}deg) scaleX(${newFlipped ? -1 : 1})`;
+
+    if (piece.dataset.currentX !== undefined && piece.dataset.currentY !== undefined) {
+        const gridX = parseInt(piece.dataset.currentX);
+        const gridY = parseInt(piece.dataset.currentY);
+        const newPos = calculatePieceFinalPosition(piece, gridX, gridY);
+        if (newPos) {
+            piece.style.left = newPos.finalLeft;
+            piece.style.top = newPos.finalTop;
+        }
+    }
+
     pushCommand(command);
-
-    // 更新移动次数
     moves++;
     movesElement.textContent = `移动次数: ${moves}`;
+
+    // 【关键修复】操作结束后，延迟一小段时间再检查是否完成
+    setTimeout(checkPuzzleCompletion, 50);
 }
+
 // 修复鼠标按下事件处理
 function handleDragStart(e) {
     draggedPiece = this;
@@ -413,19 +465,14 @@ function shufflePieces() {
 function dragStart(e) {
     draggedPiece = this;
 
-    // --- 修正后的逻辑 ---
-    // 获取棋盘上所有已放置的拼图块
     const piecesOnBoard = puzzleBoard.querySelectorAll('.puzzle-piece');
     // 遍历它们
     piecesOnBoard.forEach(piece => {
-        // 关键的判断：如果这个块不是我们正在拖动的块，才让它忽略鼠标
         if (piece !== draggedPiece) {
             piece.style.pointerEvents = 'none';
         }
     });
-    // --- 修正结束 ---
 
-    // --- 自定义拖拽图像方案 (这部分保持不变) ---
     customFollower = this.cloneNode(true);
     customFollower.id = 'custom-follower';
     customFollower.style.position = 'fixed';
@@ -439,6 +486,10 @@ function dragStart(e) {
     document.body.appendChild(customFollower);
     pieceDrag(e);
 
+    // 添加鼠标移动事件监听（火狐浏览器兼容）
+    document.addEventListener('dragover', handleDragOver);
+    document.addEventListener('drag', pieceDrag);
+
     const transparentPixel = new Image();
     transparentPixel.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
     e.dataTransfer.setDragImage(transparentPixel, 0, 0);
@@ -451,7 +502,7 @@ function dragStart(e) {
 }
 
 function dragEnd() {
-    // 移除吸附提示
+
     const hint = document.getElementById('drop-hint');
     if (hint) {
         hint.style.display = 'none';
@@ -461,6 +512,10 @@ function dragEnd() {
     allPieces.forEach(piece => {
         piece.style.pointerEvents = 'auto';
     });
+
+    // 移除事件监听器（火狐浏览器兼容）
+    document.removeEventListener('dragover', handleDragOver);
+    document.removeEventListener('drag', pieceDrag);
 
     if (draggedPiece) {
         draggedPiece.classList.remove('dragging');
@@ -479,222 +534,126 @@ function dragEnd() {
 function dragOver(e) {
     e.preventDefault();
 }
+
+// 火狐浏览器专用的拖拽处理函数
+function handleDragOver(e) {
+    e.preventDefault();
+    if (customFollower && draggedPiece) {
+        pieceDrag(e);
+    }
+}
 // 拖拽到棋盘
-// 修改dropOnBoard函数，修复拖拽问题并增强吸附功能
 function dropOnBoard(e) {
     e.preventDefault();
     if (!draggedPiece) return;
 
-    // 保存移动前的状态
+    // --- 诊断会话开始 ---
+    console.group(`--- 拼图块放置诊断 @ ${new Date().toLocaleTimeString()} ---`);
+
     const fromParent = draggedPiece.parentNode;
-    const fromRect = {
-        position: draggedPiece.style.position,
-        left: draggedPiece.style.left,
-        top: draggedPiece.style.top,
-        margin: draggedPiece.style.margin
-    };
+    const fromRect = { position: draggedPiece.style.position, left: draggedPiece.style.left, top: draggedPiece.style.top, margin: draggedPiece.style.margin };
     const fromX = draggedPiece.dataset.currentX;
     const fromY = draggedPiece.dataset.currentY;
-
-    draggedPiece.style.margin = '0'; // 放置到棋盘时清除 margin
 
     const pieceWidth = puzzleBoard.offsetWidth / difficulty;
     const pieceHeight = puzzleBoard.offsetHeight / difficulty;
     const boardRect = puzzleBoard.getBoundingClientRect();
 
-    // 计算鼠标在棋盘内的相对位置
     let x = e.clientX - boardRect.left;
     let y = e.clientY - boardRect.top;
-
-    // 计算初始网格位置
     let gridX = Math.floor(x / pieceWidth);
     let gridY = Math.floor(y / pieceHeight);
-
-    // 边界检查
     gridX = Math.max(0, Math.min(gridX, difficulty - 1));
     gridY = Math.max(0, Math.min(gridY, difficulty - 1));
 
-    let finalLeft, finalTop;
-    let canPlace = true; // 新增：标记是否可以放置
+    console.log(`[1. 目标位置] 尝试放置到棋盘网格: (${gridX}, ${gridY})`);
 
-    if (shape === 'jigsaw' || shape === 'square') {
-        // 检查目标位置是否已有拼图块
-        if (findPieceOnBoard(gridX, gridY)) {
-            // 尝试找到附近的空位置，增强容错性
-            const nearbyPositions = [
-                {x: gridX - 1, y: gridY},
-                {x: gridX + 1, y: gridY},
-                {x: gridX, y: gridY - 1},
-                {x: gridX, y: gridY + 1}
-            ];
+    let canPlace = false;
 
-            let found = false;
-            for (const pos of nearbyPositions) {
-                if (pos.x >= 0 && pos.x < difficulty && pos.y >= 0 && pos.y < difficulty) {
-                    if (!findPieceOnBoard(pos.x, pos.y)) {
-                        gridX = pos.x;
-                        gridY = pos.y;
-                        found = true;
-                        break;
-                    }
-                }
-            }
+    // --- 诊断正在拖拽的块 ---
+    console.log(`[2. 拖拽块信息]`, {
+        '原始形状': draggedPiece.dataset.type,
+        '当前旋转角度': parseInt(draggedPiece.dataset.rotation) || 0,
+        '是否翻转': draggedPiece.dataset.flipped === 'true',
+        '计算后的有效形状': getEffectivePieceType(draggedPiece)
+    });
 
-            if (!found) {
-                canPlace = false; // 找不到可放置位置
-            }
-        }
+    const piecesInTargetCell = Array.from(
+        puzzleBoard.querySelectorAll(`[data-current-x='${gridX}'][data-current-y='${gridY}']`)
+    ).filter(p => p !== draggedPiece);
 
-        if (canPlace) {
-            if (shape === 'jigsaw') {
-                const rotation = parseInt(draggedPiece.dataset.rotation) || 0;
-                const isFlipped = draggedPiece.dataset.flipped === 'true';
-                const tabSize = pieceWidth * JIGSAW_TAB_RATIO;
+    console.log(`[3. 目标格检查] 目标格中发现 ${piecesInTargetCell.length} 个【其他】拼图块。`);
 
-                let edges = {
-                    top: draggedPiece.dataset.edgeTop, right: draggedPiece.dataset.edgeRight,
-                    bottom: draggedPiece.dataset.edgeBottom, left: draggedPiece.dataset.edgeLeft
-                };
-                if (isFlipped) { [edges.left, edges.right] = [edges.right, edges.left]; }
-                const rotationSteps = rotation / 90;
-                for (let i = 0; i < rotationSteps; i++) {
-                    const tempTop = edges.top; edges.top = edges.left; edges.left = edges.bottom;
-                    edges.bottom = edges.right; edges.right = tempTop;
-                }
+    if (shape === 'triangle') {
+        // --- 三角形逻辑 (保持不变) ---
+        if (piecesInTargetCell.length === 0) {
+            console.log('[4. 判断] 目标格为空。判定：【可以放置】');
+            canPlace = true;
+        } else if (piecesInTargetCell.length === 1) {
+            console.log('[4. 判断] 目标格已有1个块，开始进行兼容性检查...');
+            const existingPiece = piecesInTargetCell[0];
 
-                const offsetXForDiv = (edges.left === 'tab' ? tabSize : 0);
-                const offsetYForDiv = (edges.top === 'tab' ? tabSize : 0);
+            console.log(`   - [4a. 已有块信息]`, {
+                '原始形状': existingPiece.dataset.type,
+                '当前旋转角度': parseInt(existingPiece.dataset.rotation) || 0,
+                '是否翻转': existingPiece.dataset.flipped === 'true',
+                '计算后的有效形状': getEffectivePieceType(existingPiece)
+            });
 
-                let calculatedLeft = gridX * pieceWidth - offsetXForDiv;
-                let calculatedTop = gridY * pieceHeight - offsetYForDiv;
+            const draggedPieceEffectiveType = getEffectivePieceType(draggedPiece);
+            const existingPieceEffectiveType = getEffectivePieceType(existingPiece);
 
-                if (rotation === 90 || rotation === 270) {
-                    const divWidth = parseFloat(draggedPiece.style.width);
-                    const divHeight = parseFloat(draggedPiece.style.height);
-                    calculatedLeft += (divWidth - divHeight) / 2;
-                    calculatedTop += (divHeight - divWidth) / 2;
-                }
-                finalLeft = `${calculatedLeft}px`;
-                finalTop = `${calculatedTop}px`;
-            } else { // 'square'
-                finalLeft = `${gridX * pieceWidth}px`;
-                finalTop = `${gridY * pieceHeight}px`;
-            }
-        }
-
-    } else if (shape === 'triangle') {
-        // 三角形拼图逻辑
-        const draggedPieceType = draggedPiece.dataset.type;
-
-        // 查找目标格子里所有已经存在的三角块
-        const piecesInCell = Array.from(
-            puzzleBoard.querySelectorAll(`.puzzle-piece.triangle[data-current-x='${gridX}'][data-current-y='${gridY}']`)
-        );
-
-        // 检查格子是否已满 (最多只能有2个)
-        if (piecesInCell.length >= 2) {
-            // 尝试附近的格子
-            const nearbyPositions = [
-                {x: gridX - 1, y: gridY},
-                {x: gridX + 1, y: gridY},
-                {x: gridX, y: gridY - 1},
-                {x: gridX, y: gridY + 1}
-            ];
-
-            let found = false;
-            for (const pos of nearbyPositions) {
-                if (pos.x >= 0 && pos.x < difficulty && pos.y >= 0 && pos.y < difficulty) {
-                    const nearbyPieces = puzzleBoard.querySelectorAll(`.puzzle-piece.triangle[data-current-x='${pos.x}'][data-current-y='${pos.y}']`);
-                    if (nearbyPieces.length < 2) {
-                        gridX = pos.x;
-                        gridY = pos.y;
-                        found = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!found) {
-                canPlace = false;
-            }
-        }
-
-        if (canPlace) {
-            // 检查是否要放置的“类型”已经存在于格子中
-            const typeAlreadyExists = piecesInCell.some(p => p.dataset.type === draggedPieceType);
-            if (typeAlreadyExists) {
-                canPlace = false;
-            }
-        }
-
-        if (canPlace && piecesInCell.length === 1) {
-            const existingPieceType = piecesInCell[0].dataset.type;
-
-            // 定义所有兼容的配对关系
             const isCompatible =
-                (draggedPieceType === 'top-left' && existingPieceType === 'bottom-right') ||
-                (draggedPieceType === 'bottom-right' && existingPieceType === 'top-left') ||
-                (draggedPieceType === 'top-right' && existingPieceType === 'bottom-left') ||
-                (draggedPieceType === 'bottom-left' && existingPieceType === 'top-right');
+                (draggedPieceEffectiveType === 'top-left' && existingPieceEffectiveType === 'bottom-right') ||
+                (draggedPieceEffectiveType === 'bottom-right' && existingPieceEffectiveType === 'top-left') ||
+                (draggedPieceEffectiveType === 'top-right' && existingPieceEffectiveType === 'bottom-left') ||
+                (draggedPieceEffectiveType === 'bottom-left' && existingPieceEffectiveType === 'top-right');
 
-            if (!isCompatible) {
-                canPlace = false;
+            console.log(`   - [4b. 兼容性结果] 拖拽块(${draggedPieceEffectiveType}) + 已有块(${existingPieceEffectiveType}) => 是否兼容: ${isCompatible}`);
+
+            if (isCompatible) {
+                console.log('   - [4c. 结论] 两个块兼容。判定：【可以放置】');
+                canPlace = true;
+            } else {
+                console.log('   - [4c. 结论] 两个块不兼容。判定：【不可放置】');
             }
+        } else {
+             console.log('[4. 判断] 目标格已满。判定：【不可放置】');
         }
-
-        if (canPlace) {
-            draggedPiece.dataset.position = draggedPieceType;
-            finalLeft = `${gridX * pieceWidth}px`;
-            finalTop = `${gridY * pieceHeight}px`;
+    } else {
+        // --- 【关键修复】方形和 Jigsaw 块的逻辑 ---
+        // 只有当目标格子为空时，才允许放置
+        if (piecesInTargetCell.length === 0) {
+            console.log('[4. 判断] 目标格为空。判定：【可以放置】');
+            canPlace = true;
+        } else {
+            console.log(`[4. 判断] 目标格已有 ${piecesInTargetCell.length} 个块。判定：【不可放置】`);
+            // canPlace 默认为 false，无需显式设置
         }
     }
 
-    // 如果可以放置，则执行放置操作
-    if (canPlace && finalLeft && finalTop) {
-        // 创建移动命令并推入栈
-        const toRect = {
-            position: "absolute",
-            left: finalLeft,
-            top: finalTop,
-            margin: '0'
-        };
+    console.log(`[5. 最终决定] 是否可以放置: ${canPlace}`);
+    console.groupEnd();
 
-        const command = new MoveCommand(
-            draggedPiece,
-            fromParent,
-            fromRect,
-            puzzleBoard,
-            toRect,
-            fromX,
-            fromY,
-            gridX,
-            gridY
-        );
-        pushCommand(command);
-        // 添加吸附动画效果
-        //draggedPiece.style.transition = 'transform 0.2s ease-out';
-        //draggedPiece.style.transform = `${draggedPiece.style.transform || ''} translate(${finalLeft}px, ${finalTop}px)`;
-
-        // 动画结束后应用最终位置
-            draggedPiece.style.transition = '';
+    // --- 以下是原有的执行逻辑，保持不变 ---
+    if (canPlace) {
+        const pos = calculatePieceFinalPosition(draggedPiece, gridX, gridY);
+        if (pos) {
+            draggedPiece.style.margin = '0';
+            const toRect = { position: "absolute", left: pos.finalLeft, top: pos.finalTop, margin: '0' };
+            const command = new MoveCommand(draggedPiece, fromParent, fromRect, puzzleBoard, toRect, fromX, fromY, gridX, gridY);
+            pushCommand(command);
             draggedPiece.style.position = "absolute";
-            draggedPiece.style.left = finalLeft;
-            draggedPiece.style.top = finalTop;
-            draggedPiece.style.transform = draggedPiece.style.transform.replace(/ translate\([^)]*\)/, '') || '';
+            draggedPiece.style.left = pos.finalLeft;
+            draggedPiece.style.top = pos.finalTop;
             draggedPiece.dataset.currentX = gridX;
             draggedPiece.dataset.currentY = gridY;
-
             puzzleBoard.appendChild(draggedPiece);
-
             moves++;
             movesElement.textContent = `移动次数: ${moves}`;
+        }
     } else {
-        // 无法放置时，添加返回动画
-        draggedPiece.style.transition = 'transform 0.3s ease-out';
-        setTimeout(() => {
-            draggedPiece.style.transition = '';
-            returnToZone(draggedPiece);
-        }, 300);
+        returnToZone(draggedPiece, fromParent === piecesZone);
     }
 }
 
@@ -760,9 +719,11 @@ function findPieceOnBoard(x, y) {
 // 修复拼图完成检测及提示功能
 function checkPuzzleCompletion() {
     const piecesOnBoard = puzzleBoard.querySelectorAll('.puzzle-piece');
-    const totalPieces = difficulty * difficulty;
 
-    // 检查是否所有拼图都已放置到棋盘上
+    const totalPieces = shape === 'triangle'
+        ? difficulty * difficulty * 2
+        : difficulty * difficulty;
+
     if (piecesOnBoard.length !== totalPieces) {
         return false;
     }
@@ -775,21 +736,18 @@ function checkPuzzleCompletion() {
         const correctX = parseInt(piece.dataset.correctX);
         const correctY = parseInt(piece.dataset.correctY);
 
-        // 检查位置是否正确
+        // 1. 检查位置是否正确
         if (pieceX !== correctX || pieceY !== correctY) {
             allCorrect = false;
         }
 
-        // 对于拼图形状，还要检查旋转和翻转是否正确
-        if (shape === 'jigsaw') {
-            const rotation = parseInt(piece.dataset.rotation) || 0;
-            const correctRotation = parseInt(piece.dataset.correctRotation) || 0;
-            const isFlipped = piece.dataset.flipped === 'true';
-            const shouldBeFlipped = piece.dataset.shouldBeFlipped === 'true';
+        // 2. 【关键修复】对所有类型的拼图块都检查旋转和翻转
+        //    (移除了外层的 if (shape === ...) 判断)
+        const rotation = parseInt(piece.dataset.rotation) || 0;
+        const isFlipped = piece.dataset.flipped === 'true';
 
-            if (rotation !== correctRotation || isFlipped !== shouldBeFlipped) {
-                allCorrect = false;
-            }
+        if (rotation !== 0 || isFlipped) {
+            allCorrect = false;
         }
     });
 
@@ -844,16 +802,10 @@ function showCompletionMessage() {
     timeInfo.textContent = `用时: ${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     timeInfo.style.fontSize = '1.2rem';
 
-    // 添加按钮容器
-    const buttonContainer = document.createElement('div');
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.justifyContent = 'center';
-    buttonContainer.style.gap = '1rem';
-    buttonContainer.style.marginTop = '1rem';
-
     // 添加重新开始按钮
     const restartBtn = document.createElement('button');
     restartBtn.textContent = '再玩一次';
+    restartBtn.style.marginTop = '1rem';
     restartBtn.style.padding = '0.8rem 1.5rem';
     restartBtn.style.fontSize = '1rem';
     restartBtn.style.backgroundColor = '#4CAF50';
@@ -866,27 +818,11 @@ function showCompletionMessage() {
         resetGame(); // 假设存在重置拼图的函数
     });
 
-    // 添加返回按钮
-    const backBtn = document.createElement('button');
-    backBtn.textContent = '返回选择关卡';
-    backBtn.style.padding = '0.8rem 1.5rem';
-    backBtn.style.fontSize = '1rem';
-    backBtn.style.backgroundColor = '#2196F3';
-    backBtn.style.color = 'white';
-    backBtn.style.border = 'none';
-    backBtn.style.borderRadius = '5px';
-    backBtn.style.cursor = 'pointer';
-    backBtn.addEventListener('click', () => {
-        window.location.href = '/option'; // 返回选择关卡页面
-    });
-
     // 组装提示信息
     messageContainer.appendChild(title);
     messageContainer.appendChild(timeInfo);  // 添加时间显示
     messageContainer.appendChild(movesInfo);
-    buttonContainer.appendChild(restartBtn);
-    buttonContainer.appendChild(backBtn);
-    messageContainer.appendChild(buttonContainer);
+    messageContainer.appendChild(restartBtn);
 
     // 添加到页面
     document.body.appendChild(messageContainer);
@@ -1032,17 +968,8 @@ function createJigsawPiece(x, y, width, height, edges) {
 
     const tabSize = width * JIGSAW_TAB_RATIO;
 
-    // div 的尺寸需要比基础尺寸大，以容纳凸出的部分
-    const hasLeftTab = edges.left !== 'flat';
-    const hasRightTab = edges.right !== 'flat';
-    const hasTopTab = edges.top !== 'flat';
-    const hasBottomTab = edges.bottom !== 'flat';
-
     const divWidth = width + (edges.left === 'tab' ? tabSize : 0) + (edges.right === 'tab' ? tabSize : 0);
     const divHeight = height + (edges.top === 'tab' ? tabSize : 0) + (edges.bottom === 'tab' ? tabSize : 0);
-    const offsetXForDiv = (edges.left === 'tab' ? tabSize : 0);
-    const offsetYForDiv = (edges.top === 'tab' ? tabSize : 0);
-
 
     piece.style.width = `${divWidth}px`;
     piece.style.height = `${divHeight}px`;
@@ -1064,10 +991,16 @@ function createJigsawPiece(x, y, width, height, edges) {
     piece.style.backgroundImage = `url(${originalImageUrl})`;
     piece.style.backgroundSize = `${coveredWidth}px ${coveredHeight}px`;
 
-    const bgPosX = -(x * width) + offsetX + offsetXForDiv; // <--- 减号改加号
-    const bgPosY = -(y * height) + offsetY + offsetYForDiv; // <--- 减号改加号
+    const offsetXForBg = (edges.left === 'tab' ? tabSize : 0);
+    const offsetYForBg = (edges.top === 'tab' ? tabSize : 0);
+    const bgPosX = -(x * width) + offsetX + offsetXForBg;
+    const bgPosY = -(y * height) + offsetY + offsetYForBg;
     piece.style.backgroundPosition = `${bgPosX}px ${bgPosY}px`;
 
+    // 【核心修正】: 计算并设置正确的旋转中心点（核心正方形的中心）
+    const coreCenterX = offsetXForBg + width / 2;
+    const coreCenterY = offsetYForBg + height / 2;
+    piece.style.transformOrigin = `${coreCenterX}px ${coreCenterY}px`;
 
     piece.dataset.correctX = x;
     piece.dataset.correctY = y;
@@ -1164,44 +1097,6 @@ function setupPieceEvents(piece) {
     piece.addEventListener('drag', pieceDrag);
 }
 
-// 旋转拼图块
-function rotatePiece(piece) {
-    const currentRotation = parseInt(piece.dataset.rotation) || 0;
-    // 记录当前旋转状态作为撤销依据
-    const command = new RotateCommand(piece, currentRotation);
-
-    const newRotation = (currentRotation + 90) % 360;
-    piece.dataset.rotation = newRotation;
-    const isFlipped = piece.dataset.flipped === 'true';
-    piece.style.transform = `rotate(${newRotation}deg) scaleX(${isFlipped ? -1 : 1})`;
-
-    // 推入命令栈
-    pushCommand(command);
-
-    // 更新移动次数
-    moves++;
-    movesElement.textContent = `移动次数: ${moves}`;
-}
-
-// 翻转拼图块
-function flipPiece(piece) {
-    const isFlipped = piece.dataset.flipped === 'true';
-    // 记录当前翻转状态作为撤销依据
-    const command = new FlipCommand(piece, isFlipped);
-
-    const newFlipped = !isFlipped;
-    piece.dataset.flipped = newFlipped;
-    const currentRotation = parseInt(piece.dataset.rotation) || 0;
-    piece.style.transform = `rotate(${currentRotation}deg) scaleX(${newFlipped ? -1 : 1})`;
-
-    // 推入命令栈
-    pushCommand(command);
-
-    // 更新移动次数
-    moves++;
-    movesElement.textContent = `移动次数: ${moves}`;
-}
-
 // 确定三角形位置
 function getTrianglePosition(relX, relY) {
     // 根据相对坐标确定三角形位置
@@ -1225,78 +1120,433 @@ function findTrianglePieceOnBoard(x, y, position) {
 }
  // 提交成绩到排行榜
 function submitToRanking() {
-        try {
-            const userId = localStorage.getItem('userId');
-            if (userId) {
-                fetch('/ranking/record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        user_id: Number(userId),
-                        step_count: moves,
-                        time_used: seconds
-                    })
-                }).catch(error => {
-                    console.error('提交排行榜成绩失败:', error);
+    try {
+        const userId = localStorage.getItem('userId');
+        const token = localStorage.getItem('puzzleToken');
+        
+        // 1. 获取关卡信息并打印完整日志
+        const levelInfo = extractLevelInfo();
+        console.log('submitToRanking: 提取的关卡信息', levelInfo);
+        
+        // 2. 先判断关卡信息是否存在
+        if (!levelInfo) {
+            console.warn('无法获取关卡信息，无法提交成绩');
+            alert('无法识别当前关卡，请选择系统关卡后重试');
+            return;
+        }
+
+        // 3. 提取并校验关卡ID（更宽松的逻辑）
+        let levelId = null;
+        if (levelInfo.levelId) {
+            console.log('submitToRanking: 原始levelId', levelInfo.levelId, '类型', typeof levelInfo.levelId);
+            
+            // 先尝试直接转换
+            levelId = Number(levelInfo.levelId);
+            
+            // 如果直接转换失败，尝试提取数字部分
+            if (isNaN(levelId) && typeof levelInfo.levelId === 'string') {
+                const match = levelInfo.levelId.match(/\d+/);
+                if (match) {
+                    levelId = Number(match[0]);
+                    console.log('submitToRanking: 从字符串中提取数字', levelId);
+                }
+            }
+            
+            // 校验：只要是大于0的数字即可，不严格要求整数
+            if (!isNaN(levelId) && levelId > 0) {
+                // 转换为整数（后端可能需要整数）
+                levelId = Math.floor(levelId);
+                console.log('submitToRanking: 最终有效levelId', levelId);
+            } else {
+                levelId = null; // 标记为无效ID
+                console.warn('submitToRanking: 无效的关卡ID', levelInfo.levelId);
+            }
+        }
+
+        // 3. 无效ID拦截
+        if (!levelId) {
+            console.warn('无效的关卡ID，仅系统关卡（纯数字ID）支持提交成绩', '原始ID:', levelInfo.levelId);
+            alert('当前关卡ID无效（仅系统关卡支持提交），请重新选择关卡');
+            return;
+        }
+
+        // 4. 后续身份与成绩校验（原有逻辑保留）
+        if (!userId || !token) {
+            console.warn('未登录或Token缺失，无法提交成绩');
+            alert('请先登录再提交成绩');
+            return;
+        }
+
+        const stepCount = typeof moves === 'number' ? moves : 0;
+        const timeUsed = typeof seconds === 'number' ? seconds : 0;
+        if (stepCount <= 0 || timeUsed <= 0) {
+            console.warn('无效的成绩数据，步数和时长必须为正整数', '步数:', stepCount, '时长:', timeUsed);
+            alert('成绩数据无效，请完成关卡后再提交');
+            return;
+        }
+
+        // 5. 提交请求（原有逻辑保留）
+        fetch('/ranking/record', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+                user_id: Number(userId),
+                level_id: levelId, // 已确保为纯数字正整数
+                step_count: stepCount,
+                time_used: timeUsed
+            })
+        }).then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    if (err.msg && (err.msg.includes('Token has expired') || err.msg.includes('用户身份无效'))) {
+                        localStorage.removeItem('puzzleToken');
+                        localStorage.removeItem('userId');
+                        localStorage.removeItem('username');
+                        alert('登录已过期，请重新登录');
+                        window.location.href = '/login';
+                        throw new Error('登录已过期');
+                    }
+                    throw new Error(`提交失败：${err.msg || '未知错误'}`);
                 });
             }
-        } catch (e) {
-            console.error('提交成绩失败:', e);
-        }
+            return response.json();
+        }).then(result => {
+            console.log('成绩提交成功:', result);
+            alert(result.msg || '成绩提交成功！');
+        }).catch(error => {
+            if (error.message !== '登录已过期') {
+                console.error('提交排行榜成绩失败:', error.message);
+                alert(`成绩提交失败：${error.message}`);
+            }
+        });
+
+    } catch (e) {
+        console.error('提交成绩失败:', e);
+        alert('提交成绩时发生错误，请刷新页面重试');
     }
+}
+
 // 放回备选区
-function returnToZone(piece) {
+function returnToZone(piece, incrementMoves = true) {
     piece.style.position = 'static';
+    piece.style.left = '';
+    piece.style.top = '';
     delete piece.dataset.currentX;
     delete piece.dataset.currentY;
+    delete piece.dataset.position;
+
+    if (shape === 'jigsaw') {
+        const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+        draggedPiece.style.margin = `${(pieceHeight * JIGSAW_TAB_RATIO) / 2}px`;
+    }
+
     piecesZone.appendChild(piece);
-    moves++;
-    movesElement.textContent = `移动次数: ${moves}`;
+
+    if (incrementMoves) {
+        moves++;
+        movesElement.textContent = `移动次数: ${moves}`;
+    }
 }
 
 // 提交关卡成绩到后端 levels（需登录 token）
 function submitLevelRecord() {
     try {
         const token = localStorage.getItem('puzzleToken');
-        if (!token) return Promise.resolve();
+        if (!token) {
+            console.warn('Token缺失，无法提交关卡成绩');
+            return Promise.resolve();
+        }
 
         const info = extractLevelInfo();
-        if (!info) return Promise.resolve();
+        console.log('submitLevelRecord: 提取的关卡信息', info);
+        if (!info) {
+            console.warn('无法获取关卡信息，无法提交成绩');
+            return Promise.resolve();
+        }
+
+        // 验证关卡ID有效性（更宽松的逻辑）
+        let levelId = Number(info.levelId);
+        console.log('submitLevelRecord: 原始levelId', info.levelId, '类型', typeof info.levelId, '转换后', levelId);
+        
+        // 如果直接转换失败，尝试提取数字部分
+        if (isNaN(levelId) && typeof info.levelId === 'string') {
+            const match = info.levelId.match(/\d+/);
+            if (match) {
+                levelId = Number(match[0]);
+                console.log('submitLevelRecord: 从字符串中提取数字', levelId);
+            }
+        }
+        
+        // 校验：只要是大于0的数字即可，不严格要求整数
+        if (isNaN(levelId) || levelId <= 0) {
+            console.warn('无效的关卡ID，仅系统关卡支持提交成绩', '关卡ID:', info.levelId);
+            return Promise.resolve();
+        }
+        
+        // 转换为整数（后端可能需要整数）
+        levelId = Math.floor(levelId);
+        console.log('submitLevelRecord: 最终有效levelId', levelId);
+
+        // 验证成绩数据
+        const stepCount = typeof moves === 'number' ? moves : 0;
+        const timeUsed = typeof seconds === 'number' ? seconds : 0;
+        if (stepCount <= 0 || timeUsed <= 0) {
+            console.warn('无效的关卡成绩数据', '步数:', stepCount, '时长:', timeUsed);
+            return Promise.resolve();
+        }
 
         return fetch('/levels/record', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + token
+                'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({
-                level_id: info.levelId,
-                level_name: info.levelName,
-                image_url: info.imageUrl,
-                difficulty: info.difficulty,
-                time_used: seconds,
-                step_count: moves
+                level_id: levelId,
+                level_name: info.levelName || '',
+                image_url: info.imageUrl || '',
+                difficulty: info.difficulty || '',
+                time_used: timeUsed,
+                step_count: stepCount
             })
-        }).then(r => r.json()).catch(() => {});
-    } catch (e) { return Promise.resolve(); }
+        }).then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    // 处理Token过期
+                    if (err.msg && (err.msg.includes('Token has expired') || err.msg.includes('用户身份无效'))) {
+                        localStorage.removeItem('puzzleToken');
+                        localStorage.removeItem('userId');
+                        localStorage.removeItem('username');
+                        alert('登录已过期，请重新登录');
+                        window.location.href = '/login';
+                        throw new Error('登录已过期');
+                    }
+                    throw new Error(`提交失败：${err.msg || '未知错误'}`);
+                });
+            }
+            return response.json();
+        }).then(result => {
+            console.log('关卡成绩提交成功:', result);
+        }).catch(error => {
+            if (error.message !== '登录已过期') {
+                console.error('提交关卡成绩失败:', error.message);
+            }
+        });
+    } catch (e) {
+        console.error('提交关卡成绩异常:', e);
+        return Promise.resolve();
+    }
 }
 
-// 从当前 customImage/customSize 推导关卡信息
+
+// 提取关卡信息，严格适配后端level_id（正整数）要求
 function extractLevelInfo() {
     try {
-        const imageUrl = originalImageUrl;
-        const diff = difficulty;
-        if (!imageUrl || !diff) return null;
-        // 关卡命名策略：图片文件名 + 难度
-        const urlObj = new URL(imageUrl, window.location.origin);
-        const pathname = urlObj.pathname || '';
-        const fileName = pathname.split('/').pop() || 'custom';
-        const levelId = `${fileName}-${diff}`;
-        const levelName = fileName.replace(/\.[a-zA-Z0-9]+$/, '');
-        return { levelId, levelName, imageUrl, difficulty: diff };
+        // 1. 定义核心工具函数：校验是否为可接受的关卡ID（更宽松的检查逻辑）
+        const isValidLevelId = (value) => {
+            if (typeof value === 'undefined' || value === null || value === '') return false;
+            // 尝试转换为数字，如果转换成功且大于0，则有效
+            const num = Number(value);
+            return num > 0 && !isNaN(num) && isFinite(num);
+        };
+
+        // 调试信息：初始状态
+        console.log('提取关卡信息开始，当前状态:', {
+            window_currentLevelId: window.currentLevelId,
+            window_currentLevelId_type: typeof window.currentLevelId,
+            urlParams: Object.fromEntries(new URLSearchParams(window.location.search)),
+            localStorage_keys: Object.keys(localStorage)
+        });
+
+        // 2. 最高优先级：直接使用界面已定义的全局关卡ID（window.currentLevelId）
+        if (window.currentLevelId !== undefined && window.currentLevelId !== null && window.currentLevelId !== '') {
+            console.log('检查window.currentLevelId:', window.currentLevelId, '类型:', typeof window.currentLevelId);
+            let levelNum;
+            
+            // 改进的ID处理逻辑
+            if (typeof window.currentLevelId === 'string') {
+                // 尝试直接转换为数字
+                levelNum = Number(window.currentLevelId);
+                
+                // 如果直接转换失败，尝试提取数字部分
+                if (isNaN(levelNum)) {
+                    const match = window.currentLevelId.match(/\d+/);
+                    levelNum = match ? Number(match[0]) : NaN;
+                }
+            } else {
+                levelNum = Number(window.currentLevelId);
+            }
+            
+            console.log('提取的levelNum:', levelNum, '是否有效:', isValidLevelId(levelNum));
+            
+            if (isValidLevelId(levelNum)) {
+                console.log('从window.currentLevelId获取有效关卡ID:', levelNum);
+                return {
+                    levelId: String(levelNum), // 统一为纯数字字符串
+                    levelName: `系统关卡${levelNum}`,
+                    imageUrl: `/static/images/system-level${levelNum}.png`,
+                    difficulty: getDifficultyByLevel(levelNum),
+                    type: 'system',
+                    isValidForRanking: true,
+                    source: 'window.currentLevelId'
+                };
+            }
+        } else {
+            console.log('window.currentLevelId不存在或为空');
+        }
+
+        // 3. 第二优先级：从localStorage获取puzzleId（界面存档功能使用的关键ID）
+        const localStoragePuzzleId = localStorage.getItem('puzzleId');
+        console.log('localStorage.puzzleId:', localStoragePuzzleId);
+        if (localStoragePuzzleId !== undefined && localStoragePuzzleId !== null && localStoragePuzzleId !== '') {
+            let levelNum = Number(localStoragePuzzleId);
+            if (isNaN(levelNum)) {
+                // 尝试提取数字部分
+                const match = localStoragePuzzleId.match(/\d+/);
+                levelNum = match ? Number(match[0]) : NaN;
+            }
+            
+            if (isValidLevelId(levelNum)) {
+                console.log('从localStorage.puzzleId获取有效关卡ID:', levelNum);
+                return {
+                    levelId: String(levelNum),
+                    levelName: `系统关卡${levelNum}`,
+                    imageUrl: `/static/images/system-level${levelNum}.png`,
+                    difficulty: getDifficultyByLevel(levelNum),
+                    type: 'system',
+                    isValidForRanking: true,
+                    source: 'localStorage.puzzleId'
+                };
+            }
+        }
+
+        // 4. 第三优先级：从URL参数获取
+        const urlParams = new URLSearchParams(window.location.search);
+        const urlLevelId = urlParams.get('levelId');
+        console.log('URL.levelId:', urlLevelId);
+        if (urlLevelId !== undefined && urlLevelId !== null && urlLevelId !== '') {
+            let levelNum = Number(urlLevelId);
+            if (isNaN(levelNum)) {
+                // 尝试提取数字部分
+                const match = urlLevelId.match(/\d+/);
+                levelNum = match ? Number(match[0]) : NaN;
+            }
+            
+            if (isValidLevelId(levelNum)) {
+                console.log('从URL.levelId获取有效关卡ID:', levelNum);
+                // 同步更新到全局变量和localStorage
+                window.currentLevelId = String(levelNum);
+                localStorage.setItem('puzzleId', String(levelNum));
+                return {
+                    levelId: String(levelNum),
+                    levelName: `系统关卡${levelNum}`,
+                    imageUrl: `/static/images/system-level${levelNum}.png`,
+                    difficulty: getDifficultyByLevel(levelNum),
+                    type: 'system',
+                    isValidForRanking: true,
+                    source: 'URL.levelId'
+                };
+            }
+        }
+
+        // 5. 尝试从game.html中使用的localStorage键获取
+        const selectedLevelForRanking = localStorage.getItem('selectedLevelForRanking');
+        console.log('localStorage.selectedLevelForRanking:', selectedLevelForRanking);
+        if (selectedLevelForRanking !== undefined && selectedLevelForRanking !== null && selectedLevelForRanking !== '') {
+            let levelNum = Number(selectedLevelForRanking);
+            if (isNaN(levelNum)) {
+                // 尝试提取数字部分
+                const match = selectedLevelForRanking.match(/\d+/);
+                levelNum = match ? Number(match[0]) : NaN;
+            }
+            
+            if (isValidLevelId(levelNum)) {
+                console.log('从localStorage.selectedLevelForRanking获取有效关卡ID:', levelNum);
+                window.currentLevelId = String(levelNum);
+                localStorage.setItem('puzzleId', String(levelNum));
+                return {
+                    levelId: String(levelNum),
+                    levelName: `系统关卡${levelNum}`,
+                    imageUrl: `/static/images/system-level${levelNum}.png`,
+                    difficulty: getDifficultyByLevel(levelNum),
+                    type: 'system',
+                    isValidForRanking: true,
+                    source: 'localStorage.selectedLevelForRanking'
+                };
+            }
+        }
+
+        // 5. 处理非系统关卡（存档/自定义，界面中通过currentArchive/currentCustomLevel区分）
+        const archiveId = localStorage.getItem('currentArchive');
+        const customLevelId = localStorage.getItem('currentCustomLevel');
+        console.log('非系统关卡检查:', {archiveId, customLevelId});
+        if (archiveId || customLevelId) {
+            const effectiveId = archiveId || customLevelId;
+            console.log('使用非系统关卡ID:', effectiveId, '类型:', archiveId ? 'archive' : 'custom');
+            // 非系统关卡不支持排行榜提交，明确标记isValidForRanking: false
+            return {
+                levelId: effectiveId, // 非数字ID（如"archive-123"，与界面存档逻辑一致）
+                levelName: archiveId ? `存档关卡(${effectiveId})` : `自定义关卡(${effectiveId})`,
+                imageUrl: `/static/images/${effectiveId || 'custom-default.png'}`, // 适配界面图片路径
+                difficulty: 4, // 界面中自定义关卡难度默认标记为4
+                type: archiveId ? 'archive' : 'custom',
+                isValidForRanking: false,
+                source: archiveId ? 'localStorage.currentArchive' : 'localStorage.currentCustomLevel'
+            };
+        }
+
+        // 6. 调试信息：记录当前localStorage中的所有相关值
+        console.log('localStorage中的值:', {
+            puzzleId: localStorage.getItem('puzzleId'),
+            selectedLevelForRanking: localStorage.getItem('selectedLevelForRanking'),
+            currentArchive: localStorage.getItem('currentArchive'),
+            currentCustomLevel: localStorage.getItem('currentCustomLevel')
+        });
+
+        // 7. 降级方案：使用默认系统关卡
+        console.warn('未找到有效关卡信息，使用默认系统关卡（ID:1）');
+        const defaultLevelNum = 1;
+        // 同步默认值到全局变量和localStorage
+        console.log('降级方案：设置window.currentLevelId =', String(defaultLevelNum));
+        window.currentLevelId = String(defaultLevelNum);
+        localStorage.setItem('puzzleId', String(defaultLevelNum));
+        return {
+            levelId: String(defaultLevelNum),
+            levelName: '系统关卡1（默认）',
+            imageUrl: '/static/images/system-level1.png',
+            difficulty: '简单',
+            type: 'system',
+            isValidForRanking: true,
+            source: 'default'
+        };
+
     } catch (e) {
-        return null;
+        console.error('提取关卡信息异常:', e, '当前window.currentLevelId:', window.currentLevelId);
+        // 异常场景下强制返回有效系统关卡，避免界面功能阻塞
+        const emergencyLevelNum = 1;
+        console.log('异常处理：设置window.currentLevelId =', String(emergencyLevelNum));
+        window.currentLevelId = String(emergencyLevelNum);
+        localStorage.setItem('puzzleId', String(emergencyLevelNum));
+        return {
+            levelId: String(emergencyLevelNum),
+            levelName: '应急默认关卡（系统关卡1）',
+            imageUrl: '/static/images/system-level1.png',
+            difficulty: '简单',
+            type: 'system',
+            isValidForRanking: true,
+            source: 'emergency'
+        };
     }
+}
+
+// 辅助函数：根据关卡ID判断难度（与界面系统关卡难度逻辑一致，可复用）
+function getDifficultyByLevel(levelNum) {
+    if (levelNum <= 3) return '简单';
+    if (levelNum <= 6) return '中等';
+    return '困难'; // 关卡ID>6时为困难，符合常规游戏难度梯度
 }
 
 function pieceDrag(e) {
@@ -1311,6 +1561,48 @@ function pieceDrag(e) {
     }
 }
 
+
+function calculatePieceFinalPosition(piece, gridX, gridY) {
+    const pieceWidth = puzzleBoard.offsetWidth / difficulty;
+    const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+    const tabSize = pieceWidth * JIGSAW_TAB_RATIO;
+
+    let finalLeft;
+    let finalTop;
+
+    if (shape === 'jigsaw') {
+        // 1. 目标：将拼图块的旋转中心，对齐到网格的中心。
+
+        // 2. 计算网格中心的绝对坐标
+        const gridCenterX = gridX * pieceWidth + pieceWidth / 2;
+        const gridCenterY = gridY * pieceHeight + pieceHeight / 2;
+
+        // 3. 计算旋转中心在拼图块div内部的坐标
+        //    (这必须与 createJigsawPiece 中设置的 transformOrigin 完全一致)
+        const dx = (piece.dataset.edgeLeft === 'tab' ? tabSize : 0);
+        const dy = (piece.dataset.edgeTop === 'tab' ? tabSize : 0);
+        const pivotInDivX = dx + pieceWidth / 2;
+        const pivotInDivY = dy + pieceHeight / 2;
+
+        // 4. 计算div的left和top，使得两个中心点重合
+        finalLeft = gridCenterX - pivotInDivX;
+        finalTop = gridCenterY - pivotInDivY;
+
+    } else { // 对于 'square' 和 'triangle'，它们的旋转中心就是几何中心
+        finalLeft = gridX * pieceWidth;
+        finalTop = gridY * pieceHeight;
+    }
+
+    if (finalLeft !== undefined && finalTop !== undefined) {
+        return {
+            finalLeft: `${finalLeft}px`,
+            finalTop: `${finalTop}px`
+        };
+    }
+
+    return null;
+}
+
 // 兼容 game.html 对 window.puzzleGame 的依赖（用于帮助弹窗暂停/恢复）
 try {
     window.puzzleGame = {
@@ -1319,3 +1611,104 @@ try {
         get gameStarted() { return typeof gameStarted !== 'undefined' ? gameStarted : false; }
     };
 } catch (e) {}
+
+function getEffectivePieceType(piece) {
+    const originalType = piece.dataset.type;
+    const rotation = parseInt(piece.dataset.rotation) || 0;
+    const isFlipped = piece.dataset.flipped === 'true';
+
+    // 定义旋转顺序 (顺时针)
+    const types = ['top-left', 'top-right', 'bottom-right', 'bottom-left'];
+    let effectiveType = originalType;
+
+    // --- 核心修复：严格按照 CSS 的 transform 顺序（从右到左）进行计算 ---
+
+    // 第1步：先处理翻转 (scaleX)
+    if (isFlipped) {
+        if (effectiveType === 'top-left') {
+            effectiveType = 'top-right';
+        } else if (effectiveType === 'top-right') {
+            effectiveType = 'top-left';
+        } else if (effectiveType === 'bottom-left') {
+            effectiveType = 'bottom-right';
+        } else if (effectiveType === 'bottom-right') {
+            effectiveType = 'bottom-left';
+        }
+    }
+
+    // 第2步：再处理旋转 (rotate)，作用于【可能已经被翻转过】的形状上
+    const currentIndex = types.indexOf(effectiveType);
+    const rotationSteps = rotation / 90;
+    effectiveType = types[(currentIndex + rotationSteps) % 4];
+
+    return effectiveType;
+}
+
+function saveBoardPieces() {
+    const piecesOnBoard = Array.from(document.querySelectorAll('#puzzleBoard .puzzle-piece'))
+        .map(piece => ({
+            correctX: piece.dataset.correctX,
+            correctY: piece.dataset.correctY,
+            currentX: piece.dataset.currentX,
+            currentY: piece.dataset.currentY,
+            rotation: piece.dataset.rotation,
+            flipped: piece.dataset.flipped,
+            type: piece.dataset.type || null
+        }));
+    localStorage.setItem('boardPieces', JSON.stringify(piecesOnBoard));
+}
+
+async function restoreProgressFromDB() {
+    // For demo, use user_id=1, puzzle_id=1. Replace with real values if needed.
+    const token = localStorage.getItem('puzzleToken');
+    const puzzle_id = localStorage.getItem('puzzleId') || 1;
+    const res = await fetch(`/pic/get_progress?puzzle_id=${puzzle_id}`, {
+        headers: {
+            'Authorization': 'Bearer ' + token
+        }
+    });
+    
+    if (!res.ok) {
+        alert('Failed to fetch progress from server');
+        return;
+    }
+    const data = await res.json();
+    if (!data.progress_json) {
+        alert('No progress found in database');
+        return;
+    }
+    const piecesOnBoard = JSON.parse(data.progress_json);
+    console.log(piecesOnBoard)
+    // Remove all pieces from board and zone
+    puzzleBoard.innerHTML = '';
+    piecesZone.innerHTML = '';
+    pieces.forEach(piece => {
+        piece.style.position = 'static';
+        delete piece.dataset.currentX;
+        delete piece.dataset.currentY;
+        piecesZone.appendChild(piece);
+    });
+
+    // Place pieces on board according to saved state
+    piecesOnBoard.forEach(saved => {
+        const piece = pieces.find(p =>
+            p.dataset.correctX == saved.correctX &&
+            p.dataset.correctY == saved.correctY &&
+            (p.dataset.type || null) == (saved.type || null)
+        );
+        if (piece) {
+            piece.dataset.currentX = saved.currentX;
+            piece.dataset.currentY = saved.currentY;
+            piece.dataset.rotation = saved.rotation;
+            piece.dataset.flipped = saved.flipped;
+            piece.style.transform = `rotate(${saved.rotation}deg) scaleX(${saved.flipped === 'true' ? -1 : 1})`;
+            piece.style.position = 'absolute';
+            const pieceWidth = puzzleBoard.offsetWidth / difficulty;
+            const pieceHeight = puzzleBoard.offsetHeight / difficulty;
+            piece.style.left = `${saved.currentX * pieceWidth}px`;
+            piece.style.top = `${saved.currentY * pieceHeight}px`;
+            puzzleBoard.appendChild(piece);
+        }
+    });
+    alert('Progress restored!');
+}

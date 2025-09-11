@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关卡排行榜</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/game-rank.css') }}">
+    <style>
+        .rank-container { max-width: 1000px; margin: 80px auto 20px; padding: 20px; background: #20223A; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+        .rank-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 2px solid #F9E078; }
+        .back-btn { background-color: #F9E078; color: #20223A; border: none; padding: 8px 16px; border-radius: 0; cursor: pointer; text-decoration: none; display: inline-block; font-family: 'Press Start 2P', 'Zpix', monospace; font-size: 12px; }
+        .back-btn:hover { background-color: #E6D166; }
+        .rank-title { font-weight: bold; color: #F9E078; margin: 0; font-family: 'Press Start 2P', 'Zpix', monospace; font-size: 18px; }
+        .refresh-btn { background: #F9E078; color: #20223A; border: none; cursor: pointer; font-size: 12px; padding: 8px 16px; border-radius: 0; font-family: 'Press Start 2P', 'Zpix', monospace; }
+        .level-info { background: linear-gradient(135deg,#36D1DC 0%,#5B86E5 100%); color:#fff; padding:20px; border-radius:10px; margin-bottom:20px; box-shadow:0 4px 15px rgba(54,209,220,.3); text-align: center; }
+        .level-name { font-size: 24px; font-weight: bold; margin-bottom: 10px; }
+        .level-details { font-size: 16px; opacity: 0.9; }
+        .my-rank-card { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#fff; padding:20px; border-radius:10px; margin-bottom:20px; box-shadow:0 4px 15px rgba(102,126,234,.3); }
+        .my-rank-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
+        .my-rank-title::before { content: "👤"; margin-right: 8px; }
+        .my-rank-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+        .my-rank-item { text-align: center; }
+        .my-rank-label { font-size: 12px; opacity: .8; margin-bottom: 5px; }
+        .my-rank-value { font-size: 20px; font-weight: bold; }
+        .rank-table { width: 100%; border-collapse: collapse; background: #20223A; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,.25); }
+        .rank-table th { background: #2a2c4a; color:#F9E078; padding: 15px; text-align: center; font-weight: bold; font-size: 18px; }
+        .rank-table td { padding: 16px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 16px; color:#F9E078; }
+        .rank-table tr:hover { background-color: rgba(255,255,255,0.04); }
+        .rank-number { font-weight: bold; font-size: 20px; }
+        .rank-number.top3 { font-size: 22px; }
+        .rank-number.rank-1 { color: #ffd700; }
+        .rank-number.rank-2 { color: #c0c0c0; }
+        .rank-number.rank-3 { color: #cd7f32; }
+        .player-name { font-weight: 500; }
+        .player-name.top3 { font-weight: bold; }
+        .time-display { font-family: 'Courier New', monospace; font-weight: 500; }
+        .time-display.top3 { font-weight: bold; }
+        .steps-display { font-weight: 500; }
+        .steps-display.top3 { font-weight: bold; }
+        .loading-message,.error-message,.empty-message { text-align:center; padding:40px; font-size:18px; }
+        .error-message { color:#e74c3c; }
+        @media (max-width: 768px) {
+            .rank-container { margin:10px; padding:15px; }
+            .rank-header { flex-direction: column; gap: 15px; text-align: center; }
+            .rank-title { font-size: 28px; }
+            .rank-table th { font-size: 16px; }
+            .rank-table td { font-size: 15px; padding: 12px 6px; }
+        }
+        @media (max-width: 480px) {
+            .rank-table th { font-size: 14px; }
+            .rank-table td { font-size: 14px; padding: 10px 4px; }
+            .my-rank-info { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    {% include '_navbar.html' %}
+    <div class="background-blur"></div>
+    <div class="rank-container">
+        <div class="rank-header">
+            <button class="btn btn-secondary back-btn" onclick="window.location.href='{{ url_for('main') }}'" style="padding: 8px 16px; font-size: 12px;">
+                <span class="chinese-text">返回主界面</span>
+            </button>
+            <h1 class="rank-title chinese-text">关卡排行榜</h1>
+            <button id="refreshBtn" class="btn refresh-btn" title="刷新数据" style="padding: 8px 16px; font-size: 12px;">
+                <span class="chinese-text">刷新</span>
+            </button>
+        </div>
+        
+        <!-- 关卡信息卡片 -->
+        <div class="level-info">
+            <div class="level-name" id="currentLevelName">海洋世界</div>
+            <div class="level-details" id="currentLevelDetails">难度: 中等 | 拼图块数: 36 | 最佳记录: 00:03:45</div>
+        </div>
+        
+        <!-- 我的排名卡片 -->
+        <div id="myRankCard" class="my-rank-card" style="display:block;">
+            <div class="my-rank-title">我的成绩</div>
+            <div class="my-rank-info">
+                <div class="my-rank-item"><div class="my-rank-label">排名</div><div class="my-rank-value" id="myRank">5</div></div>
+                <div class="my-rank-item"><div class="my-rank-label">用时</div><div class="my-rank-value" id="myTotalTime">00:05:30</div></div>
+                <div class="my-rank-item"><div class="my-rank-label">步数</div><div class="my-rank-value" id="myTotalSteps">128</div></div>
+            </div>
+        </div>
+        
+        <!-- 排行榜表格 -->
+        <div id="rankTableContainer" style="display:block;">
+            <table class="rank-table">
+                <thead><tr><th>排名</th><th>玩家</th><th>游戏用时</th><th>步数</th></tr></thead>
+                <tbody id="rankTableBody"></tbody>
+            </table>
+        </div>
+        
+        <!-- 状态提示 -->
+        <div id="loadingMessage" class="loading-message" style="display:none;">正在加载排行榜数据...</div>
+        <div id="errorMessage" class="error-message" style="display:none;">❌ 加载失败，请稍后重试</div>
+        <div id="emptyMessage" class="empty-message" style="display:none;">暂无排行榜数据</div>
+    </div>
+    
+    <script>
+        class LevelRankPage {
+            constructor() {
+                // 获取DOM元素
+                this.refreshBtn = document.getElementById('refreshBtn');
+                this.currentLevelName = document.getElementById('currentLevelName');
+                this.currentLevelDetails = document.getElementById('currentLevelDetails');
+                this.myRankCard = document.getElementById('myRankCard');
+                this.rankTableBody = document.getElementById('rankTableBody');
+                this.loadingMessage = document.getElementById('loadingMessage');
+                this.errorMessage = document.getElementById('errorMessage');
+                this.emptyMessage = document.getElementById('emptyMessage');
+                this.rankTableContainer = document.getElementById('rankTableContainer');
+                
+                // 从URL获取关卡ID，默认为1
+                const urlParams = new URLSearchParams(window.location.search);
+                // 优先从URL获取，URL没有则从localStorage获取，都没有则用默认1
+                this.levelId = urlParams.get('levelId') || localStorage.getItem('selectedLevelForRanking') || '1';
+                // 可选：获取后清除localStorage中的备份（避免下次误用旧值）
+                localStorage.removeItem('selectedLevelForRanking');
+                
+                // 绑定事件
+                this.bindEvents();
+                
+                // 初始化页面（异步）
+                this.initPage();
+            }
+            
+            // 异步初始化页面
+async initPage() {
+    this.showLoading(); // 先显示加载中
+    try {
+        // 1. 获取关卡信息（若失败会抛出错误，进入catch）
+        this.levelData = await this.getLevelData(this.levelId);
+        
+        // 2. 只有获取到有效数据，才更新关卡信息
+        this.updateLevelInfo();
+        
+        // 3. 加载排名数据（若排名接口失败，不影响关卡信息显示）
+        await this.loadRankData();
+        
+        // 4. 所有数据加载完成，显示正常内容
+        this.hideAll();
+        this.rankTableContainer.style.display = 'block';
+        this.myRankCard.style.display = 'block';
+    } catch (e) {
+        console.error('初始化页面失败:', e);
+        // 异常时，保持错误提示状态（不显示默认关卡内容）
+        this.showError(); // 若 getLevelData 已调用 showError，这里可省略
+    }
+}
+            
+            // 获取关卡信息（异步）
+            async getLevelData(levelId) {
+                try {
+                    const response = await fetch(`/ranking/level-info/${parseInt(levelId)}`);
+                    const result = await response.json();
+                    
+                    // 1. 处理非成功状态（如服务器错误）
+                    if (result.code !== 200 || !result.data) {
+                        this.showError(`获取关卡信息失败：${result.msg || '未知错误'}`);
+                        throw new Error(`API返回异常：${result.code}`);
+                    }
+                    
+                    // 2. 正常获取数据，转换格式（含最佳记录扩展）
+                    const difficultyMap = {
+                        'easy': '简单',
+                        'medium': '中等',
+                        'hard': '困难',
+                        'custom': '自定义'
+                    };
+                    
+                    return {
+                        name: result.data.level_name, // 关卡名（后端返回的真实名称或默认名称）
+                        difficulty: difficultyMap[result.data.difficulty] || result.data.difficulty, // 中文难度
+                        pieceCount: result.data.piece_count, // 真实块数或默认块数
+                        bestRecord: '暂无记录' // 当前无真实数据，先用“暂无记录”替代默认值
+                    };
+                } catch (e) {
+                    console.error('获取关卡信息异常:', e);
+                    // 网络错误时，显示通用提示
+                    this.showError('网络异常，无法获取关卡信息，请检查网络连接');
+                    throw e; // 抛出错误，让 initPage 处理后续
+                }
+            }
+            
+            // 绑定事件
+            bindEvents() {
+                this.refreshBtn.addEventListener('click', () => this.loadRankData());
+            }
+            
+            // 更新关卡信息显示
+            // 更新关卡信息显示
+updateLevelInfo() {
+    // 1. 确保 levelData 和 DOM 元素都存在
+    if (!this.levelData || !this.currentLevelName || !this.currentLevelDetails) {
+        console.warn('关卡数据或DOM元素缺失，无法更新信息');
+        return;
+    }
+    
+    // 2. 渲染关卡名称（真实名称，如“森林探险”）
+    this.currentLevelName.textContent = this.levelData.name;
+    
+    // 3. 渲染难度、块数、最佳记录（格式统一）
+    this.currentLevelDetails.textContent = 
+        `难度: ${this.levelData.difficulty} | 拼图块数: ${this.levelData.pieceCount} | 最佳记录: ${this.levelData.bestRecord}`;
+}
+            
+            // 加载排名数据
+            async loadRankData() {
+                this.showLoading();
+                
+                try {
+                    // 调用API获取排名数据
+                    const response = await fetch(`/ranking/by-level/${this.levelId}`);
+                    const result = await response.json();
+                    
+                    if (result.code === 200 && result.data) {
+                        // 处理排名数据，检查当前用户
+                        const rankingData = result.data;
+                        
+                        // 在实际应用中，应该根据用户登录状态判断是否是当前用户
+                        // 这里简化处理，假设没有登录状态
+                        
+                        this.displayRankList(rankingData);
+                        this.hideAll();
+                        this.rankTableContainer.style.display = 'block';
+                        this.myRankCard.style.display = 'block';
+                    } else {
+                        console.error('获取排名数据失败:', result.msg);
+                        this.showError();
+                    }
+                } catch (e) {
+                    console.error('加载排名数据异常:', e);
+                    this.showError();
+                }
+            }
+            
+            // 显示排名列表
+            displayRankList(list) {
+                this.rankTableBody.innerHTML = '';
+                
+                list.forEach(p => {
+                    const isTop3 = p.rank <= 3;
+                    
+                    const row = document.createElement('tr');
+                    
+                    row.innerHTML = `
+                        <td><span class="rank-number ${isTop3 ? 'top3' : ''} ${isTop3 ? `rank-${p.rank}` : ''}">${p.rank}</span></td>
+                        <td><span class="player-name ${isTop3 ? 'top3' : ''}">${p.username}</span></td>
+                        <td><span class="time-display ${isTop3 ? 'top3' : ''}">${this.formatTime(p.totalTime)}</span></td>
+                        <td><span class="steps-display ${isTop3 ? 'top3' : ''}">${p.totalSteps}</span></td>`;
+                    
+                    // 实际应用中可以根据登录状态判断当前用户
+                    // if (isCurrentUser) {
+                    //     row.className = 'current-user-row';
+                    // }
+                    
+                    this.rankTableBody.appendChild(row);
+                });
+                
+                // 更新我的排名信息
+                // 在实际应用中，应该获取当前登录用户的ID并在列表中查找
+                // 这里简化处理，暂时不显示我的排名信息
+                if (list.length > 0) {
+                    // 可以设置一个默认值或隐藏相关元素
+                    document.getElementById('myRank').textContent = '-';
+                    document.getElementById('myTotalTime').textContent = '00:00:00';
+                    document.getElementById('myTotalSteps').textContent = '0';
+                }
+            }
+            
+            // 格式化时间
+            formatTime(s) {
+                const h = Math.floor(s / 3600);
+                const m = Math.floor((s % 3600) / 60);
+                const sec = s % 60;
+                return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+            }
+            
+            // 显示加载状态
+            showLoading() {
+                this.hideAll();
+                this.loadingMessage.style.display = 'block';
+                this.refreshBtn.disabled = true;
+            }
+            
+            // 显示错误状态
+            // 显示错误状态（支持自定义提示）
+showError(customMsg = '❌ 加载失败，请稍后重试') {
+    this.hideAll(); // 隐藏所有其他内容
+    this.errorMessage.textContent = customMsg; // 显示自定义错误
+    this.errorMessage.style.display = 'block';
+    this.refreshBtn.disabled = false; // 启用刷新按钮，允许重试
+}
+            
+            // 显示空数据状态
+            showEmpty() {
+                this.hideAll();
+                this.emptyMessage.style.display = 'block';
+                this.refreshBtn.disabled = false;
+            }
+            
+            // 隐藏所有状态
+            hideAll() {
+                this.loadingMessage.style.display = 'none';
+                this.errorMessage.style.display = 'none';
+                this.emptyMessage.style.display = 'none';
+                this.rankTableContainer.style.display = 'none';
+                this.myRankCard.style.display = 'none';
+            }
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            new LevelRankPage();
+        });
+    </script>
+    
+    <!-- 帮助页面模态框 -->
+    <div class="modal-mask" id="helpModal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <span>操作指南</span>
+                <span class="modal-close" onclick="document.getElementById('helpModal').style.display='none'">×</span>
+            </div>
+            <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
+                <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+                <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+                <p>- 单击选中的图块，顺时针旋转90度</p>
+                <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+                <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+                <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+                <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+                <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+                <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="document.getElementById('helpModal').style.display='none'">我知道了</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 页面特定的背景音乐 -->
+    <script>
+        // 等待音乐管理器加载完成
+        function initPageMusic() {
+            if (window.musicManager) {
+                // 排行榜页面自动播放主界面音乐
+                window.musicManager.playScene('main');
+            } else {
+                // 如果音乐管理器尚未加载，稍后重试
+                setTimeout(initPageMusic, 100);
+            }
+        }
+        
+        // 页面加载完成后直接初始化音乐，无需等待用户交互
+        document.addEventListener('DOMContentLoaded', function() {
+            // 直接尝试播放音乐
+            initPageMusic();
+        });
+    </script>
+</body>
+</html>

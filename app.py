@@ -1,6 +1,6 @@
 import eventlet
 eventlet.monkey_patch()
-from flask import Flask,render_template, send_file
+from flask import Flask,render_template, send_file, request
 from config import Config
 from extensions import db
 from flask_jwt_extended import JWTManager
@@ -12,6 +12,7 @@ from flask_socketio import SocketIO
 from views.ranking import ranking
 from views.levels import levels
 from views.social import social
+from views.share import share_bp
 
 def create_app():
     app = Flask(__name__)
@@ -31,6 +32,7 @@ def create_app():
     app.register_blueprint(ranking, url_prefix='/ranking')
     app.register_blueprint(levels, url_prefix='/levels')
     app.register_blueprint(social, url_prefix='/social')
+    app.register_blueprint(share_bp,url_prefix='/share')
 
     @app.route('/')
     def main():
@@ -69,7 +71,7 @@ def create_app():
     def messages_page():
         return render_template('messages.html')
 
-    @app.route('/friends')
+    @app.route('/friends_page')
     def friends_page():
         return render_template('search_friend.html')
 
@@ -85,7 +87,28 @@ def create_app():
     def versus_page():
         return render_template('versus.html')
 
+    @app.route('/level_rank')
+    def level_rank_page():
+        level_id = request.args.get('levelId', '1')
+        return render_template('level_rank.html', levelId=level_id)
+
+    @app.route('/test_level_rank')
+    def test_level_rank_page():
+        return render_template('test_level_rank.html')
+
+    
+    @app.route('/online_game')
+    def online_game_page():
+        return render_template('online_game.html')
+    
+    @app.route('/online_editor')
+    def online_game_editor():
+        return render_template('online_editor.html')
+
+
     return app
+
+
 
 if __name__ == '__main__':
     app = create_app()

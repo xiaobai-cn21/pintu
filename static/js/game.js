@@ -1,5 +1,20 @@
 // 游戏状态管理
 class PuzzleGame {
+    init({ img, size, shape, randomRotation, randomFlip }) {
+        this.originalImageUrl = img;
+        this.difficulty = parseInt(size);
+        if (shape) this.shape = shape;
+        // 支持随机旋转/翻转配置
+        if (typeof randomRotation !== 'undefined') {
+            localStorage.setItem('randomRotation', randomRotation);
+        }
+        if (typeof randomFlip !== 'undefined') {
+            localStorage.setItem('randomFlip', randomFlip);
+        }
+        this.setPuzzleBg();
+        this.startGame();
+    }
+    
     constructor() {
         this.pieces = [];
         this.difficulty = 4;
@@ -17,6 +32,40 @@ class PuzzleGame {
         this.initializeElements();
         this.bindEvents();
         this.setPuzzleBg();
+    }
+        sendWinMessage() {
+        const roomId = new URLSearchParams(window.location.search).get('room_id');
+        if (window.socket && roomId) {
+            window.socket.emit('pvp_win', {
+                room_id: roomId,
+                username: localStorage.getItem('pvp_username') || '玩家',
+                moves: this.moves,
+                time: this.seconds
+            });
+        }
+    }
+
+        async saveProgressToDB() {
+        const piecesOnBoard = Array.from(this.puzzleBoard.querySelectorAll('.puzzle-piece')).map(piece => ({
+            correctX: piece.dataset.correctX,
+            correctY: piece.dataset.correctY,
+            currentX: piece.dataset.currentX,
+            currentY: piece.dataset.currentY,
+            rotation: piece.dataset.rotation
+        }));
+        const userId = localStorage.getItem('userId');
+        const puzzleId = localStorage.getItem('puzzleId');
+        if (!userId || !puzzleId) return;
+
+        await fetch('/pic/save_progress', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id: userId,
+                puzzle_id: puzzleId,
+                progress_json: JSON.stringify(piecesOnBoard)
+            })
+        });
     }
 
     initializeElements() {
@@ -41,6 +90,11 @@ class PuzzleGame {
             this.resetGame();
         });
         this.toggleBgBtn.addEventListener('click', () => this.toggleBg());
+        // 新增保存按钮事件
+        const saveBtn = document.getElementById('saveBtn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', () => this.saveProgressToDB());
+        }
     }
 
     // 设置背景
@@ -73,7 +127,36 @@ class PuzzleGame {
         this.toggleBgBtn.textContent = this.bgVisible ? '隐藏背景' : '显示背景';
         this.createPuzzlePieces();
     }
+    async restoreProgressFromDB() {
+        const userId = localStorage.getItem('userId');
+        const puzzleId = localStorage.getItem('puzzleId');
+        if (!userId || !puzzleId) return;
+        
+        const res = await fetch(`/pic/get_progress?user_id=${userId}&puzzle_id=${puzzleId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.progress_json) return;
+        const piecesOnBoard = JSON.parse(data.progress_json);
 
+        piecesOnBoard.forEach(saved => {
+            const piece = this.pieces.find(p =>
+                p.dataset.correctX == saved.correctX &&
+                p.dataset.correctY == saved.correctY
+            );
+            if (piece) {
+                piece.dataset.currentX = saved.currentX;
+                piece.dataset.currentY = saved.currentY;
+                piece.dataset.rotation = saved.rotation;
+                piece.style.transform = `rotate(${saved.rotation}deg)`;
+                piece.style.position = 'absolute';
+                const pieceWidth = this.puzzleBoard.offsetWidth / this.difficulty;
+                const pieceHeight = this.puzzleBoard.offsetHeight / this.difficulty;
+                piece.style.left = `${saved.currentX * pieceWidth}px`;
+                piece.style.top = `${saved.currentY * pieceHeight}px`;
+                this.puzzleBoard.appendChild(piece);
+            }
+        });
+    }
     // 重置游戏
     resetGame() {
         this.gameStarted = false;
@@ -132,7 +215,7 @@ class PuzzleGame {
     }
 
     // 创建拼图块
-    createPuzzlePieces() {
+    async createPuzzlePieces() {
         this.puzzleBoard.querySelectorAll('.puzzle-piece').forEach(piece => piece.remove());
         this.piecesZone.innerHTML = '';
         this.pieces = [];
@@ -167,6 +250,7 @@ class PuzzleGame {
         });
         
         this.bindBoardEvents();
+        await this.restoreProgressFromDB();
     }
 
     // 绑定拼图块事件
@@ -264,6 +348,7 @@ class PuzzleGame {
         });
         
         this.draggedPiece = null;
+        this.saveProgressToDB();
     }
 
     // 拖拽回piecesZone
@@ -502,6 +587,7 @@ class PuzzleGame {
         }
         
         this.moves++;
+        emitMyMoves()
         this.updateUI();
         this.checkPuzzleCompletion();
     }
@@ -565,6 +651,7 @@ class PuzzleGame {
 
     // 检查拼图是否完成
     checkPuzzleCompletion() {
+        
         const allPieces = this.puzzleBoard.querySelectorAll('.puzzle-piece');
         if (allPieces.length !== this.difficulty * this.difficulty) return false;
         
@@ -584,6 +671,7 @@ class PuzzleGame {
         
         if (completed && this.gameStarted) {
             this.gameStarted = false;
+            this.sendWinMessage(); // 调用上面的方法
             this.clearTimer();
             const minutes = Math.floor(this.seconds / 60);
             const remainingSeconds = this.seconds % 60;
@@ -601,25 +689,55 @@ class PuzzleGame {
 
     // 提交成绩到排行榜
     submitToRanking() {
-        try {
-            const userId = localStorage.getItem('userId');
-            if (userId) {
-                fetch('/ranking/record', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        user_id: Number(userId), 
-                        step_count: this.moves, 
-                        time_used: this.seconds 
-                    })
-                }).catch(error => {
-                    console.error('提交排行榜成绩失败:', error);
+    try {
+        const userId = localStorage.getItem('userId');
+        const token = localStorage.getItem('puzzleToken');
+        if (!userId || !token) {
+            console.warn('未登录或Token缺失，无法提交成绩');
+            return;
+        }
+
+        fetch('/ranking/record', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer `+localStorage.getItem('puzzleToken') 
+            },
+            body: JSON.stringify({ 
+                user_id: Number(userId), 
+                level_id: Number(this.levelId),
+                step_count: this.moves, 
+                time_used: this.seconds 
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    // 检测token过期错误
+                    if (err.msg && err.msg.includes('Token has expired')) {
+                        localStorage.removeItem('puzzleToken');
+                        localStorage.removeItem('userId');
+                        alert('登录已过期，请重新登录');
+                        window.location.href = '/';
+                        throw new Error('登录已过期');
+                    }
+                    throw new Error(`后端错误：${err.msg || '未知错误'}`);
                 });
             }
-        } catch (e) {
-            console.error('提交成绩失败:', e);
-        }
+            return response.json();
+        })
+        .then(result => {
+            console.log('成绩提交成功:', result);
+        })
+        .catch(error => {
+            if (error.message !== '登录已过期') {
+                console.error('提交排行榜成绩失败:', error.message);
+            }
+        });
+    } catch (e) {
+        console.error('提交成绩失败:', e);
     }
+}
 
     // 获取游戏统计信息
     getStats() {
@@ -656,3 +774,17 @@ window.addEventListener('DOMContentLoaded', function() {
 
 // 导出游戏实例供外部使用
 window.puzzleGame = game;
+
+document.addEventListener('DOMContentLoaded', function() {
+    const restoreBtn = document.getElementById('restoreBtn');
+    if (restoreBtn) {
+        restoreBtn.addEventListener('click', async function() {
+            if (window.puzzleGame && typeof window.puzzleGame.restoreProgressFromDB === 'function') {
+                await window.puzzleGame.restoreProgressFromDB();
+                alert('进度已恢复！');
+            } else {
+                alert('游戏未初始化或方法不存在');
+            }
+        });
+    }
+});

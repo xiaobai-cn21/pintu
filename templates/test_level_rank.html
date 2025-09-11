@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>关卡排行榜测试</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body { font-family: 'Zpix', 'Press Start 2P', monospace; background-color: #1a1a2e; color: #F9E078; text-align: center; margin: 0; padding: 0; }
+        .test-container { max-width: 800px; margin: 100px auto; padding: 20px; background: #20223A; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,.3); }
+        h1 { margin-bottom: 30px; font-size: 24px; }
+        .level-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 30px; }
+        .level-link { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); color: white; text-decoration: none; padding: 20px; border-radius: 10px; transition: transform 0.3s ease; }
+        .level-link:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(102,126,234,.3); }
+        .level-name { font-weight: bold; margin-bottom: 10px; font-size: 18px; }
+        .level-desc { font-size: 14px; opacity: 0.9; }
+        .back-btn { background-color: #F9E078; color: #20223A; border: none; padding: 10px 20px; border-radius: 0; cursor: pointer; text-decoration: none; display: inline-block; font-family: 'Press Start 2P', 'Zpix', monospace; font-size: 14px; margin-top: 20px; }
+        .back-btn:hover { background-color: #E6D166; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>关卡排行榜测试</h1>
+        <p>点击下方链接查看不同关卡的排行榜：</p>
+        
+        <div class="level-links">
+            <a href="{{ url_for('level_rank_page', levelId='1') }}" class="level-link">
+                <div class="level-name">海洋世界</div>
+                <div class="level-desc">难度: 中等 | 拼图块数: 36</div>
+            </a>
+            
+            <a href="{{ url_for('level_rank_page', levelId='2') }}" class="level-link">
+                <div class="level-name">森林探险</div>
+                <div class="level-desc">难度: 简单 | 拼图块数: 16</div>
+            </a>
+            
+            <a href="{{ url_for('level_rank_page', levelId='3') }}" class="level-link">
+                <div class="level-name">城市风光</div>
+                <div class="level-desc">难度: 困难 | 拼图块数: 64</div>
+            </a>
+            
+            <a href="{{ url_for('level_rank_page', levelId='4') }}" class="level-link">
+                <div class="level-name">太空探索</div>
+                <div class="level-desc">难度: 困难 | 拼图块数: 64</div>
+            </a>
+            
+            <a href="{{ url_for('level_rank_page', levelId='5') }}" class="level-link">
+                <div class="level-name">动物乐园</div>
+                <div class="level-desc">难度: 简单 | 拼图块数: 16</div>
+            </a>
+        </div>
+        
+        <a href="{{ url_for('main') }}" class="back-btn">返回主界面</a>
+    </div>
+</body>
+</html>

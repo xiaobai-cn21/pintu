@@ -1,7 +1,8 @@
+
 from flask import Blueprint, request, jsonify, current_app
 from werkzeug.utils import secure_filename
 import os
-from extensions import users, puzzles, db
+from extensions import users, puzzles, db, puzzle_progress
 from datetime import datetime
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
@@ -45,16 +46,33 @@ def create_puzzle():
         puzzle_title = data.get('title')
         if (len(puzzle_title) < 4 or len(puzzle_title) > 20):
             return jsonify({"code": "404", "message": "拼图标题长度需在5~20个字符之间", "data": None})
-        
+        # 检查标题唯一性
+        if puzzles.query.filter_by(title=puzzle_title).first():
+            return jsonify({"code": "409", "message": "该关卡标题已存在，请更换标题", "data": None})
+
+        puzzle_type = data.get('type', 'other')
+        if puzzle_type not in ['nature', 'animal', 'building', 'cartoon', 'other']:
+            puzzle_type = 'other'
+
+
+        # 只有管理员能设置 is_system_level，普通用户强制为 False
+        is_admin = getattr(user, 'is_admin', False)
+        if is_admin:
+            is_system_level = bool(int(data.get('is_system_level', 0)))
+        else:
+            is_system_level = False
+
         puzzle = puzzles(
             creator_id=creator_id,
             title=puzzle_title,
             image_url=image_url,
+            type=puzzle_type,
             difficulty=data.get('difficulty'),
             piece_count=data.get('piece_count'),
             piece_shape=data.get('piece_shape'),
             is_rotatable=bool(int(data.get('is_rotatable', 0))),
-            is_system_level=bool(int(data.get('is_system_level', 0))),
+            is_flipable=bool(int(data.get('is_flipable', 0))) if data.get('is_flipable') is not None else False,
+            is_system_level=is_system_level,
             created_at=datetime.now()
         )
         db.session.add(puzzle)
@@ -82,16 +100,17 @@ def update_puzzle(puzzle_id):
             puzzle.image_url = f'/static/uploads/{filename}'
 
         puzzle.title = data.get('title', puzzle.title)
+        puzzle.type = data.get('type', puzzle.type)
         puzzle.difficulty = data.get('difficulty', puzzle.difficulty)
         puzzle.piece_count = data.get('piece_count', puzzle.piece_count)
         puzzle.piece_shape = data.get('piece_shape', puzzle.piece_shape)
-        puzzle.is_rotatable = bool(int(data.get('is_rotatable', puzzle.is_rotatable)))
-        puzzle.is_system_level = bool(int(data.get('is_system_level', puzzle.is_system_level)))
+        puzzle.is_rotatable = bool(int(data.get('is_rotatable', int(puzzle.is_rotatable))))
+        puzzle.is_flipable = bool(int(data.get('is_flipable', int(puzzle.is_flipable))))
+        puzzle.is_system_level = bool(int(data.get('is_system_level', int(puzzle.is_system_level))))
         db.session.commit()
         return jsonify({"code": "200", "message": "关卡更新成功", "data": None})
     except Exception as e:
         return jsonify({"code": "500", "message": f"服务器内部错误: {str(e)}", "data": None})
-
 
 @pic.route('/puzzles/<int:puzzle_id>', methods=['DELETE'])
 def delete_puzzle(puzzle_id):
@@ -120,10 +139,12 @@ def get_puzzle_detail(puzzle_id):
                 "puzzle_id": puzzle.puzzle_id,
                 "title": puzzle.title,
                 "image_url": puzzle.image_url,
+                "type": puzzle.type,
                 "difficulty": puzzle.difficulty,
                 "piece_count": puzzle.piece_count,
                 "piece_shape": puzzle.piece_shape,
                 "is_rotatable": puzzle.is_rotatable,
+                "is_flipable": puzzle.is_flipable,
                 "is_system_level": puzzle.is_system_level,
                 "created_at": puzzle.created_at,
                 "creator": {
@@ -147,10 +168,12 @@ def get_puzzle_list():
                 "puzzle_id": puzzle.puzzle_id,
                 "title": puzzle.title,
                 "image_url": puzzle.image_url,
+                "type": puzzle.type,
                 "difficulty": puzzle.difficulty,
                 "piece_count": puzzle.piece_count,
                 "piece_shape": puzzle.piece_shape,
                 "is_rotatable": puzzle.is_rotatable,
+                "is_flipable": puzzle.is_flipable,
                 "is_system_level": puzzle.is_system_level,
                 "created_at": puzzle.created_at
             })
@@ -161,3 +184,65 @@ def get_puzzle_list():
         })
     except Exception as e:
         return jsonify({"code": "500", "message": f"服务器内部错误: {str(e)}", "data": None})
+    
+# 获取所有 is_system_level 为 true 的关卡（包含 puzzles 的所有新属性）
+@pic.route('/levels/system', methods=['GET'])
+def get_system_levels():
+    try:
+        puzzles_list = puzzles.query.filter_by(is_system_level=True).order_by(puzzles.created_at.desc()).all()
+        result = []
+        for puzzle in puzzles_list:
+            result.append({
+                "puzzle_id": puzzle.puzzle_id,
+                "title": puzzle.title,
+                "image_url": puzzle.image_url,
+                "type": puzzle.type,
+                "difficulty": puzzle.difficulty,
+                "piece_count": puzzle.piece_count,
+                "piece_shape": puzzle.piece_shape,
+                "is_rotatable": puzzle.is_rotatable,
+                "is_flipable": puzzle.is_flipable,
+                "is_system_level": puzzle.is_system_level,
+                "created_at": puzzle.created_at
+            })
+        return jsonify({"code": 200, "message": "获取成功", "data": result})
+    except Exception as e:
+        return jsonify({"code": 500, "message": f"服务器内部错误: {str(e)}", "data": None})
+    
+
+@pic.route('/save_progress', methods=['POST'])
+@jwt_required()
+def save_progress():
+    data = request.json
+    user_id = get_jwt_identity()  # 从token获取
+    puzzle_id = data.get('puzzle_id', None)
+    progress_json = data.get('progress_json', None)
+
+    if not puzzle_id or not progress_json:
+        return jsonify({"code": 400, "message": "缺少 puzzle_id 或 progress_json", "data": None})
+
+    record = puzzle_progress.query.filter_by(user_id=user_id, puzzle_id=puzzle_id).first()
+    if record:
+        record.progress_json = progress_json
+    else:
+        record = puzzle_progress(user_id=user_id, puzzle_id=puzzle_id, progress_json=progress_json)
+        db.session.add(record)
+    db.session.commit()
+    return jsonify({"code": 200, "message": "保存成功", "data": None})
+
+@pic.route('/get_progress', methods=['GET'])
+@jwt_required()
+def get_progress():
+    user_id = get_jwt_identity()
+    puzzle_id = request.args.get('puzzle_id', type=int)
+    if not puzzle_id:
+        return jsonify({"code": 400, "message": "缺少 puzzle_id", "data": None})
+
+    record = puzzle_progress.query.filter_by(user_id=user_id, puzzle_id=puzzle_id).first()
+    if record:
+        print(f"Fetched record: id={record.id}, user_id={record.user_id}, puzzle_id={record.puzzle_id}")
+        print("progress_json:", record.progress_json)
+        return jsonify({"code": 200, "message": "获取成功", "data": record.progress_json})
+    else:
+        print("No record found for user_id:", user_id, "puzzle_id:", puzzle_id)
+        return jsonify({"code": 404, "message": "未找到进度", "data": None})

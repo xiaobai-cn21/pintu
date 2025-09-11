@@ -15,7 +15,7 @@
         .my-rank-card { background: linear-gradient(135deg,#667eea 0%,#764ba2 100%); color:#fff; padding:20px; border-radius:10px; margin-bottom:20px; box-shadow:0 4px 15px rgba(102,126,234,.3); }
         .my-rank-title { font-size: 18px; font-weight: bold; margin-bottom: 10px; display: flex; align-items: center; }
         .my-rank-title::before { content: "👤"; margin-right: 8px; }
-        .my-rank-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+        .my-rank-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 15px; }
         .my-rank-item { text-align: center; }
         .my-rank-label { font-size: 12px; opacity: .8; margin-bottom: 5px; }
         .my-rank-value { font-size: 20px; font-weight: bold; }
@@ -34,19 +34,21 @@
         .time-display.top3 { font-weight: bold; }
         .steps-display { font-weight: 500; }
         .steps-display.top3 { font-weight: bold; }
+        .levels-display { font-weight: 500; }
+        .levels-display.top3 { font-weight: bold; }
         .loading-message,.error-message,.empty-message { text-align:center; padding:40px; font-size:18px; }
         .error-message { color:#e74c3c; }
         @media (max-width: 768px) {
             .rank-container { margin:10px; padding:15px; }
             .rank-header { flex-direction: column; gap: 15px; text-align: center; }
             .rank-title { font-size: 28px; }
-            .rank-table th { font-size: 16px; }
-            .rank-table td { font-size: 15px; padding: 12px 6px; }
+            .rank-table th { font-size: 14px; padding: 10px 5px; }
+            .rank-table td { font-size: 14px; padding: 10px 5px; }
         }
         @media (max-width: 480px) {
-            .rank-table th { font-size: 14px; }
-            .rank-table td { font-size: 14px; padding: 10px 4px; }
-            .my-rank-info { grid-template-columns: 1fr; }
+            .rank-table th { font-size: 12px; }
+            .rank-table td { font-size: 12px; }
+            .my-rank-info { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
@@ -69,11 +71,20 @@
                 <div class="my-rank-item"><div class="my-rank-label">排名</div><div class="my-rank-value" id="myRank">-</div></div>
                 <div class="my-rank-item"><div class="my-rank-label">总时长</div><div class="my-rank-value" id="myTotalTime">00:00:00</div></div>
                 <div class="my-rank-item"><div class="my-rank-label">总步数</div><div class="my-rank-value" id="myTotalSteps">0</div></div>
+                <div class="my-rank-item"><div class="my-rank-label">通过关卡数</div><div class="my-rank-value" id="myPassedLevels">0</div></div>
             </div>
         </div>
         <div id="rankTableContainer">
             <table class="rank-table">
-                <thead><tr><th>排名</th><th>玩家</th><th>游戏总时长</th><th>总步数</th></tr></thead>
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>玩家</th>
+                        <th>游戏总时长</th>
+                        <th>总步数</th>
+                        <th>通过关卡数</th>
+                    </tr>
+                </thead>
                 <tbody id="rankTableBody"></tbody>
             </table>
         </div>
@@ -107,42 +118,75 @@
             async fetchRankData(){
                 try{
                     if(this.useMock){
+                        // 模拟数据添加通过关卡数
                         const mock=[
-                            { playerName:'test1', totalTime:5400, totalSteps:200 },
-                            { playerName:'test2', totalTime:7200, totalSteps:188 },
-                            { playerName:'test3', totalTime:7200, totalSteps:190 },
-                            { playerName:'test4', totalTime:3600, totalSteps:120 },
-                            { playerName:'admin', totalTime:6100, totalSteps:175 },
-                            { playerName:'test5', totalTime:6100, totalSteps:180 },
-                            { playerName:'test6', totalTime:1200, totalSteps:90 }
+                            { playerName:'test1', totalTime:5400, totalSteps:200, passedLevels:5 },
+                            { playerName:'test2', totalTime:7200, totalSteps:188, passedLevels:7 },
+                            { playerName:'test3', totalTime:7200, totalSteps:190, passedLevels:6 },
+                            { playerName:'test4', totalTime:3600, totalSteps:120, passedLevels:3 },
+                            { playerName:'admin', totalTime:6100, totalSteps:175, passedLevels:4 },
+                            { playerName:'test5', totalTime:6100, totalSteps:180, passedLevels:5 },
+                            { playerName:'test6', totalTime:1200, totalSteps:90, passedLevels:2 }
                         ];
-                        mock.sort((a,b)=>(b.totalTime-a.totalTime)||(a.totalSteps-b.totalSteps));
+                        // 排序规则：总时长降序 → 总步数升序 → 过关数降序
+                        mock.sort((a,b)=>{ 
+                            if(b.totalTime!==a.totalTime) return b.totalTime-a.totalTime;
+                            if(a.totalSteps!==b.totalSteps) return a.totalSteps-b.totalSteps;
+                            return b.passedLevels - a.passedLevels;
+                        });
                         mock.forEach((p,i)=>p.rank=i+1);
-                        const my=null;
-                        return { success:true, data:{ myRank: my, rankList: mock } };
+                        return { success:true, data:{ rankList: mock } };
                     }
                     const res=await fetch('/ranking/',{ credentials:'include' });
                     if(!res.ok) return { success:false };
                     const json=await res.json();
                     if(json.code!==200||!Array.isArray(json.data)) return { success:false };
-                    const rankList=json.data.map((r,i)=>({ rank:i+1, playerName:r.username, totalTime:Number(r.time_used)||0, totalSteps:Number(r.step_count)||0 }));
-                    return { success:true, data:{ myRank:null, rankList } };
+                    // 从接口数据映射所需字段，包含过关数
+                    const rankList=json.data.map((r,i)=>({ 
+                        rank:i+1, 
+                        playerName:r.username, 
+                        totalTime:Number(r.time_used)||0, 
+                        totalSteps:Number(r.step_count)||0,
+                        passedLevels:Number(r.passed_levels)||0  // 新增：通过关卡数
+                    }));
+                    return { success:true, data:{ rankList } };
                 }catch(e){ return { success:false }; }
             }
             displayRankData(data){
                 this.hideAll();
-                const sorted=[...data.rankList].sort((a,b)=>{ if(b.totalTime!==a.totalTime) return b.totalTime-a.totalTime; return a.totalSteps-b.totalSteps; });
+                // 排序规则：总时长降序 → 总步数升序 → 过关数降序
+                const sorted=[...data.rankList].sort((a,b)=>{ 
+                    if(b.totalTime!==a.totalTime) return b.totalTime-a.totalTime;
+                    if(a.totalSteps!==b.totalSteps) return a.totalSteps-b.totalSteps;
+                    return b.passedLevels - a.passedLevels;
+                });
                 sorted.forEach((p,idx)=>p.rank=idx+1);
+                
                 const currentName=localStorage.getItem('username')||'当前用户';
                 const myEntry=sorted.find(p=>p.playerName===currentName);
-                if(myEntry){ this.displayMyRank({ rank:myEntry.rank, playerName:myEntry.playerName, totalTime:myEntry.totalTime, totalSteps:myEntry.totalSteps }); }
+                if(myEntry){ 
+                    this.displayMyRank({ 
+                        rank:myEntry.rank, 
+                        playerName:myEntry.playerName, 
+                        totalTime:myEntry.totalTime, 
+                        totalSteps:myEntry.totalSteps,
+                        passedLevels:myEntry.passedLevels  // 传递过关数
+                    }); 
+                }
+                
                 this.displayRankList(sorted);
                 this.rankTableContainer.style.display='block';
+                
+                // 处理空数据情况
+                if(sorted.length === 0){
+                    this.showEmpty();
+                }
             }
             displayMyRank(m){
                 document.getElementById('myRank').textContent=m.rank;
                 document.getElementById('myTotalTime').textContent=this.formatTime(m.totalTime);
                 document.getElementById('myTotalSteps').textContent=m.totalSteps;
+                document.getElementById('myPassedLevels').textContent=m.passedLevels;  // 显示过关数
                 this.myRankCard.style.display='block';
             }
             displayRankList(list){
@@ -155,15 +199,27 @@
                         <td><span class="rank-number ${isTop3?'top3':''} ${isTop3?`rank-${p.rank}`:''}">${p.rank}</span></td>
                         <td><span class="player-name ${isTop3?'top3':''}">${p.playerName}${isCurrent?' (我)':''}</span></td>
                         <td><span class="time-display ${isTop3?'top3':''}">${this.formatTime(p.totalTime)}</span></td>
-                        <td><span class="steps-display ${isTop3?'top3':''}">${p.totalSteps}</span></td>`;
+                        <td><span class="steps-display ${isTop3?'top3':''}">${p.totalSteps}</span></td>
+                        <td><span class="levels-display ${isTop3?'top3':''}">${p.passedLevels}</span></td>`;  // 新增过关数列
                     this.rankTableBody.appendChild(row);
                 });
             }
-            formatTime(s){ const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60; return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` }
+            formatTime(s){ 
+                const h=Math.floor(s/3600), 
+                      m=Math.floor((s%3600)/60), 
+                      sec=s%60; 
+                return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}` 
+            }
             showLoading(){ this.hideAll(); this.loadingMessage.style.display='block'; this.refreshBtn.disabled=true; }
             showError(){ this.hideAll(); this.errorMessage.style.display='block'; this.refreshBtn.disabled=false; }
             showEmpty(){ this.hideAll(); this.emptyMessage.style.display='block'; this.refreshBtn.disabled=false; }
-            hideAll(){ this.loadingMessage.style.display='none'; this.errorMessage.style.display='none'; this.emptyMessage.style.display='none'; this.rankTableContainer.style.display='none'; this.myRankCard.style.display='none'; }
+            hideAll(){ 
+                this.loadingMessage.style.display='none'; 
+                this.errorMessage.style.display='none'; 
+                this.emptyMessage.style.display='none'; 
+                this.rankTableContainer.style.display='none'; 
+                this.myRankCard.style.display='none'; 
+            }
         }
         document.addEventListener('DOMContentLoaded',()=>{ new RankPage(); });
     </script>
@@ -213,5 +269,3 @@
     </script>
 </body>
 </html>
-
-

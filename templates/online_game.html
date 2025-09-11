@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>拼图游戏</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/game-rank.css') }}">
+</head>
+<body>
+{% include '_navbar.html' %}
+<div class="background-blur"></div>
+<div class="container">
+    <h1>拼图游戏</h1>
+    <div class="controls">
+        <button id="toggleBgBtn" class="btn">隐藏背景</button>
+        <button id="undoBtn" class="btn">撤销</button>
+    </div>
+    <div class="game-info">
+        <div id="timer">时间: 00:00</div>
+        <div id="moves">移动次数: 0</div>
+        <div id="opponentMovesBox">
+            对手移动次数: <span id="opponentMoves">0</span>
+            ，正确块数: <span id="opponentCorrect">0</span>
+        </div>
+    </div>
+    <div class="puzzle-container">
+        <div class="puzzle-board-wrapper">
+            <div id="puzzleBg" class="puzzle-bg"></div>
+            <div id="puzzleBoard" class="puzzle-board"></div>
+        </div>
+        <div id="piecesZone" class="pieces-zone"></div>
+    </div>
+    <div id="gameComplete" class="game-complete">
+        <div class="message">
+            <h2>恭喜！拼图完成！</h2>
+            <p id="completeInfo"></p>
+            <button id="playAgainBtn" class="btn">再玩一次</button>
+        </div>
+    </div>
+</div>
+
+<!-- 帮助页面模态框 -->
+<div class="modal-mask" id="helpModal" style="display: none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <span>操作指南</span>
+            <span class="modal-close" onclick="closeHelpModal()">×</span>
+        </div>
+        <div class="modal-body" style="font-size: 14px; line-height: 24px; color: #E0E0E0;">
+            <p><strong style="color: #F9E078;">1. 游戏操作</strong></p>
+            <p>- 鼠标左键长按图块，拖拽到拼图区域</p>
+            <p>- 单击选中的图块，顺时针旋转90度</p>
+            <p>- 点击"撤销"可还原上一步操作，"重做"恢复撤销操作</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">2. 自定义拼图</strong></p>
+            <p>- 支持上传本地图片（JPG/PNG，最大5MB），可裁剪调整</p>
+            <p>- 可设置拼图块数（4-64块）、形状（矩形/异形）、是否旋转</p>
+            <p><strong style="color: #F9E078; margin-top: 16px; display: block;">3. 存档与分享</strong></p>
+            <p>- 登录用户存档同步至服务器，游客存档仅保存在当前浏览器</p>
+            <p>- 自定义拼图可分享至"分享中心"，供其他玩家游玩</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary" onclick="closeHelpModal()">我知道了</button>
+        </div>
+    </div>
+</div>
+<svg width="0" height="0" style="position: absolute; z-index: -1;">
+  <defs id="puzzle-defs"></defs>
+</svg>
+<script src="{{ url_for('static', filename='js/online_game.js') }}"></script>
+<script src="{{ url_for('static', filename='js/online_script.js') }}"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+// 游戏暂停/继续功能
+let gamePaused = false;
+let gameInstance = null;
+
+// 等待游戏实例初始化
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        if (window.puzzleGame) {
+            gameInstance = window.puzzleGame;
+        }
+    }, 100);
+});
+
+// 打开帮助模态框时暂停游戏
+function openHelpModal() {
+    const helpModal = document.getElementById('helpModal');
+    if (helpModal) {
+        helpModal.style.display = 'flex';
+        if (gameInstance && gameInstance.gameStarted && !gamePaused) {
+            gameInstance.pauseGame();
+            gamePaused = true;
+        }
+    }
+}
+
+// 关闭帮助模态框时继续游戏
+function closeHelpModal() {
+    const helpModal = document.getElementById('helpModal');
+    if (helpModal) {
+        helpModal.style.display = 'none';
+        if (gameInstance && gamePaused) {
+            gameInstance.resumeGame();
+            gamePaused = false;
+        }
+    }
+}
+
+// 重写导航栏的帮助按钮点击事件（仅限game页面）
+document.addEventListener('DOMContentLoaded', function() {
+    const helpLink = document.getElementById('pm-help-link');
+    if (helpLink) {
+        helpLink.onclick = null;
+        helpLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            openHelpModal();
+        });
+    }
+    const piecesZone = document.getElementById('piecesZone');
+    if (piecesZone) {
+        piecesZone.addEventListener('wheel', function(event) {
+            const hasHorizontalScrollbar = piecesZone.scrollWidth > piecesZone.clientWidth;
+            if (hasHorizontalScrollbar) {
+                event.preventDefault();
+                let scrollAmount = event.deltaY;
+                if (scrollAmount === 0 && event.deltaX !== 0) {
+                    scrollAmount = event.deltaX;
+                }
+                piecesZone.scrollLeft += scrollAmount;
+            }
+        }, { passive: false });
+    }
+});
+
+// 页面特定的背景音乐
+function initPageMusic() {
+    if (window.musicManager) {
+        window.musicManager.playScene('game');
+    } else {
+        setTimeout(initPageMusic, 100);
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    initPageMusic();
+});
+
+// Socket.IO 连接与对手步数/正确块数监听
+async function joinRoomWithAuth() {
+    if (!window.socket) {
+        window.socket = io();
+    }
+    const roomId = new URLSearchParams(window.location.search).get('room_id');
+    // 用 /auth/me 获取用户名
+    let username = '玩家';
+    const token = localStorage.getItem('puzzleToken');
+    if (token) {
+        try {
+            const res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+            const data = await res.json();
+            if (data.code === 200 && data.data && data.data.username) {
+                username = data.data.username;
+            }
+        } catch (e) {}
+    }
+    window.socket.emit('join_room', { room_id: roomId, username });
+}
+joinRoomWithAuth();
+window.socket.on('opponent_moves', function(data) {
+    document.getElementById('opponentMoves').textContent = data.moves;
+    document.getElementById('opponentCorrect').textContent = data.correct;
+});
+
+// 拉取房间拼图数据并初始化游戏
+document.addEventListener('DOMContentLoaded', function() {
+    const roomId = new URLSearchParams(window.location.search).get('room_id');
+    if (roomId) {
+        fetch(`/pvp/room_info?room_id=${roomId}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.code === 200) {
+                    window.puzzleGame && window.puzzleGame.init({
+                        img: '/static/uploads/' + data.image,
+                        ...data.config
+                    });
+                } else {
+                    alert('没有找到拼图数据，请从预览页面开始游戏。');
+                    window.location.href = '/versus';
+                }
+            })
+            .catch(err => {
+                alert('网络错误: ' + err);
+                window.location.href = '/versus';
+            });
+    }
+});
+
+// 统一用 /auth/me 获取用户名，保证和后端一致
+async function getMyUsername() {
+    const token = localStorage.getItem('puzzleToken');
+    if (!token) return '玩家';
+    try {
+        const res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        const data = await res.json();
+        if (data.code === 200 && data.data && data.data.username) {
+            return data.data.username;
+        }
+    } catch (e) {}
+    return '玩家';
+}
+
+window.socket.on('pvp_game_over', async function(data) {
+    // data: { winner, loser }
+    let myName = await getMyUsername();
+    const isWinner = data.loser !=== myName;
+    const opponentName = isWinner ? data.loser : data.winner;
+    console.log(opponentName);
+    // 获取本地步数变量
+    let myMoves = 0, opponentMoves = 0;
+    if (window.puzzleGame && typeof window.puzzleGame.moveCount === 'number') {
+        myMoves = window.puzzleGame.moveCount;
+    } else {
+        myMoves = window.moveCount || 0;
+    }
+    // 对手步数用页面实时变量
+    const oppMovesElem = document.getElementById('opponentMoves');
+    if (oppMovesElem) {
+        opponentMoves = parseInt(oppMovesElem.textContent) || 0;
+    }
+
+    let msg = '';
+    if (isWinner) {
+        msg = `🎉 你赢了！<br>
+        <span style="font-size:1rem;">你的步数: <b>${myMoves}</b></span><br>
+        <span style="font-size:1rem;">对手（${opponentName}）步数: <b>${opponentMoves}</b></span>`;
+    } else {
+        msg = `😢 你输了！<br>
+        <span style="font-size:1rem;">你的步数: <b>${myMoves}</b></span><br>
+        <span style="font-size:1rem;">对手（${opponentName}）步数: <b>${opponentMoves}</b></span>`;
+    }
+
+    const winDiv = document.createElement('div');
+    winDiv.style.position = 'fixed';
+    winDiv.style.top = '50%';
+    winDiv.style.left = '50%';
+    winDiv.style.transform = 'translate(-50%, -50%)';
+    winDiv.style.background = 'rgba(0,0,0,0.9)';
+    winDiv.style.color = '#fff';
+    winDiv.style.padding = '2rem';
+    winDiv.style.borderRadius = '12px';
+    winDiv.style.fontSize = '1.5rem';
+    winDiv.style.zIndex = 9999;
+    winDiv.innerHTML = `<div style="text-align:center;">${msg}</div>
+        <button id="exitRoomBtn" style="margin-top:1.5rem;font-size:1rem;">退出房间</button>`;
+    document.body.appendChild(winDiv);
+
+    document.getElementById('exitRoomBtn').onclick = function() {
+        const roomId = new URLSearchParams(window.location.search).get('room_id');
+        window.socket.emit('leave_room', { room_id: roomId, username: myName });
+        window.location.href = '/menu';
+    };
+});
+</script>
+</body>
+</html>

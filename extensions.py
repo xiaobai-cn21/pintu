@@ -12,9 +12,10 @@ class users(db.Model):
     username = Column(String(50))
     email = Column(String(50))
     hash_password = Column(String(256))
+    is_admin = Column(Boolean, default=False)
     created_at = Column(DateTime)
     puzzles = relationship('puzzles', backref='creator', lazy=True)
-    records = relationship('records', backref='user', lazy=True)
+    records = relationship('rank_records', backref='user', lazy=True)
     level_records = relationship('level_records', backref='user', lazy=True)
     game_saves = relationship('game_saves', backref='user', lazy=True)
 
@@ -26,14 +27,18 @@ class puzzles(db.Model):
     image_url = Column(String(255), nullable=False)
     difficulty = Column(Enum('easy', 'medium', 'hard'), nullable=True)
     piece_count = Column(Integer, nullable=False)
-    piece_shape = Column(Enum('rect', 'irregular'), nullable=False)
+    piece_shape = Column(Enum('rect', 'irregular', 'triangle'), nullable=False)
     is_rotatable = Column(Boolean, default=False)
+    is_flipable = Column(Boolean, default=False)
     is_system_level = Column(Boolean, default=False)
+    type = Column(Enum('nature', 'animal', 'building', 'cartoon', 'other'), default='other')
     created_at = Column(DateTime, default=datetime.utcnow)
 
-class records(db.Model):
-    __tablename__ = 'records'
-    user_id = Column(Integer, ForeignKey('users.user_id'), primary_key=True)
+class rank_records(db.Model):
+    __tablename__ = 'rank_records'
+    record_id =Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'))
+    level_id = Column(Integer, ForeignKey('puzzles.puzzle_id'))
     step_count = Column(Integer, nullable=False)
     time_used = Column(Integer, nullable=False)
 
@@ -92,4 +97,26 @@ class friends(db.Model):
     created_at = Column(DateTime, default=datetime.utcnow)
     __table_args__ = (
         db.UniqueConstraint('user_id', 'friend_id', name='unique_friendship'),
+    )
+
+
+# 分享表
+class shares(db.Model):
+    __tablename__ = 'shares'
+    share_id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    puzzle_id = Column(Integer, ForeignKey('puzzles.puzzle_id'), nullable=False)
+    share_code = Column(Integer)
+    view_count = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class puzzle_progress(db.Model):
+    __tablename__ = 'puzzle_progress'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey('users.user_id'), nullable=False)
+    puzzle_id = Column(Integer, ForeignKey('puzzles.puzzle_id'), nullable=False)
+    progress_json = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    __table_args__ = (
+        db.UniqueConstraint('user_id', 'puzzle_id', name='unique_user_puzzle'),
     )

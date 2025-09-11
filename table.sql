@@ -3,6 +3,7 @@ CREATE TABLE users (
     username VARCHAR(16) NOT NULL,
     email VARCHAR(50) NOT NULL,
     hash_password VARCHAR(256) NOT NULL,
+    is_admin BOOLEAN DEFAULT FALSE,
     created_at DATETIME NOT NULL,
     PRIMARY KEY (user_id)
 );
@@ -10,13 +11,15 @@ CREATE TABLE users (
 CREATE TABLE puzzles (
     puzzle_id INT PRIMARY KEY AUTO_INCREMENT ,
     creator_id INT,
-    title VARCHAR(20) NOT NULL ,
+    title VARCHAR(20) NOT NULL UNIQUE,
     image_url VARCHAR(255) NOT NULL ,
     difficulty ENUM('easy', 'medium', 'hard'),
     piece_count INT NOT NULL,
-    piece_shape ENUM('rect', 'irregular') NOT NULL,
+    piece_shape ENUM('rect', 'irregular', 'triangle') NOT NULL,
     is_rotatable BOOLEAN DEFAULT FALSE,
+    is_flipable BOOLEAN DEFAULT FALSE,
     is_system_level BOOLEAN DEFAULT FALSE ,
+    type ENUM('nature', 'animal', 'building', 'cartoon', 'other') DEFAULT 'other',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP ,
     FOREIGN KEY (creator_id) REFERENCES users(user_id)
 );
@@ -48,6 +51,17 @@ CREATE TABLE friend_requests (
     FOREIGN KEY (receiver_id) REFERENCES users(user_id)
 );
 
+CREATE TABLE shares (
+    share_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    puzzle_id INT NOT NULL,
+    view_count INT DEFAULT 0,
+    share_code INT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (puzzle_id) REFERENCES puzzles(puzzle_id)
+);
+
 CREATE TABLE friends (
     id INT PRIMARY KEY AUTO_INCREMENT,
     user_id INT NOT NULL,
@@ -56,4 +70,15 @@ CREATE TABLE friends (
     FOREIGN KEY (user_id) REFERENCES users(user_id),
     FOREIGN KEY (friend_id) REFERENCES users(user_id),
     UNIQUE KEY unique_friendship (user_id, friend_id)
+);
+
+CREATE TABLE puzzle_progress (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    puzzle_id INT NOT NULL,
+    progress_json TEXT NOT NULL,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_puzzle (user_id, puzzle_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id),
+    FOREIGN KEY (puzzle_id) REFERENCES puzzles(puzzle_id)
 );
