@@ -1330,11 +1330,11 @@ async function restoreProgressFromDB() {
         return;
     }
     const data = await res.json();
-    if (!data.progress_json) {
+    if (!data.data) {
         alert('No progress found in database');
         return;
     }
-    const piecesOnBoard = JSON.parse(data.progress_json);
+    const piecesOnBoard = JSON.parse(data.data);
     console.log(piecesOnBoard)
     // Remove all pieces from board and zone
     puzzleBoard.innerHTML = '';
