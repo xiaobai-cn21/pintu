@@ -1,341 +1,110 @@
-/**
- * 移动端样式 - 非侵入式设计
- * 只在移动端时应用，不影响桌面端
- */
+/* 移动端支持样式 */
 
-/* 移动端检测 */
+/* 移动端设备标识 */
+.mobile-device {
+    /* 移动端特定样式 */
+}
+
+/* 拼图块拖拽状态（仅限移动端） */
+.mobile-device .puzzle-piece.dragging {
+    z-index: 1000;
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}
+
+/* 拼图块选中状态（仅限移动端） */
+.mobile-device .puzzle-piece.selected {
+    border: 2px solid #F9E078;
+    box-shadow: 0 0 10px rgba(249, 224, 120, 0.5);
+}
+
+/* 移动端触摸优化（仅限移动端） */
+.mobile-device .puzzle-piece {
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* 移动端拼图块栏优化 - 多行显示（仅限移动端） */
+.mobile-device .pieces-zone {
+    touch-action: none;
+    overflow-x: visible;
+    overflow-y: visible;
+    position: relative;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    gap: 5px;
+    min-height: 120px;
+}
+
+/* 删除导航按键样式，因为不再需要滚动 */
+
+/* 移动端响应式设计 */
 @media (max-width: 768px) {
-    /* 基础触摸优化 */
-    * {
-        touch-action: manipulation;
+    .container {
+        padding: 10px;
     }
     
-    /* 按钮和链接触摸优化 */
-    .btn, .pm-link, .pm-menu-item {
-        min-height: 44px;
-        min-width: 44px;
-    }
-    
-    /* 移动端背景 */
-    body {
-        background-image: url('../images/background1.png');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-    }
-    
-    .background-blur {
-        background-image: url('../images/background1.png');
-        background-size: cover;
-        background-position: center;
-    }
-    
-    /* 拼图板移动端优化 */
-    .puzzle-board-wrapper {
-        width: 90vw;
-        height: 90vw;
-        max-width: 350px;
-        max-height: 350px;
-        margin: 0 auto 20px;
-    }
-    
-    .puzzle-board {
-        width: 100%;
-        height: 100%;
-    }
-    
-    /* 拼图块移动端优化 */
-    .puzzle-piece {
-        width: calc(100% / var(--grid-size, 4));
-        height: calc(100% / var(--grid-size, 4));
-        margin: 0;
-        border: 1px solid rgba(255,255,255,0.2);
-        background-repeat: no-repeat !important;
-        background-attachment: scroll !important;
-        touch-action: none;
-        user-select: none;
-    }
-    
-    /* 确保移动端拼图块尺寸不被CSS覆盖 */
-    .puzzle-piece {
-        min-width: unset !important;
-        min-height: unset !important;
-        max-width: unset !important;
-        max-height: unset !important;
-    }
-    
-    /* 拼图块栏移动端优化 */
-    .pieces-zone {
-        width: 90vw;
-        max-width: 350px;
-        margin: 10px auto;
-        min-height: 80px;
-        padding: 5px;
-        gap: 4px;
-        overflow-y: auto;
-        overflow-x: hidden;
-        scrollbar-width: thin;
-        scrollbar-color: #F9E078 #20223A;
-        touch-action: pan-y;
-    }
-    
-    /* 移动端滚动条样式 */
-    .pieces-zone::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    .pieces-zone::-webkit-scrollbar-track {
-        background: #20223A;
-    }
-    
-    .pieces-zone::-webkit-scrollbar-thumb {
-        background: #F9E078;
-        border-radius: 3px;
-    }
-    
-    .pieces-zone::-webkit-scrollbar-thumb:hover {
-        background: #FFD700;
-    }
-    
-    /* 移动端滚动按钮样式 */
-    .mobile-scroll-container {
-        position: absolute;
-        right: -40px;
-        top: 50%;
-        transform: translateY(-50%);
-        display: flex;
+    .puzzle-container {
         flex-direction: column;
-        gap: 10px;
-        z-index: 1000;
     }
     
-    .scroll-btn {
-        width: 30px;
-        height: 30px;
-        background: #F9E078;
-        color: #20223A;
-        border: 2px solid #20223A;
-        border-radius: 0;
-        font-family: 'Zpix', monospace;
-        font-size: 16px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.2s ease;
-    }
-    
-    .scroll-btn:hover {
-        background: #FFD700;
-        transform: translateY(-1px);
-    }
-    
-    .scroll-btn:active {
-        transform: translateY(0);
-        background: #E6D166;
-    }
-    
-    /* 拼图块栏中的拼图块 */
-    .pieces-zone .puzzle-piece {
-        flex-shrink: 0;
-    }
-    
-    /* 游戏控制按钮移动端优化 */
-    .game-controls {
-        flex-direction: column;
-        gap: 10px;
-        margin: 20px 0;
-    }
-    
-    .btn {
-        font-size: 14px;
-        padding: 12px 20px;
-    }
-    
-    /* 游戏信息移动端优化 */
-    .game-info {
-        font-size: 12px;
-        margin: 10px 0;
-    }
-    
-    /* 消息框移动端优化 */
-    .message {
-        font-size: 12px;
-        padding: 8px 12px;
-        margin: 10px 0;
-    }
-    
-    /* 模态框移动端优化 */
-    .modal-content {
-        width: 90vw;
-        max-width: 400px;
-        margin: 20px auto;
-        padding: 20px;
-        font-size: 14px;
-    }
-    
-    .modal-content h2 {
-        font-size: 18px;
-        margin-bottom: 15px;
-    }
-    
-    .modal-content p {
-        font-size: 12px;
-        line-height: 1.4;
-    }
-    
-    .modal-content button {
-        font-size: 12px;
-        padding: 10px 15px;
-        margin: 5px;
-    }
-}
-
-/* 超小屏幕优化 */
-@media (max-width: 480px) {
     .puzzle-board-wrapper {
-        width: 95vw;
-        height: 95vw;
-        max-width: 300px;
-        max-height: 300px;
+        margin-bottom: 20px;
     }
     
     .pieces-zone {
-        width: 95vw;
-        max-width: 300px;
-        min-height: 70px;
-    }
-    
-    .pieces-zone .puzzle-piece {
-        /* 移除固定尺寸，让JavaScript动态设置 */
-    }
-    
-    .game-info {
-        font-size: 10px;
-    }
-    
-    .btn {
-        font-size: 12px;
-        padding: 10px 15px;
-    }
-    
-    .modal-content {
-        width: 95vw;
+        min-height: 150px;
         padding: 15px;
+        gap: 8px;
     }
     
-    .modal-content h2 {
-        font-size: 16px;
-    }
-    
-    .modal-content p {
-        font-size: 11px;
-    }
-}
-
-/* 极小屏幕优化 */
-@media (max-width: 360px) {
-    .puzzle-board-wrapper {
-        width: 98vw;
-        height: 98vw;
-        max-width: 280px;
-        max-height: 280px;
-    }
-    
-    .pieces-zone {
-        width: 98vw;
-        max-width: 280px;
+    .puzzle-piece {
+        min-width: 60px;
         min-height: 60px;
     }
-    
-    .pieces-zone .puzzle-piece {
-        /* 移除固定尺寸，让JavaScript动态设置 */
-    }
-    
-    .game-info {
-        font-size: 9px;
-    }
-    
-    .btn {
-        font-size: 11px;
-        padding: 8px 12px;
-    }
-    
-    .modal-content {
-        width: 98vw;
-        padding: 12px;
-    }
-    
-    .modal-content h2 {
-        font-size: 14px;
-    }
-    
-    .modal-content p {
-        font-size: 10px;
-    }
 }
 
-/* 移动端拖拽样式 */
-.puzzle-piece.dragging {
-    opacity: 0.8;
-    transform: scale(1.05);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+/* 移动端按钮优化 */
+.btn {
+    min-height: 44px;
+    min-width: 44px;
+    touch-action: manipulation;
 }
 
-/* 移动端调试面板样式 */
-.mobile-debug-panel {
-    position: fixed;
-    top: 10px;
-    left: 10px;
-    width: 200px;
-    background: rgba(32, 34, 58, 0.9);
-    border: 2px solid #F9E078;
-    border-radius: 5px;
-    padding: 10px;
-    font-family: monospace;
-    font-size: 12px;
-    color: #F9E078;
-    z-index: 10000;
-    display: none;
-}
-
-.mobile-debug-panel button {
-    background: #F9E078;
-    color: #20223A;
-    border: none;
-    padding: 5px 10px;
-    border-radius: 3px;
-    cursor: pointer;
-    margin: 2px;
-}
-
-.mobile-debug-panel button:hover {
-    background: #FFD700;
+/* 移动端调试面板 */
+#mobile-debug-panel {
+    font-size: 11px;
+    max-width: 90vw;
 }
 
 #debug-log {
-    max-height: 300px;
-    overflow-y: auto;
-    background: rgba(0,0,0,0.3);
-    padding: 5px;
-    border-radius: 3px;
-    margin-top: 10px;
+    font-size: 10px;
+    line-height: 1.4;
 }
 
-#debug-btn {
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    width: 40px;
-    height: 40px;
-    background: #F9E078;
-    color: #20223A;
-    border: 2px solid #20223A;
-    border-radius: 50%;
-    font-size: 20px;
-    cursor: pointer;
-    z-index: 10001;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+/* 移动端触摸反馈（仅限移动端） */
+.mobile-device .puzzle-piece:active {
+    transform: scale(0.95);
+    transition: transform 0.1s ease;
+}
+
+/* 移动端拖拽指示器（仅限移动端） */
+.mobile-device .puzzle-piece.dragging::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border: 2px dashed #F9E078;
+    border-radius: 5px;
+    pointer-events: none;
 }
