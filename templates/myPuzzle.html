@@ -114,7 +114,10 @@ function continueGame(puzzleId, imageUrl, difficulty) {
     localStorage.setItem('puzzleId', puzzleId);
     // 如果你有 imageUrl 和 difficulty，也可以一并存储
     if (imageUrl) localStorage.setItem('customImage', imageUrl);
-    if (difficulty) localStorage.setItem('customSize', difficulty);
+        if (difficulty) {
+        const diff = Math.sqrt(Number(difficulty));
+        localStorage.setItem('customSize', diff);
+    }
     localStorage.setItem('fromMyPuzzle', '1'); // 标记来源
     window.location.href = '{{ url_for('game_page') }}';
 }
