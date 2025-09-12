@@ -130,15 +130,19 @@ class PuzzleGame {
     }
     
     async restoreProgressFromDB() {
-        const userId = localStorage.getItem('userId');
+        const token = localStorage.getItem('puzzleToken');
         const puzzleId = localStorage.getItem('puzzleId');
-        if (!userId || !puzzleId) return;
+        if (!token || !puzzleId) return;
         
-        const res = await fetch(`/pic/get_progress?user_id=${userId}&puzzle_id=${puzzleId}`);
+        const res = await fetch(`/pic/get_progress?puzzle_id=${puzzleId}`, {
+            headers: {
+                'Authorization': 'Bearer ' + token
+            }
+        });
         if (!res.ok) return;
         const data = await res.json();
-        if (!data.progress_json) return;
-        const piecesOnBoard = JSON.parse(data.progress_json);
+        if (!data.data || !data.data.progress_json) return;
+        const piecesOnBoard = JSON.parse(data.data.progress_json);
 
         piecesOnBoard.forEach(saved => {
             const piece = this.pieces.find(p =>

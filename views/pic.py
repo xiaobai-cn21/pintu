@@ -31,12 +31,16 @@ def create_puzzle():
         if file_length > (5 * 1024 * 1024):
             return jsonify({"code":"404", "message":"图片的大小大于5mb", "data": None})
         
-        filename = secure_filename(file.filename)
+        # 生成唯一文件名，避免覆盖
+        import uuid
+        file_extension = file.filename.rsplit('.', 1)[1].lower() if '.' in file.filename else 'png'
+        unique_filename = f"{uuid.uuid4().hex}.{file_extension}"
+        
         img_dir = os.path.join(current_app.root_path, 'static', 'uploads')
         os.makedirs(img_dir, exist_ok=True)
-        file_path = os.path.join(img_dir, filename)
+        file_path = os.path.join(img_dir, unique_filename)
         file.save(file_path)
-        image_url = f'/static/uploads/{filename}'
+        image_url = f'/static/uploads/{unique_filename}'
 
         creator_id = int(get_jwt_identity())
         user = users.query.get(creator_id)
@@ -92,12 +96,15 @@ def update_puzzle(puzzle_id):
         data = request.form
         file = request.files.get('image')
         if file:
-            filename = secure_filename(file.filename)
+            # 使用唯一文件名避免覆盖同名文件
+            import uuid
+            original_ext = file.filename.rsplit('.', 1)[1].lower() if (file and '.' in file.filename) else 'png'
+            unique_filename = f"{uuid.uuid4().hex}.{original_ext}"
             img_dir = os.path.join(current_app.root_path, 'static', 'uploads')
             os.makedirs(img_dir, exist_ok=True)
-            file_path = os.path.join(img_dir, filename)
+            file_path = os.path.join(img_dir, unique_filename)
             file.save(file_path)
-            puzzle.image_url = f'/static/uploads/{filename}'
+            puzzle.image_url = f'/static/uploads/{unique_filename}'
 
         puzzle.title = data.get('title', puzzle.title)
         puzzle.type = data.get('type', puzzle.type)
@@ -287,7 +294,7 @@ def get_my_progress():
             "total_steps": getattr(record, 'total_steps', 0),
             "updated_at": record.updated_at.isoformat() if hasattr(record, 'updated_at') and record.updated_at else "",
             "status": "completed" if getattr(record, 'is_completed', False) else "playing",
-            "difficulty_text": f"{puzzle.piece_count}×{puzzle.piece_count}",
+            "difficulty_text": f"{int(puzzle.piece_count**0.5)}×{int(puzzle.piece_count**0.5)}",
             "status_text": "已完成" if getattr(record, 'is_completed', False) else "进行中"
         })
     return jsonify({

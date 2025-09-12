@@ -73,15 +73,7 @@
             <div class="level-details" id="currentLevelDetails">难度: 中等 | 拼图块数: 36 | 最佳记录: 00:03:45</div>
         </div>
         
-        <!-- 我的排名卡片 -->
-        <div id="myRankCard" class="my-rank-card" style="display:block;">
-            <div class="my-rank-title">我的成绩</div>
-            <div class="my-rank-info">
-                <div class="my-rank-item"><div class="my-rank-label">排名</div><div class="my-rank-value" id="myRank">5</div></div>
-                <div class="my-rank-item"><div class="my-rank-label">用时</div><div class="my-rank-value" id="myTotalTime">00:05:30</div></div>
-                <div class="my-rank-item"><div class="my-rank-label">步数</div><div class="my-rank-value" id="myTotalSteps">128</div></div>
-            </div>
-        </div>
+
         
         <!-- 排行榜表格 -->
         <div id="rankTableContainer" style="display:block;">
@@ -104,7 +96,7 @@
                 this.refreshBtn = document.getElementById('refreshBtn');
                 this.currentLevelName = document.getElementById('currentLevelName');
                 this.currentLevelDetails = document.getElementById('currentLevelDetails');
-                this.myRankCard = document.getElementById('myRankCard');
+
                 this.rankTableBody = document.getElementById('rankTableBody');
                 this.loadingMessage = document.getElementById('loadingMessage');
                 this.errorMessage = document.getElementById('errorMessage');
@@ -162,8 +154,7 @@ async initPage() {
         
         // 3. 所有数据加载完成，显示正常内容
         this.hideAll();
-        this.rankTableContainer.style.display = 'block';
-        this.myRankCard.style.display = 'block';
+                this.rankTableContainer.style.display = 'block';
     } catch (e) {
         console.error('初始化页面失败:', e);
         // 异常时，保持错误提示状态
@@ -253,8 +244,7 @@ updateLevelInfo() {
                         
                         if (rankingData.length > 0) {
                             this.hideAll();
-                            this.rankTableContainer.style.display = 'block';
-                            this.myRankCard.style.display = 'block';
+                this.rankTableContainer.style.display = 'block';
                         } else {
                             // 如果没有排名数据，显示空数据状态
                             this.showEmpty();
@@ -273,10 +263,7 @@ updateLevelInfo() {
             displayRankList(list) {
                 this.rankTableBody.innerHTML = '';
                 
-                // 无论列表是否为空，都设置"我的排名"信息的默认值
-                document.getElementById('myRank').textContent = '-';
-                document.getElementById('myTotalTime').textContent = '00:00:00';
-                document.getElementById('myTotalSteps').textContent = '0';
+
                 
                 // 只有当列表不为空时才渲染排名表格
                 if (list && list.length > 0) {
@@ -338,7 +325,6 @@ showError(customMsg = '❌ 加载失败，请稍后重试') {
                 this.errorMessage.style.display = 'none';
                 this.emptyMessage.style.display = 'none';
                 this.rankTableContainer.style.display = 'none';
-                this.myRankCard.style.display = 'none';
             }
         }
         

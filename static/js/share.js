@@ -155,8 +155,8 @@ function gameStart(puzzleId) {
     localStorage.setItem('customImage', puzzleData.image_url);
     //localStorage.setItem('customSize', difficulty); // 行列数（如3、4）
     localStorage.setItem('customShape',pieceShape );
-    //localStorage.setItem('randomRotation', puzzleData.is_rotatable);
-    //localStorage.setItem('randomFlip', puzzleData.is_flipable);
+    localStorage.setItem('randomRotation', puzzleData.is_rotatable);
+    localStorage.setItem('randomFlip', puzzleData.is_flipable);
     localStorage.setItem('currentPuzzleId', puzzleId);
     // 打印验证参数
     console.log('存储的游戏参数:', {

@@ -253,7 +253,8 @@ h1 {
     height: 100%;
     opacity: 0.45;
     z-index: 1; /* 确保在拼图板之下 */
-    background-size: cover;
+    /* 移除固定的background-size，让JavaScript动态设置 */
+    /* background-size: cover; */
     background-position: center;
     background-repeat: no-repeat; /* 确保不重复 */
     pointer-events: none;
@@ -350,7 +351,8 @@ h1 {
     .puzzle-piece {
         width: 80px;
         height: 80px;
-        background-size: 320px 320px !important;
+        /* 移除固定的background-size，让JavaScript动态设置 */
+        /* background-size: 320px 320px !important; */
     }
 }
 

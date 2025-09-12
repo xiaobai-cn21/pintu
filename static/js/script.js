@@ -1123,29 +1123,21 @@ function submitToRanking() {
     try {
         const userId = localStorage.getItem('userId');
         const token = localStorage.getItem('puzzleToken');
-        const levelInfo = extractLevelInfo();
+        // 直接从localStorage获取puzzleId作为排行榜提交的依据
+        const puzzleId = localStorage.getItem('puzzleId');
         
-        // 1. 先判断关卡信息是否存在
-        if (!levelInfo) {
+        // 1. 先判断puzzleId是否存在
+        if (!puzzleId) {
             console.warn('无法获取关卡信息，无法提交成绩');
-            alert('无法识别当前关卡，请选择系统关卡后重试');
+            alert('无法识别当前关卡，请选择关卡后重试');
             return;
         }
 
-        // 2. 提取并校验纯数字关卡ID
-        let levelId = null;
-        if (levelInfo.levelId) {
-            levelId = Number(levelInfo.levelId);
-            // 校验：必须是正整数（排除NaN、0、负数、小数）
-            if (!Number.isInteger(levelId) || levelId <= 0) {
-                levelId = null; // 标记为无效ID
-            }
-        }
-
-        // 3. 无效ID拦截
-        if (!levelId) {
-            console.warn('无效的关卡ID，仅系统关卡（纯数字ID）支持提交成绩', '原始ID:', levelInfo.levelId);
-            alert('当前关卡ID无效（仅系统关卡支持提交），请重新选择关卡');
+        // 2. 校验puzzleId必须是正整数
+        let levelId = Number(puzzleId);
+        if (!Number.isInteger(levelId) || levelId <= 0) {
+            console.warn('无效的关卡ID，关卡ID必须是正整数', '原始ID:', puzzleId);
+            alert('当前关卡ID无效，请重新选择关卡');
             return;
         }
 
@@ -1239,16 +1231,17 @@ function submitLevelRecord() {
             return Promise.resolve();
         }
 
-        const info = extractLevelInfo();
-        if (!info) {
+        // 直接从localStorage获取puzzleId作为提交的依据
+        const puzzleId = localStorage.getItem('puzzleId');
+        if (!puzzleId) {
             console.warn('无法获取关卡信息，无法提交成绩');
             return Promise.resolve();
         }
 
         // 验证关卡ID有效性
-        const levelId = Number(info.levelId);
+        const levelId = Number(puzzleId);
         if (!Number.isInteger(levelId) || levelId <= 0) {
-            console.warn('无效的关卡ID，仅系统关卡支持提交成绩', '关卡ID:', info.levelId);
+            console.warn('无效的关卡ID，关卡ID必须是正整数', '关卡ID:', puzzleId);
             return Promise.resolve();
         }
 
@@ -1547,11 +1540,11 @@ async function restoreProgressFromDB() {
         return;
     }
     const data = await res.json();
-    if (!data.progress_json) {
+    if (!data.data || !data.data.progress_json) {
         alert('No progress found in database');
         return;
     }
-    const piecesOnBoard = JSON.parse(data.progress_json);
+    const piecesOnBoard = JSON.parse(data.data.progress_json);
     console.log(piecesOnBoard)
     // Remove all pieces from board and zone
     puzzleBoard.innerHTML = '';
