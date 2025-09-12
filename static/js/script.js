@@ -1533,7 +1533,6 @@ function saveBoardPieces() {
 }
 
 async function restoreProgressFromDB() {
-    // For demo, use user_id=1, puzzle_id=1. Replace with real values if needed.
     const token = localStorage.getItem('puzzleToken');
     const puzzle_id = localStorage.getItem('puzzleId') || 1;
     const res = await fetch(`/pic/get_progress?puzzle_id=${puzzle_id}`, {
@@ -1541,19 +1540,31 @@ async function restoreProgressFromDB() {
             'Authorization': 'Bearer ' + token
         }
     });
-    
+
     if (!res.ok) {
         alert('Failed to fetch progress from server');
         return;
     }
     const data = await res.json();
-    if (!data.progress_json) {
+    if (!data.data || !data.data.progress_json) {
         alert('No progress found in database');
         return;
     }
-    const piecesOnBoard = JSON.parse(data.progress_json);
-    console.log(piecesOnBoard)
-    // Remove all pieces from board and zone
+    // 恢复用时和步数
+    if ('used_time' in data.data) {
+        seconds = data.data.used_time;
+        const minutes = Math.floor(seconds / 60);
+        const remainingSeconds = seconds % 60;
+        if (timerElement) timerElement.textContent = `时间: ${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+    if ('total_steps' in data.data) {
+        moves = data.data.total_steps;
+        if (movesElement) movesElement.textContent = `移动次数: ${moves}`;
+    }
+
+    const piecesOnBoard = JSON.parse(data.data.progress_json);
+
+    // 清空棋盘和备选区
     puzzleBoard.innerHTML = '';
     piecesZone.innerHTML = '';
     pieces.forEach(piece => {
@@ -1563,13 +1574,31 @@ async function restoreProgressFromDB() {
         piecesZone.appendChild(piece);
     });
 
-    // Place pieces on board according to saved state
-    piecesOnBoard.forEach(saved => {
-        const piece = pieces.find(p =>
-            p.dataset.correctX == saved.correctX &&
-            p.dataset.correctY == saved.correctY &&
-            (p.dataset.type || null) == (saved.type || null)
-        );
+        // 恢复拼图块位置
+        piecesOnBoard.forEach(saved => {
+        const piece = pieces.find(p => {
+            if (shape === 'triangle') {
+                return (
+                    p.dataset.correctX == saved.correctX &&
+                    p.dataset.correctY == saved.correctY &&
+                    (p.dataset.type || null) == (saved.type || null)
+                );
+            } else if (shape === 'jigsaw') {
+                return (
+                    p.dataset.correctX == saved.correctX &&
+                    p.dataset.correctY == saved.correctY &&
+                    p.dataset.edgeTop == saved.edgeTop &&
+                    p.dataset.edgeRight == saved.edgeRight &&
+                    p.dataset.edgeBottom == saved.edgeBottom &&
+                    p.dataset.edgeLeft == saved.edgeLeft
+                );
+            } else {
+                return (
+                    p.dataset.correctX == saved.correctX &&
+                    p.dataset.correctY == saved.correctY
+                );
+            }
+        });
         if (piece) {
             piece.dataset.currentX = saved.currentX;
             piece.dataset.currentY = saved.currentY;

@@ -23,7 +23,7 @@
             <label>难度：</label>
             <select id="difficultyFilter">
                 <option value="all">全部</option>
-                <option value="3">简单（3×3）</option>
+                <option value="3">简单（3s×d）</option>
                 <option value="4">中等（4×4）</option>
                 <option value="5">困难（5×5）</option>
             </select>
@@ -89,8 +89,7 @@ function applyFilters() {
             <img src="${item.image_url}" alt="${item.title}" style="width:100%;height:120px;object-fit:cover;border-radius:4px;">
             <h3 style="color:#F9E078;font-size:16px;margin:10px 0 6px;">${item.title || ''}</h3>
             <div style="font-size:13px;color:#B8BCC8;">
-                难度：${item.difficulty_text || item.piece_count + '×' + item.piece_count}<br>
-                保存时间：${item.updated_at ? item.updated_at.split('T')[0] : ''}<br>
+        难度：${(parseInt(Math.sqrt(item.piece_count)) + '*' + parseInt(Math.sqrt(item.piece_count)))}<br>                保存时间：${item.updated_at ? item.updated_at.split('T')[0] : ''}<br>
                 已用时：${formatTime(item.used_time)}<br>
                 已走步数：${item.total_steps || 0} 步<br>
                 状态：${item.status_text || (item.status === 'completed' ? '已完成' : '进行中')}
