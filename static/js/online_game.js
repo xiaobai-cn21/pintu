@@ -678,8 +678,8 @@ class PuzzleGame {
 // 创建游戏实例
 const game = new PuzzleGame();
 
-// 初始化背景
-game.setPuzzleBg();
+// 不立即初始化背景，等待正确的图片URL
+// game.setPuzzleBg();
 
 // 页面加载完成后的初始化
 window.addEventListener('DOMContentLoaded', function() {
@@ -693,7 +693,9 @@ window.addEventListener('DOMContentLoaded', function() {
         localStorage.removeItem('customImage');
         localStorage.removeItem('customSize');
     } else {
-        game.setPuzzleBg();
+        // 如果没有localStorage数据，不自动初始化游戏
+        // 等待外部调用 init() 方法
+        console.log('等待游戏初始化...');
     }
 });
 

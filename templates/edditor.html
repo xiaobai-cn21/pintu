@@ -279,12 +279,12 @@
             wrap.id = 'systemImageModal';
             wrap.style.cssText = 'position:fixed; inset:0; background:rgba(0,0,0,0.55); display:none; align-items:center; justify-content:center; z-index:2000;';
             wrap.innerHTML = `
-                <div style="width:90%; max-width:720px; background:#20223A; border:1px solid #333; box-shadow:0 10px 30px rgba(0,0,0,0.5); padding:16px; border-radius:8px;">
+                <div style="width:90%; max-width:720px; max-height:80vh; overflow:auto; background:#20223A; border:1px solid #333; box-shadow:0 10px 30px rgba(0,0,0,0.5); padding:16px; border-radius:8px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <div style="color:#F9E078; font-size:16px;">选择系统图片</div>
                         <button id="systemImageClose" class="btn btn-secondary" type="button">关闭</button>
                     </div>
-                    <div id="systemImageGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:12px;"></div>
+                    <div id="systemImageGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:12px; max-height:60vh; overflow-y:auto;"></div>
                 </div>`;
             document.body.appendChild(wrap);
             document.getElementById('systemImageClose').addEventListener('click', () => {
@@ -299,7 +299,7 @@
                 if (!token) { alert('请先登录'); return; }
                 const title = (document.getElementById('adminTitleInput').value||'').trim();
                 const type = document.getElementById('typeSelect').value;
-                const pieceCount = parseInt(difficultySelect.value, 10);
+                const grid = parseInt(difficultySelect.value, 10);
                 // 形状映射：square->rect, triangle->triangle, jigsaw->irregular
                 const shapeMap = { square: 'rect', triangle: 'triangle', jigsaw: 'irregular' };
                 const pieceShape = shapeMap[shapeSelect.value] || 'rect';
@@ -325,11 +325,19 @@
                     imageBlob = await res.blob();
                 }
 
+                // 生成唯一文件名，避免固定文件名被覆盖
+                function genUniqueName() {
+                    const timestamp = Date.now();
+                    const rand = Math.random().toString(36).slice(2, 10);
+                    return `system_level_${timestamp}_${rand}.png`;
+                }
+
                 const form = new FormData();
                 form.append('title', title);
-                form.append('image', imageBlob, 'system-level.png');
-                form.append('difficulty', pieceCount <= 4 ? 'easy' : (pieceCount <= 6 ? 'medium' : 'hard'));
-                form.append('piece_count', String(pieceCount));
+                form.append('image', imageBlob, genUniqueName());
+                form.append('difficulty', grid <= 4 ? 'easy' : (grid <= 6 ? 'medium' : 'hard'));
+                // 统一存“总块数”：grid * grid
+                form.append('piece_count', String(grid * grid));
                 form.append('piece_shape', pieceShape);
                 form.append('is_rotatable', String(isRotatable));
                 form.append('is_flipable', String(isFlipable));
